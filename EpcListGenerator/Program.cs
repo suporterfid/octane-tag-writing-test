@@ -1,4 +1,6 @@
-﻿namespace EpcListGenerator
+﻿using Impinj.TagUtils;
+
+namespace EpcListGenerator
 {
     internal class Program
     {

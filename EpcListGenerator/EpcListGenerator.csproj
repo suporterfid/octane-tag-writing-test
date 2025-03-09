@@ -13,4 +13,13 @@
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Utils\" />
+    <Folder Include="TagUtils\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TagUtils\TagUtils.csproj" />
+  </ItemGroup>
+
 </Project>
