@@ -10,12 +10,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
+    <Compile Remove="TagUtils\**" />
+    <Compile Remove="Utils\**" />
+    <EmbeddedResource Remove="TagUtils\**" />
+    <EmbeddedResource Remove="Utils\**" />
+    <None Remove="TagUtils\**" />
+    <None Remove="Utils\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Utils\" />
-    <Folder Include="TagUtils\" />
+    <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.21.0" />
   </ItemGroup>
 
   <ItemGroup>
