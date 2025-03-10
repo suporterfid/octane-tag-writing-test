@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace OctaneTagWritingTest
 {
-    interface ITestStrategy
+    public interface ITestStrategy
     {
         void RunTest();
     }

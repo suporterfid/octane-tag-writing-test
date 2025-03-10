@@ -15,10 +15,9 @@ namespace OctaneTagWritingTest.TestStrategy
     /// </summary>
     public class TestCase3MultiAntennaWriteStrategy : BaseTestStrategy
     {
-        private readonly Stopwatch sw = new Stopwatch();
         private readonly object swLock = new object();
 
-        public TestCase3MultiAntennaWriteStrategy(string hostname)
+        public TestCase3MultiAntennaWriteStrategy(string hostname) 
             : base(hostname, "TestCase3_MultiAntenna_Log.csv")
         {
         }

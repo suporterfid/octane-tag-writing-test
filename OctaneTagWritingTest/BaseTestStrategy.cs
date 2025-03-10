@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 
 namespace OctaneTagWritingTest
 {
+    /// <summary>
+    /// Base class for all test strategies implementing common functionality
+    /// </summary>
     public abstract class BaseTestStrategy : ITestStrategy
     {
         protected ImpinjReader reader;
@@ -21,6 +24,11 @@ namespace OctaneTagWritingTest
         protected string logFile;
         protected Stopwatch sw = new Stopwatch();
 
+        /// <summary>
+        /// Initializes a new instance of the BaseTestStrategy class
+        /// </summary>
+        /// <param name="hostname">The hostname of the RFID reader</param>
+        /// <param name="logFile">The path to the log file for test results</param>
         public BaseTestStrategy(string hostname, string logFile)
         {
             this.hostname = hostname;
@@ -28,6 +36,10 @@ namespace OctaneTagWritingTest
             reader = new ImpinjReader();
         }
 
+        /// <summary>
+        /// Enables low latency reporting mode for the reader
+        /// </summary>
+        /// <param name="settings">The reader settings to modify</param>
         protected void EnableLowLatencyReporting(Settings settings)
         {
             MSG_ADD_ROSPEC addRoSpecMessage = reader.BuildAddROSpecMessage(settings);
@@ -39,6 +51,10 @@ namespace OctaneTagWritingTest
             reader.ApplySettings(setReaderConfigMessage, addRoSpecMessage);
         }
 
+        /// <summary>
+        /// Appends a line to the CSV log file
+        /// </summary>
+        /// <param name="line">The line to append to the log file</param>
         protected void LogToCsv(string line)
         {
             File.AppendAllText(logFile, line + Environment.NewLine);
@@ -48,6 +64,14 @@ namespace OctaneTagWritingTest
         /// Configures the reader including connection, settings, and EPC list loading
         /// </summary>
         /// <returns>The configured reader settings</returns>
+        /// <remarks>
+        /// This method:
+        /// - Loads the predefined EPC list
+        /// - Connects to the reader
+        /// - Applies default settings
+        /// - Enables FastId and Individual reporting mode
+        /// - Enables low latency reporting
+        /// </remarks>
         protected virtual Settings ConfigureReader()
         {
             // Load the predefined EPC list

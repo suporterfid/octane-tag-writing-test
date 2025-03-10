@@ -10,11 +10,27 @@ namespace OctaneTagWritingTest.TestStrategy
 {
     /// <summary>
     /// Test Strategy - Example 1: Optimal Write Speed Test
+    /// This strategy measures the speed of writing new EPCs to tags
     /// </summary>
     public class TestCase1SpeedStrategy : BaseTestStrategy
     {
+        /// <summary>
+        /// Initializes a new instance of the TestCase1SpeedStrategy class
+        /// </summary>
+        /// <param name="hostname">The hostname of the RFID reader</param>
+        /// <param name="logFile">The path to the log file for test results</param>
         public TestCase1SpeedStrategy(string hostname, string logFile) : base(hostname, logFile) { }
 
+        /// <summary>
+        /// Executes the speed test strategy
+        /// </summary>
+        /// <remarks>
+        /// This method:
+        /// - Configures and starts the reader
+        /// - Sets up event handlers for tag reports and operations
+        /// - Runs until user presses Enter
+        /// - Logs results to a CSV file
+        /// </remarks>
         public override void RunTest()
         {
             try
@@ -39,6 +55,11 @@ namespace OctaneTagWritingTest.TestStrategy
             }
         }
 
+        /// <summary>
+        /// Handles the TagsReported event from the reader
+        /// </summary>
+        /// <param name="sender">The reader that generated the event</param>
+        /// <param name="report">The report containing tag data</param>
         private void OnTagsReported(ImpinjReader sender, TagReport? report)
         {
             if (report == null) return;
@@ -99,6 +120,11 @@ namespace OctaneTagWritingTest.TestStrategy
             }
         }
 
+        /// <summary>
+        /// Handles the TagOpComplete event from the reader
+        /// </summary>
+        /// <param name="reader">The reader that generated the event</param>
+        /// <param name="report">The report containing operation results</param>
         private void OnTagOpComplete(ImpinjReader reader, TagOpReport? report)
         {
             if (report == null) return;
