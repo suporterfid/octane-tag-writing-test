@@ -26,8 +26,7 @@ namespace OctaneTagWritingTest.TestStrategy
         // Stopwatch to measure each cycle time
         private readonly Stopwatch swCycle = new Stopwatch();
 
-        public TestCase8EnduranceStrategy(string hostname)
-            : base(hostname, "TestCase8_Endurance_Log.csv")
+        public TestCase8EnduranceStrategy(string hostname, string logFile) : base(hostname, logFile)
         {
         }
 
@@ -44,6 +43,9 @@ namespace OctaneTagWritingTest.TestStrategy
                 reader.TagOpComplete += OnTagOpComplete;
 
                 reader.Start();
+                // Create log file if it doesn't exist
+                if (!File.Exists(logFile))
+                    LogToCsv("Timestamp,TID,Previous_EPC,Expected_EPC,Verified_EPC,WriteTime_ms,VerifyTime_ms,Result,RecoveryAttempts,RSSI,AntennaPort");
                 Console.WriteLine("Waiting for target tag identification to start endurance test...");
 
                 // Wait until target tag is found
@@ -190,11 +192,18 @@ namespace OctaneTagWritingTest.TestStrategy
                 if (result is TagWriteOpResult writeResult)
                 {
                     swCycle.Stop();
+                    double resultRssi = 0;
+                    if (writeResult.Tag.IsPcBitsPresent)
+                        resultRssi = writeResult.Tag.PeakRssiInDbm;
+                    ushort antennaPort = 0;
+                    if (writeResult.Tag.IsAntennaPortNumberPresent)
+                        antennaPort = writeResult.Tag.AntennaPortNumber;
+
                     if (writeResult.Result != WriteResultStatus.Success)
                     {
                         Console.WriteLine("Cycle {0} - Write failure for TID {1}: {2}", cycleCount, tidHex, writeResult.Result);
                         // In an endurance test, failure can be recorded and cycle can continue
-                        LogToCsv($"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{tidHex},{targetTag.Epc.ToHexString()},{expectedEpc},N/A,{swCycle.ElapsedMilliseconds},0,Failure,{cycleCount}");
+                        LogToCsv($"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{tidHex},{targetTag.Epc.ToHexString()},{expectedEpc},N/A,{swCycle.ElapsedMilliseconds},0,Failure,{cycleCount},{resultRssi},{antennaPort}");
                         TagOpController.RecordResult(tidHex, "Write Error");
                     }
                     else
@@ -213,8 +222,15 @@ namespace OctaneTagWritingTest.TestStrategy
                     string resultStatus = verifiedEpc.Equals(expectedEpc, StringComparison.OrdinalIgnoreCase) ? "Success" : "Failure";
                     long operationTime = swCycle.ElapsedMilliseconds;
 
+                    double resultRssi = 0;
+                    if (readResult.Tag.IsPcBitsPresent)
+                        resultRssi = readResult.Tag.PeakRssiInDbm;
+                    ushort antennaPort = 0;
+                    if (readResult.Tag.IsAntennaPortNumberPresent)
+                        antennaPort = readResult.Tag.AntennaPortNumber;
+
                     Console.WriteLine("Cycle {0} - Verification for TID {1}: EPC read = {2} ({3}) in {4} ms", cycleCount, tidHex, verifiedEpc, resultStatus, operationTime);
-                    LogToCsv($"{timestamp},{tidHex},{targetTag.Epc.ToHexString()},{expectedEpc},{verifiedEpc},{operationTime},0,{resultStatus},{cycleCount}");
+                    LogToCsv($"{timestamp},{tidHex},{targetTag.Epc.ToHexString()},{expectedEpc},{verifiedEpc},{operationTime},0,{resultStatus},{cycleCount},{resultRssi},{antennaPort}");
                     TagOpController.RecordResult(tidHex, resultStatus);
                 }
             }

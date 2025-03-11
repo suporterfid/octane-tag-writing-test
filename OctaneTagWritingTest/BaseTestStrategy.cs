@@ -82,7 +82,16 @@ namespace OctaneTagWritingTest
 
             Settings settings = reader.QueryDefaultSettings();
             settings.Report.IncludeFastId = true;
+            settings.Report.IncludePeakRssi = true;
+            settings.Report.IncludeAntennaPortNumber = true;
             settings.Report.Mode = ReportMode.Individual;
+            settings.RfMode = 0;
+            settings.Antennas.DisableAll();
+            settings.Antennas.GetAntenna(1).IsEnabled = true;
+            settings.Antennas.GetAntenna(1).TxPowerInDbm = 30;
+            settings.Antennas.GetAntenna(1).MaxRxSensitivity = true;
+            settings.SearchMode = SearchMode.DualTarget;
+            settings.Session = 2;
             EnableLowLatencyReporting(settings);
             reader.ApplySettings(settings);
 

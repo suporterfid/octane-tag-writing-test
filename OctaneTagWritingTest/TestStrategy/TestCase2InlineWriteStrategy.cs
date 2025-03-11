@@ -85,7 +85,7 @@ namespace OctaneTagWritingTest.TestStrategy
                     sw.Restart();
                     reader.AddOpSequence(seq);
                     if (!File.Exists(logFile))
-                        LogToCsv("Timestamp,TID,OldEPC,NewEPC,WriteTime,Result");
+                        LogToCsv("Timestamp,TID,OldEPC,NewEPC,WriteTime,Result,RSSI,AntennaPort");
                     break;
                 }
             }
@@ -105,9 +105,15 @@ namespace OctaneTagWritingTest.TestStrategy
                     string newEpc = TagOpController.GetExpectedEpc(tidHex);
                     long writeTime = sw.ElapsedMilliseconds;
                     string res = writeResult.Result.ToString();
+                    double resultRssi = 0;
+                    if (writeResult.Tag.IsPcBitsPresent)
+                        resultRssi = writeResult.Tag.PeakRssiInDbm;
+                    ushort antennaPort = 0;
+                    if (writeResult.Tag.IsAntennaPortNumberPresent)
+                        antennaPort = writeResult.Tag.AntennaPortNumber;
 
                     Console.WriteLine("Inline write completed: {0} in {1} ms", res, writeTime);
-                    LogToCsv($"{timestamp},{tidHex},{oldEpc},{newEpc},{writeTime},{res}");
+                    LogToCsv($"{timestamp},{tidHex},{oldEpc},{newEpc},{writeTime},{res},{resultRssi},{antennaPort}");
                     TagOpController.RecordResult(tidHex, res);
                 }
             }

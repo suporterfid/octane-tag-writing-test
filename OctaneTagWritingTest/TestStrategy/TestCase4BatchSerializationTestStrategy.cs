@@ -17,7 +17,7 @@ namespace OctaneTagWritingTest.TestStrategy
         private int serialCounter = 0;
 
         public TestCase4BatchSerializationTestStrategy(string hostname, string logFile) 
-            : base(hostname, "TestCase4_Log.csv")
+            : base(hostname, logFile)
         {
         }
 
@@ -34,14 +34,16 @@ namespace OctaneTagWritingTest.TestStrategy
                 reader.TagOpComplete += OnTagOpComplete;
                 reader.Start();
 
-                // Create log file header
-                LogToCsv("Timestamp,TID,Previous_EPC,New_EPC,Serial,Result");
+                // Ensure log file exists
+                if (!File.Exists(logFile))
+                    LogToCsv("Timestamp,TID,OldEPC,NewEPC,SerialCounter,WriteTime,Result,RSSI,AntennaPort");
 
                 Console.WriteLine("Waiting for tags to accumulate for batch. Press Enter to start batch writing...");
                 Console.ReadLine();
 
                 // Unsubscribe from tag collection to avoid duplication
                 reader.TagsReported -= OnTagsReported;
+
 
                 // For each accumulated tag, trigger the write operation
                 foreach (Tag tag in loteTags)
@@ -58,6 +60,7 @@ namespace OctaneTagWritingTest.TestStrategy
                     sw.Restart(); // Start time measurement
                     TriggerWrite(tag, novoEpc);
                 }
+
 
                 Console.WriteLine("Batch operation triggered. Press Enter to stop.");
                 Console.ReadLine();
@@ -193,9 +196,16 @@ namespace OctaneTagWritingTest.TestStrategy
                     string res = writeResult.Result.ToString();
                     sw.Stop();
                     long writeTime = sw.ElapsedMilliseconds;
+                    double resultRssi = 0;
+                    if (writeResult.Tag.IsPcBitsPresent)
+                        resultRssi = writeResult.Tag.PeakRssiInDbm;
+                    ushort antennaPort = 0;
+                    if (writeResult.Tag.IsAntennaPortNumberPresent)
+                        antennaPort = writeResult.Tag.AntennaPortNumber;
 
                     Console.WriteLine("Write completed for TID {0}: {1} in {2} ms", tidHex, res, writeTime);
-                    LogToCsv($"{timestamp},{tidHex},{oldEpc},{newEpc},{serialCounter++},{res}");
+                    LogToCsv($"{timestamp},{tidHex},{oldEpc},{newEpc},{serialCounter++},{writeTime},{res},{resultRssi},{antennaPort}");
+
                     TagOpController.RecordResult(tidHex, res);
                 }
             }

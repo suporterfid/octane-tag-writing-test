@@ -16,8 +16,8 @@
         private Tag? currentTargetTag;
         private string? expectedEpc;
 
-        public TestCase5VerificationCycleStrategy(string hostname)
-            : base(hostname, "TestCase5_VerificationCycle_Log.csv")
+        public TestCase5VerificationCycleStrategy(string hostname, string logFile)
+            : base(hostname, logFile)
         {
         }
 
@@ -36,8 +36,8 @@
 
                 // Create log file if it doesn't exist
                 if (!File.Exists(logFile))
-                    LogToCsv("Timestamp,TID,Previous_EPC,Expected_EPC,Verified_EPC,WriteTime_ms,VerifyTime_ms,Result");
-
+                    LogToCsv("Timestamp,TID,Previous_EPC,Expected_EPC,Verified_EPC,WriteTime_ms,VerifyTime_ms,Result,RSSI,AntennaPort");
+         
                 Console.WriteLine("Waiting for target tag read. Press Enter to stop.");
                 Console.ReadLine();
 
@@ -168,9 +168,15 @@
                     string verifiedEpc = readResult.Data != null ? readResult.Data.ToHexWordString() : "N/A";
                     string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                     string resultStatus = verifiedEpc.Equals(expectedEpc, StringComparison.OrdinalIgnoreCase) ? "Success" : "Failure";
+                    double resultRssi = 0;
+                    if (readResult.Tag.IsPcBitsPresent)
+                        resultRssi = readResult.Tag.PeakRssiInDbm;
+                    ushort antennaPort = 0;
+                    if (readResult.Tag.IsAntennaPortNumberPresent)
+                        antennaPort = readResult.Tag.AntennaPortNumber;
 
                     Console.WriteLine("Verification for TID {0}: EPC read = {1} ({2}) in {3} ms", tidHex, verifiedEpc, resultStatus, swVerify.ElapsedMilliseconds);
-                    LogToCsv($"{timestamp},{tidHex},{currentTargetTag.Epc.ToHexString()},{expectedEpc},{verifiedEpc},{swWrite.ElapsedMilliseconds},{swVerify.ElapsedMilliseconds},{resultStatus}");
+                    LogToCsv($"{timestamp},{tidHex},{currentTargetTag.Epc.ToHexString()},{expectedEpc},{verifiedEpc},{swWrite.ElapsedMilliseconds},{swVerify.ElapsedMilliseconds},{resultStatus},{resultRssi},{antennaPort}");
                     TagOpController.RecordResult(tidHex, resultStatus);
                 }
             }

@@ -22,8 +22,8 @@ namespace OctaneTagWritingTest.TestStrategy
         private Tag? currentTargetTag;
         private string? expectedEpc;
 
-        public TestCase7ErrorRecoveryStrategy(string hostname)
-            : base(hostname, "TestCase7_ErrorRecovery_Log.csv")
+        public TestCase7ErrorRecoveryStrategy(string hostname, string logFile)
+            : base(hostname, logFile)
         {
         }
 
@@ -42,7 +42,7 @@ namespace OctaneTagWritingTest.TestStrategy
 
                 // Create log file if it doesn't exist
                 if (!File.Exists(logFile))
-                    LogToCsv("Timestamp,TID,Previous_EPC,Expected_EPC,Verified_EPC,WriteTime_ms,VerifyTime_ms,Result,RecoveryAttempts");
+                    LogToCsv("Timestamp,TID,Previous_EPC,Expected_EPC,Verified_EPC,WriteTime_ms,VerifyTime_ms,Result,RecoveryAttempts,RSSI,AntennaPort");
 
                 Console.WriteLine("Error recovery test running. Press Enter to stop.");
                 Console.ReadLine();
@@ -201,8 +201,15 @@ namespace OctaneTagWritingTest.TestStrategy
                     long verifyTime = swVerify.ElapsedMilliseconds;
                     int attempts = recoveryCount.ContainsKey(tidHex) ? recoveryCount[tidHex] : 0;
 
+                    double resultRssi = 0;
+                    if (readResult.Tag.IsPcBitsPresent)
+                        resultRssi = readResult.Tag.PeakRssiInDbm;
+                    ushort antennaPort = 0;
+                    if (readResult.Tag.IsAntennaPortNumberPresent)
+                        antennaPort = readResult.Tag.AntennaPortNumber;
+
                     Console.WriteLine("Verification for TID {0}: EPC read = {1} ({2}) in {3} ms", tidHex, verifiedEpc, resultStatus, verifyTime);
-                    LogToCsv($"{timestamp},{tidHex},{currentTargetTag.Epc.ToHexString()},{expectedEpc},{verifiedEpc},{writeTime},{verifyTime},{resultStatus},{attempts}");
+                    LogToCsv($"{timestamp},{tidHex},{currentTargetTag.Epc.ToHexString()},{expectedEpc},{verifiedEpc},{writeTime},{verifyTime},{resultStatus},{attempts},{resultRssi},{antennaPort}");
                     TagOpController.RecordResult(tidHex, resultStatus);
                 }
             }

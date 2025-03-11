@@ -17,8 +17,8 @@ namespace OctaneTagWritingTest.TestStrategy
     {
         private readonly object swLock = new object();
 
-        public TestCase3MultiAntennaWriteStrategy(string hostname) 
-            : base(hostname, "TestCase3_MultiAntenna_Log.csv")
+        public TestCase3MultiAntennaWriteStrategy(string hostname, string logFile)
+            : base(hostname, logFile)
         {
         }
 
@@ -41,7 +41,8 @@ namespace OctaneTagWritingTest.TestStrategy
 
                 // Ensure log file exists
                 if (!File.Exists(logFile))
-                    LogToCsv("Timestamp,TID,OldEPC,NewEPC,WriteTime_ms,Result,Antenna");
+                    LogToCsv("Timestamp,TID,OldEPC,NewEPC,WriteTime,Result,RSSI,AntennaPort");
+
 
                 Console.WriteLine("Multi-Antenna test active. Waiting for tag reads. Press Enter to stop...");
                 Console.ReadLine();
@@ -144,11 +145,16 @@ namespace OctaneTagWritingTest.TestStrategy
                     string oldEpc = writeResult.Tag.Epc.ToHexString();
                     string newEpc = TagOpController.GetExpectedEpc(tidHex);
                     string res = writeResult.Result.ToString();
-                    int antenna = writeResult.Tag.AntennaPortNumber;
+                    double resultRssi = 0;
+                    if (writeResult.Tag.IsPcBitsPresent)
+                        resultRssi = writeResult.Tag.PeakRssiInDbm;
+                    ushort antennaPort = 0;
+                    if (writeResult.Tag.IsAntennaPortNumberPresent)
+                        antennaPort = writeResult.Tag.AntennaPortNumber;
 
                     Console.WriteLine("Write on Antenna {0} completed: {1} in {2} ms",
-                        antenna, res, writeTime);
-                    LogToCsv($"{timestamp},{tidHex},{oldEpc},{newEpc},{writeTime},{res},{antenna}");
+                        antennaPort, res, writeTime);
+                    LogToCsv($"{timestamp},{tidHex},{oldEpc},{newEpc},{writeTime},{res},{resultRssi},{antennaPort}");
                     TagOpController.RecordResult(tidHex, res);
                 }
             }

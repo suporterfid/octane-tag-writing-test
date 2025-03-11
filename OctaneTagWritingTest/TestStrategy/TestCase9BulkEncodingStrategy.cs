@@ -10,7 +10,7 @@ namespace OctaneTagWritingTest.TestStrategy
 {
     /// <summary>
     /// Test Strategy - Example 9: Bulk Tag Encoding Test
-    /// Tests the ability to encode multiple tags in bulk with either all F's or all 0's
+    /// Tests the ability to encode multiple tags in bulk with either a pre-encoded EPC or  B071...
     /// </summary>
     public class TestCase9BulkEncodingStrategy : BaseTestStrategy
     {
@@ -43,7 +43,7 @@ namespace OctaneTagWritingTest.TestStrategy
             settings.Antennas.DisableAll();
             settings.Antennas.GetAntenna(1).IsEnabled = true;
             settings.Antennas.GetAntenna(1).TxPowerInDbm = 30;
-            settings.Antennas.GetAntenna(1).RxSensitivityInDbm = -90;
+            settings.Antennas.GetAntenna(1).MaxRxSensitivity = true;
 
             // Enable low latency mode
             EnableLowLatencyReporting(settings);
@@ -102,6 +102,9 @@ namespace OctaneTagWritingTest.TestStrategy
                 Console.WriteLine("Starting reader...");
                 Console.WriteLine("------------------------------------------");
                 reader.Start();
+                // Create log file if it doesn't exist
+                if (!File.Exists(logFile))
+                    LogToCsv("Timestamp,TID,Previous_EPC,Expected_EPC,Verified_EPC,WriteTime_ms,VerifyTime_ms,Result,RecoveryAttempts,RSSI,AntennaPort");
 
                 Console.WriteLine("Bulk encoding test running. Press Enter to stop.");
                 Console.ReadLine();
@@ -174,10 +177,13 @@ namespace OctaneTagWritingTest.TestStrategy
                 writeEpc.WordPointer = WordPointers.Epc;
                 writeEpc.AccessPassword = TagData.FromHexString(newAccessPassword);
 
+                // Get new EPC via helper (generation or extraction from list)
+                var expectedEpc = TagOpController.GetNextEpcForTag();
+
                 // Set EPC data based on encoding choice
-                string epcData = encodeOrDefault ? 
-                    $"FFFFFFFFFFFFFFFFFFFFFF{id:D2}" : 
-                    $"0000000000000000000000{id:D2}";
+                string epcData = encodeOrDefault ?
+                    expectedEpc : 
+                    $"B071000000000000000000{id:D2}";
                 writeEpc.Data = TagData.FromHexString(epcData);
 
                 seq.Ops.Add(writeEpc);
@@ -200,7 +206,14 @@ namespace OctaneTagWritingTest.TestStrategy
                             writeResult.SequenceId, writeResult.Tag.Epc);
                         
                         string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                        LogToCsv($"{timestamp},{writeResult.Tag.Tid?.ToHexString()},{writeResult.Tag.Epc},{writeResult.Result}");
+                        double resultRssi = 0;
+                        if (writeResult.Tag.IsPcBitsPresent)
+                            resultRssi = writeResult.Tag.PeakRssiInDbm;
+                        ushort antennaPort = 0;
+                        if (writeResult.Tag.IsAntennaPortNumberPresent)
+                            antennaPort = writeResult.Tag.AntennaPortNumber;
+
+                        LogToCsv($"{timestamp},{writeResult.Tag.Tid?.ToHexString()},{writeResult.Tag.Epc},{writeResult.Result},{resultRssi},{antennaPort}");
                         
                         encodeRemaining--;
                     }
