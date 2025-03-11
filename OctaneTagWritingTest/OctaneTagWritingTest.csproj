@@ -18,4 +18,10 @@
     <Folder Include="etk_deploy\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="epc_list.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

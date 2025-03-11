@@ -10,7 +10,8 @@ namespace OctaneTagWritingTest.TestStrategy
 {
     /// <summary>
     /// Test Strategy - Example 9: Bulk Tag Encoding Test
-    /// Tests the ability to encode multiple tags in bulk with either a pre-encoded EPC or  B071...
+    /// Tests the ability to encode multiple tags in bulk with either a pre-encoded EPC or default state.
+    /// Falls back to individual tag processing if TID list is unavailable.
     /// </summary>
     public class TestCase9BulkEncodingStrategy : BaseTestStrategy
     {
@@ -19,10 +20,16 @@ namespace OctaneTagWritingTest.TestStrategy
         private int encodeRemaining;
         private List<TagOpSequence> loadedSequences;
         private bool encodeOrDefault;
+        
+        // New fields for fallback mode
+        private bool isFallbackMode;
+        private HashSet<string> processedTids;
+        private readonly object lockObject = new object();
 
         public TestCase9BulkEncodingStrategy(string hostname, string logFile) : base(hostname, logFile) 
         {
             loadedSequences = new List<TagOpSequence>();
+            processedTids = new HashSet<string>();
         }
 
         protected override Settings ConfigureReader()
@@ -70,43 +77,59 @@ namespace OctaneTagWritingTest.TestStrategy
                 // Load TID list from file
                 Console.WriteLine("Loading TID list from file...");
                 string tidListPath = "tid_list.txt";
-                List<string> tidList;
+                List<string> tidList = null;
+                bool loadSuccess = false;
+
                 try 
                 {
                     tidList = EpcListManager.LoadTidList(tidListPath);
-                    tagsNumber = tidList.Count;
-                    encodeRemaining = tagsNumber;
-                    Console.WriteLine($"Successfully loaded {tagsNumber} TIDs from {tidListPath}");
-                }
-                catch (FileNotFoundException)
-                {
-                    Console.WriteLine($"Error: TID list file '{tidListPath}' not found.");
-                    Console.WriteLine("Please create a file named 'tid_list.txt' with one TID per line.");
-                    Console.WriteLine("Example TID format: E28011B020005A422D220337");
-                    return;
+                    loadSuccess = tidList != null && tidList.Count > 0;
+                    
+                    if (loadSuccess)
+                    {
+                        tagsNumber = tidList.Count;
+                        encodeRemaining = tagsNumber;
+                        Console.WriteLine($"Successfully loaded {tagsNumber} TIDs from {tidListPath}");
+                        isFallbackMode = false;
+                    }
+                    else
+                    {
+                        Console.WriteLine("TID list is empty or null. Switching to fallback mode.");
+                        isFallbackMode = true;
+                    }
                 }
                 catch (Exception ex)
                 {
                     Console.WriteLine($"Error loading TID list: {ex.Message}");
-                    return;
+                    Console.WriteLine("Switching to fallback mode - processing tags individually.");
+                    isFallbackMode = true;
                 }
 
-                Console.WriteLine("\nAdding write operations to reader...");
-                PrepareTagOperationSequences(tidList);
-
-                // Subscribe to tag operation events
+                // Subscribe to events based on mode
                 reader.TagOpComplete += OnTagOpComplete;
+                
+                if (isFallbackMode)
+                {
+                    Console.WriteLine("Operating in fallback mode - processing tags as they are detected.");
+                    reader.TagsReported += OnTagsReported;
+                }
+                else
+                {
+                    Console.WriteLine("\nAdding write operations to reader...");
+                    PrepareTagOperationSequences(tidList);
+                }
 
                 // Start timing and reading
                 sw.Start();
                 Console.WriteLine("Starting reader...");
                 Console.WriteLine("------------------------------------------");
                 reader.Start();
+
                 // Create log file if it doesn't exist
                 if (!File.Exists(logFile))
                     LogToCsv("Timestamp,TID,Previous_EPC,Expected_EPC,Verified_EPC,WriteTime_ms,VerifyTime_ms,Result,RecoveryAttempts,RSSI,AntennaPort");
 
-                Console.WriteLine("Bulk encoding test running. Press Enter to stop.");
+                Console.WriteLine($"Test running in {(isFallbackMode ? "fallback" : "bulk")} mode. Press Enter to stop.");
                 Console.ReadLine();
 
                 reader.Stop();
@@ -115,34 +138,12 @@ namespace OctaneTagWritingTest.TestStrategy
             catch (OctaneSdkException e)
             {
                 Console.WriteLine("Octane SDK exception: {0}", e.Message);
-                if (reader.IsConnected)
-                {
-                    try
-                    {
-                        reader.Stop();
-                        reader.Disconnect();
-                    }
-                    catch (Exception disconnectEx)
-                    {
-                        Console.WriteLine("Error during reader cleanup: " + disconnectEx.Message);
-                    }
-                }
+                CleanupReader();
             }
             catch (Exception e)
             {
                 Console.WriteLine("Exception : {0}", e.Message);
-                if (reader.IsConnected)
-                {
-                    try
-                    {
-                        reader.Stop();
-                        reader.Disconnect();
-                    }
-                    catch (Exception disconnectEx)
-                    {
-                        Console.WriteLine("Error during reader cleanup: " + disconnectEx.Message);
-                    }
-                }
+                CleanupReader();
             }
             finally
             {
@@ -154,8 +155,26 @@ namespace OctaneTagWritingTest.TestStrategy
             }
         }
 
+        private void CleanupReader()
+        {
+            if (reader.IsConnected)
+            {
+                try
+                {
+                    reader.Stop();
+                    reader.Disconnect();
+                }
+                catch (Exception disconnectEx)
+                {
+                    Console.WriteLine("Error during reader cleanup: " + disconnectEx.Message);
+                }
+            }
+        }
+
         private void PrepareTagOperationSequences(List<string> tidList)
         {
+            if (tidList == null) return;
+
             ushort id = 1;
             foreach (var tid in tidList)
             {
@@ -177,7 +196,7 @@ namespace OctaneTagWritingTest.TestStrategy
                 writeEpc.WordPointer = WordPointers.Epc;
                 writeEpc.AccessPassword = TagData.FromHexString(newAccessPassword);
 
-                // Get new EPC via helper (generation or extraction from list)
+                // Get new EPC via helper
                 var expectedEpc = TagOpController.GetNextEpcForTag();
 
                 // Set EPC data based on encoding choice
@@ -193,36 +212,98 @@ namespace OctaneTagWritingTest.TestStrategy
             }
         }
 
+        private void OnTagsReported(ImpinjReader sender, TagReport report)
+        {
+            if (!isFallbackMode || report == null) return;
+
+            foreach (Tag tag in report)
+            {
+                string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
+                if (string.IsNullOrEmpty(tidHex)) continue;
+
+                lock (lockObject)
+                {
+                    if (!processedTids.Contains(tidHex))
+                    {
+                        Console.WriteLine($"New tag detected - TID: {tidHex}");
+                        processedTids.Add(tidHex);
+                        ProcessNewTag(tag);
+                    }
+                }
+            }
+        }
+
+        private void ProcessNewTag(Tag tag)
+        {
+            try
+            {
+                TagOpSequence seq = new TagOpSequence();
+                seq.TargetTag.MemoryBank = MemoryBank.Tid;
+                seq.TargetTag.BitPointer = 0;
+                seq.TargetTag.Data = tag.Tid.ToHexString();
+                seq.BlockWriteEnabled = true;
+                seq.BlockWriteWordCount = 2;
+                seq.BlockWriteRetryCount = 3;
+
+                // Create tag write operation
+                TagWriteOp writeEpc = new TagWriteOp();
+                writeEpc.MemoryBank = MemoryBank.Epc;
+                writeEpc.WordPointer = WordPointers.Epc;
+                writeEpc.AccessPassword = TagData.FromHexString(newAccessPassword);
+
+                // Get new EPC via helper
+                var expectedEpc = TagOpController.GetNextEpcForTag();
+
+                // Set EPC data based on encoding choice
+                string epcData = encodeOrDefault ?
+                    expectedEpc :
+                    $"B071000000000000000000{processedTids.Count:D2}";
+                writeEpc.Data = TagData.FromHexString(epcData);
+
+                seq.Ops.Add(writeEpc);
+                reader.AddOpSequence(seq);
+
+                Console.WriteLine($"Scheduled write operation for TID: {tag.Tid.ToHexString()}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error processing new tag: {ex.Message}");
+            }
+        }
+
         private void OnTagOpComplete(ImpinjReader reader, TagOpReport report)
         {
             foreach (TagOpResult result in report)
             {
                 if (result is TagWriteOpResult writeResult)
                 {
+                    string tidHex = writeResult.Tag.Tid?.ToHexString() ?? "N/A";
+                    string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    double resultRssi = writeResult.Tag.IsPcBitsPresent ? writeResult.Tag.PeakRssiInDbm : 0;
+                    ushort antennaPort = writeResult.Tag.IsAntennaPortNumberPresent ? writeResult.Tag.AntennaPortNumber : (ushort)0;
+
                     if (writeResult.Result == WriteResultStatus.Success)
                     {
-                        reader.DeleteOpSequence(writeResult.SequenceId);
-                        Console.WriteLine("Tag operation {0} completed for EPC {1}, removing from queue...", 
-                            writeResult.SequenceId, writeResult.Tag.Epc);
-                        
-                        string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                        double resultRssi = 0;
-                        if (writeResult.Tag.IsPcBitsPresent)
-                            resultRssi = writeResult.Tag.PeakRssiInDbm;
-                        ushort antennaPort = 0;
-                        if (writeResult.Tag.IsAntennaPortNumberPresent)
-                            antennaPort = writeResult.Tag.AntennaPortNumber;
+                        if (!isFallbackMode)
+                        {
+                            reader.DeleteOpSequence(writeResult.SequenceId);
+                            encodeRemaining--;
+                        }
 
-                        LogToCsv($"{timestamp},{writeResult.Tag.Tid?.ToHexString()},{writeResult.Tag.Epc},{writeResult.Result},{resultRssi},{antennaPort}");
-                        
-                        encodeRemaining--;
+                        Console.WriteLine($"Successfully wrote EPC for TID: {tidHex}");
+                        LogToCsv($"{timestamp},{tidHex},{writeResult.Tag.Epc},{writeResult.Result},{resultRssi},{antennaPort}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Failed to write EPC for TID: {tidHex}, Status: {writeResult.Result}");
+                        LogToCsv($"{timestamp},{tidHex},{writeResult.Tag.Epc},Failed-{writeResult.Result},{resultRssi},{antennaPort}");
                     }
 
-                    if (encodeRemaining == 0)
+                    if (!isFallbackMode && encodeRemaining == 0)
                     {
                         sw.Stop();
                         Console.WriteLine("------------------------------------------");
-                        Console.WriteLine("Total test time to encode {0} tags: {1}", tagsNumber, sw.Elapsed);
+                        Console.WriteLine($"Total test time to encode {tagsNumber} tags: {sw.Elapsed}");
                         Console.WriteLine("------------------------------------------\n");
                         Console.WriteLine("Press enter to continue");
 
