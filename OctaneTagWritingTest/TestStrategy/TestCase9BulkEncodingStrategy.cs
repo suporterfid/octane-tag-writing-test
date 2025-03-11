@@ -58,11 +58,13 @@ namespace OctaneTagWritingTest.TestStrategy
             return settings;
         }
 
-        public override void RunTest()
+        public override void RunTest(CancellationToken cancellationToken = default)
         {
             try
             {
+                this.cancellationToken = cancellationToken;
                 Console.WriteLine("Executing Bulk Encoding Test Strategy...");
+                Console.WriteLine("Press 'q' to stop the test and return to menu.");
                 
                 // Get user input for encoding type
                 Console.WriteLine("Do you want ENCODE (EPC as Fs) or DEFAULT (EPC as 0s) state?");
@@ -129,24 +131,25 @@ namespace OctaneTagWritingTest.TestStrategy
                 if (!File.Exists(logFile))
                     LogToCsv("Timestamp,TID,Previous_EPC,Expected_EPC,Verified_EPC,WriteTime_ms,VerifyTime_ms,Result,RecoveryAttempts,RSSI,AntennaPort");
 
-                Console.WriteLine($"Test running in {(isFallbackMode ? "fallback" : "bulk")} mode. Press Enter to stop.");
-                Console.ReadLine();
+                // Keep the test running until cancellation is requested
+                while (!IsCancellationRequested())
+                {
+                    Thread.Sleep(100); // Small delay to prevent CPU spinning
+                }
 
-                reader.Stop();
-                reader.Disconnect();
+                Console.WriteLine("\nStopping test...");
             }
             catch (OctaneSdkException e)
             {
                 Console.WriteLine("Octane SDK exception: {0}", e.Message);
-                CleanupReader();
             }
             catch (Exception e)
             {
                 Console.WriteLine("Exception : {0}", e.Message);
-                CleanupReader();
             }
             finally
             {
+                CleanupReader();
                 if (sw.IsRunning)
                 {
                     sw.Stop();
@@ -155,29 +158,15 @@ namespace OctaneTagWritingTest.TestStrategy
             }
         }
 
-        private void CleanupReader()
-        {
-            if (reader.IsConnected)
-            {
-                try
-                {
-                    reader.Stop();
-                    reader.Disconnect();
-                }
-                catch (Exception disconnectEx)
-                {
-                    Console.WriteLine("Error during reader cleanup: " + disconnectEx.Message);
-                }
-            }
-        }
-
         private void PrepareTagOperationSequences(List<string> tidList)
         {
-            if (tidList == null) return;
+            if (tidList == null || IsCancellationRequested()) return;
 
             ushort id = 1;
             foreach (var tid in tidList)
             {
+                if (IsCancellationRequested()) return;
+
                 TagOpSequence seq = new TagOpSequence();
                 seq.Id = id;
                 seq.AntennaId = 1;
@@ -214,18 +203,28 @@ namespace OctaneTagWritingTest.TestStrategy
 
         private void OnTagsReported(ImpinjReader sender, TagReport report)
         {
-            if (!isFallbackMode || report == null) return;
+            if (!isFallbackMode || report == null || IsCancellationRequested()) return;
 
             foreach (Tag tag in report)
             {
+                if (IsCancellationRequested()) return;
+
                 string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
                 if (string.IsNullOrEmpty(tidHex)) continue;
+
+                // Reset target TID for each new tag to enable continuous encoding
+                if (!string.IsNullOrEmpty(tidHex))
+                {
+                    targetTid = tidHex;
+                    isTargetTidSet = true;
+                    Console.WriteLine($"\nNew target TID found: {tidHex}");
+                }
 
                 lock (lockObject)
                 {
                     if (!processedTids.Contains(tidHex))
                     {
-                        Console.WriteLine($"New tag detected - TID: {tidHex}");
+                        Console.WriteLine($"Processing tag: EPC={tag.Epc.ToHexString()}, TID={tidHex}");
                         processedTids.Add(tidHex);
                         ProcessNewTag(tag);
                     }
@@ -235,6 +234,8 @@ namespace OctaneTagWritingTest.TestStrategy
 
         private void ProcessNewTag(Tag tag)
         {
+            if (IsCancellationRequested()) return;
+
             try
             {
                 TagOpSequence seq = new TagOpSequence();
@@ -263,6 +264,9 @@ namespace OctaneTagWritingTest.TestStrategy
                 seq.Ops.Add(writeEpc);
                 reader.AddOpSequence(seq);
 
+                string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
+                TagOpController.RecordExpectedEpc(tidHex, expectedEpc);
+
                 Console.WriteLine($"Scheduled write operation for TID: {tag.Tid.ToHexString()}");
             }
             catch (Exception ex)
@@ -273,8 +277,12 @@ namespace OctaneTagWritingTest.TestStrategy
 
         private void OnTagOpComplete(ImpinjReader reader, TagOpReport report)
         {
+            if (report == null || IsCancellationRequested()) return;
+
             foreach (TagOpResult result in report)
             {
+                if (IsCancellationRequested()) return;
+
                 if (result is TagWriteOpResult writeResult)
                 {
                     string tidHex = writeResult.Tag.Tid?.ToHexString() ?? "N/A";
@@ -292,11 +300,17 @@ namespace OctaneTagWritingTest.TestStrategy
 
                         Console.WriteLine($"Successfully wrote EPC for TID: {tidHex}");
                         LogToCsv($"{timestamp},{tidHex},{writeResult.Tag.Epc},{writeResult.Result},{resultRssi},{antennaPort}");
+
+                        // Reset isTargetTidSet to allow processing of new tags
+                        isTargetTidSet = false;
                     }
                     else
                     {
                         Console.WriteLine($"Failed to write EPC for TID: {tidHex}, Status: {writeResult.Result}");
                         LogToCsv($"{timestamp},{tidHex},{writeResult.Tag.Epc},Failed-{writeResult.Result},{resultRssi},{antennaPort}");
+
+                        // Reset isTargetTidSet to allow processing of new tags
+                        isTargetTidSet = false;
                     }
 
                     if (!isFallbackMode && encodeRemaining == 0)
@@ -305,10 +319,9 @@ namespace OctaneTagWritingTest.TestStrategy
                         Console.WriteLine("------------------------------------------");
                         Console.WriteLine($"Total test time to encode {tagsNumber} tags: {sw.Elapsed}");
                         Console.WriteLine("------------------------------------------\n");
-                        Console.WriteLine("Press enter to continue");
+                        Console.WriteLine("All tags encoded. Press 'q' to return to menu.");
 
                         sw.Reset();
-                        reader.Stop();
                     }
                 }
             }

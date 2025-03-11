@@ -14,53 +14,67 @@ namespace OctaneTagWritingTest.TestStrategy
     public class TestCase2InlineWriteStrategy : BaseTestStrategy
     {
         public TestCase2InlineWriteStrategy(string hostname, string logFile) : base(hostname, logFile) { }
-        public override void RunTest()
+
+        public override void RunTest(CancellationToken cancellationToken = default)
         {
             try
             {
+                this.cancellationToken = cancellationToken;
                 Console.WriteLine("Executing Inline Write Test Strategy...");
+                Console.WriteLine("Press 'q' to stop the test and return to menu.");
+
                 ConfigureReader();
 
                 reader.TagsReported += OnTagsReported;
                 reader.TagOpComplete += OnTagOpComplete;
                 reader.Start();
 
-                Console.WriteLine("Inline test running. Press Enter to stop.");
-                Console.ReadLine();
+                // Keep the test running until cancellation is requested
+                while (!IsCancellationRequested())
+                {
+                    Thread.Sleep(100); // Small delay to prevent CPU spinning
+                }
 
-                reader.Stop();
-                reader.Disconnect();
+                Console.WriteLine("\nStopping test...");
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Test error: " + ex.Message);
             }
+            finally
+            {
+                CleanupReader();
+            }
         }
+
         private void OnTagsReported(ImpinjReader sender, TagReport? report)
         {
-            if (report == null) return;
+            if (report == null || IsCancellationRequested()) return;
             
             foreach (Tag tag in report.Tags)
             {
+                if (IsCancellationRequested()) return;
+
                 string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
                 if (TagOpController.HasResult(tidHex))
                     continue;
 
-                // Set target TID if not set yet
-                if (!isTargetTidSet && !string.IsNullOrEmpty(tidHex))
+                // Reset target TID for each new tag to enable continuous encoding
+                if (!string.IsNullOrEmpty(tidHex))
                 {
                     targetTid = tidHex;
                     isTargetTidSet = true;
-                    Console.WriteLine($"Target TID set to: {tidHex}");
+                    Console.WriteLine($"\nNew target TID found: {tidHex}");
                 }
 
                 if (!string.IsNullOrEmpty(tidHex) && tidHex.Equals(targetTid, StringComparison.OrdinalIgnoreCase))
                 {
-                    Console.WriteLine("Tag found (Inline): EPC={0}, TID={1}", tag.Epc.ToHexString(), tidHex);
-                    reader.TagsReported -= OnTagsReported;
+                    Console.WriteLine($"Processing tag (Inline): EPC={tag.Epc.ToHexString()}, TID={tidHex}");
+                    
                     string novoEpc = TagOpController.GetNextEpcForTag();
-                    Console.WriteLine("Writing inline: {0} -> {1}", tag.Epc.ToHexString(), novoEpc);
+                    Console.WriteLine($"Writing inline: {tag.Epc.ToHexString()} -> {novoEpc}");
                     TagOpController.RecordExpectedEpc(tidHex, novoEpc);
+
                     TagOpSequence seq = new TagOpSequence();
                     seq.BlockWriteEnabled = true;
                     seq.BlockWriteWordCount = 2;
@@ -84,18 +98,22 @@ namespace OctaneTagWritingTest.TestStrategy
 
                     sw.Restart();
                     reader.AddOpSequence(seq);
+
                     if (!File.Exists(logFile))
                         LogToCsv("Timestamp,TID,OldEPC,NewEPC,WriteTime,Result,RSSI,AntennaPort");
                     break;
                 }
             }
         }
+
         private void OnTagOpComplete(ImpinjReader reader, TagOpReport? report)
         {
-            if (report == null) return;
+            if (report == null || IsCancellationRequested()) return;
             
             foreach (TagOpResult result in report)
             {
+                if (IsCancellationRequested()) return;
+
                 if (result is TagWriteOpResult writeResult)
                 {
                     sw.Stop();
@@ -112,9 +130,12 @@ namespace OctaneTagWritingTest.TestStrategy
                     if (writeResult.Tag.IsAntennaPortNumberPresent)
                         antennaPort = writeResult.Tag.AntennaPortNumber;
 
-                    Console.WriteLine("Inline write completed: {0} in {1} ms", res, writeTime);
+                    Console.WriteLine($"Inline write completed: {res} in {writeTime} ms");
                     LogToCsv($"{timestamp},{tidHex},{oldEpc},{newEpc},{writeTime},{res},{resultRssi},{antennaPort}");
                     TagOpController.RecordResult(tidHex, res);
+
+                    // Reset isTargetTidSet to allow processing of new tags
+                    isTargetTidSet = false;
                 }
             }
         }

@@ -23,13 +23,11 @@ namespace OctaneTagWritingTest
             strategies.Add("7", new TestCase7ErrorRecoveryStrategy(hostname, "TestCase7_ErrorRecovery_Log.csv"));
             strategies.Add("8", new TestCase8EnduranceStrategy(hostname, "TestCase8_Endurance_Log.csv"));
             strategies.Add("9", new TestCase9BulkEncodingStrategy(hostname, "TestCase9_Log.csv"));
-            
-
         }
 
         public void DisplayMenu()
         {
-            Console.WriteLine("=== Test Manager ===");
+            Console.WriteLine("\n=== Test Manager ===");
             Console.WriteLine("Select a test to execute:");
             foreach (var kvp in strategies)
             {
@@ -37,11 +35,11 @@ namespace OctaneTagWritingTest
             }
         }
 
-        public void ExecuteTest(string key)
+        public void ExecuteTest(string key, CancellationToken cancellationToken = default)
         {
             if (strategies.ContainsKey(key))
             {
-                strategies[key].RunTest();
+                strategies[key].RunTest(cancellationToken);
             }
             else
             {

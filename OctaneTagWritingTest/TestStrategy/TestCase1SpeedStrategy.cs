@@ -28,14 +28,17 @@ namespace OctaneTagWritingTest.TestStrategy
         /// This method:
         /// - Configures and starts the reader
         /// - Sets up event handlers for tag reports and operations
-        /// - Runs until user presses Enter
+        /// - Runs continuously until cancellation is requested
         /// - Logs results to a CSV file
         /// </remarks>
-        public override void RunTest()
+        public override void RunTest(CancellationToken cancellationToken = default)
         {
             try
             {
+                this.cancellationToken = cancellationToken;
                 Console.WriteLine("Executing Speed Test Strategy...");
+                Console.WriteLine("Press 'q' to stop the test and return to menu.");
+                
                 ConfigureReader();
 
                 // Subscribe to read and write events
@@ -43,15 +46,21 @@ namespace OctaneTagWritingTest.TestStrategy
                 reader.TagOpComplete += OnTagOpComplete;
                 reader.Start();
 
-                Console.WriteLine("Speed test running. Press Enter to stop.");
-                Console.ReadLine();
+                // Keep the test running until cancellation is requested
+                while (!IsCancellationRequested())
+                {
+                    Thread.Sleep(100); // Small delay to prevent CPU spinning
+                }
 
-                reader.Stop();
-                reader.Disconnect();
+                Console.WriteLine("\nStopping test...");
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Test error: " + ex.Message);
+            }
+            finally
+            {
+                CleanupReader();
             }
         }
 
@@ -62,29 +71,30 @@ namespace OctaneTagWritingTest.TestStrategy
         /// <param name="report">The report containing tag data</param>
         private void OnTagsReported(ImpinjReader sender, TagReport? report)
         {
-            if (report == null) return;
+            if (report == null || IsCancellationRequested()) return;
             
             foreach (Tag tag in report)
             {
+                if (IsCancellationRequested()) return;
+
                 string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
                 if (TagOpController.HasResult(tidHex))
                     continue;
 
-                // Set target TID if not set yet
-                if (!isTargetTidSet && !string.IsNullOrEmpty(tidHex))
+                // Reset target TID for each new tag to enable continuous encoding
+                if (!string.IsNullOrEmpty(tidHex))
                 {
                     targetTid = tidHex;
                     isTargetTidSet = true;
-                    Console.WriteLine($"Target TID set to: {tidHex}");
+                    Console.WriteLine($"\nNew target TID found: {tidHex}");
                 }
 
                 if (!string.IsNullOrEmpty(tidHex) && tidHex.Equals(targetTid, StringComparison.OrdinalIgnoreCase))
                 {
-                Console.WriteLine("Tag found: EPC={0}, TID={1}", tag.Epc.ToHexString(), tidHex);
-                    reader.TagsReported -= OnTagsReported;
-
+                    Console.WriteLine($"Processing tag: EPC={tag.Epc.ToHexString()}, TID={tidHex}");
+                    
                     string novoEpc = TagOpController.GetNextEpcForTag();
-                    Console.WriteLine("Writing new EPC: {0} -> {1}", tag.Epc.ToHexString(), novoEpc);
+                    Console.WriteLine($"Writing new EPC: {tag.Epc.ToHexString()} -> {novoEpc}");
                     TagOpController.RecordExpectedEpc(tidHex, novoEpc);
 
                     TagOpSequence seq = new TagOpSequence();
@@ -127,10 +137,12 @@ namespace OctaneTagWritingTest.TestStrategy
         /// <param name="report">The report containing operation results</param>
         private void OnTagOpComplete(ImpinjReader reader, TagOpReport? report)
         {
-            if (report == null) return;
+            if (report == null || IsCancellationRequested()) return;
             
             foreach (TagOpResult result in report)
             {
+                if (IsCancellationRequested()) return;
+
                 if (result is TagWriteOpResult writeResult)
                 {
                     sw.Stop();
@@ -147,9 +159,12 @@ namespace OctaneTagWritingTest.TestStrategy
                     if (writeResult.Tag.IsAntennaPortNumberPresent)
                         antennaPort = writeResult.Tag.AntennaPortNumber;
 
-                    Console.WriteLine("Write completed: {0} in {1} ms", res, writeTime);
+                    Console.WriteLine($"Write completed: {res} in {writeTime} ms");
                     LogToCsv($"{timestamp},{tidHex},{oldEpc},{newEpc},{writeTime},{res},{resultRssi},{antennaPort}");
                     TagOpController.RecordResult(tidHex, res);
+
+                    // Reset isTargetTidSet to allow processing of new tags
+                    isTargetTidSet = false;
                 }
             }
         }

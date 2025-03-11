@@ -22,14 +22,19 @@ namespace OctaneTagWritingTest.TestStrategy
         {
         }
 
-        public override void RunTest()
+        public override void RunTest(CancellationToken cancellationToken = default)
         {
             try
             {
+                this.cancellationToken = cancellationToken;
+                
                 if (reader == null)
                 {
                     throw new InvalidOperationException("Reader not initialized properly");
                 }
+
+                Console.WriteLine("Executing Multi-Antenna Write Test Strategy...");
+                Console.WriteLine("Press 'q' to stop the test and return to menu.");
 
                 // Configure the reader and load predefined EPCs
                 ConfigureReader();
@@ -43,43 +48,49 @@ namespace OctaneTagWritingTest.TestStrategy
                 if (!File.Exists(logFile))
                     LogToCsv("Timestamp,TID,OldEPC,NewEPC,WriteTime,Result,RSSI,AntennaPort");
 
+                // Keep the test running until cancellation is requested
+                while (!IsCancellationRequested())
+                {
+                    Thread.Sleep(100); // Small delay to prevent CPU spinning
+                }
 
-                Console.WriteLine("Multi-Antenna test active. Waiting for tag reads. Press Enter to stop...");
-                Console.ReadLine();
-
-                reader.Stop();
-                reader.Disconnect();
+                Console.WriteLine("\nStopping test...");
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Error in MultiAntennaTestStrategy: " + ex.Message);
             }
+            finally
+            {
+                CleanupReader();
+            }
         }
 
         private void OnTagsReported(ImpinjReader sender, TagReport? report)
         {
-            if (report == null) return;
+            if (report == null || IsCancellationRequested()) return;
             
             foreach (Tag tag in report)
             {
+                if (IsCancellationRequested()) return;
+
                 string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
                 // If result already exists for this TID, skip it
                 if (TagOpController.HasResult(tidHex))
                     continue;
 
-                // Set target TID if not set yet
-                if (!isTargetTidSet && !string.IsNullOrEmpty(tidHex))
+                // Reset target TID for each new tag to enable continuous encoding
+                if (!string.IsNullOrEmpty(tidHex))
                 {
                     targetTid = tidHex;
                     isTargetTidSet = true;
-                    Console.WriteLine($"Target TID set to: {tidHex}");
+                    Console.WriteLine($"\nNew target TID found: {tidHex}");
                 }
 
                 // Filter by desired TID
                 if (!string.IsNullOrEmpty(tidHex) && tidHex.Equals(targetTid, StringComparison.OrdinalIgnoreCase))
                 {
-                    Console.WriteLine("Tag read: EPC={0}, TID={1}, Antenna={2}",
-                        tag.Epc.ToHexString(), tidHex, tag.AntennaPortNumber);
+                    Console.WriteLine($"Processing tag: EPC={tag.Epc.ToHexString()}, TID={tidHex}, Antenna={tag.AntennaPortNumber}");
                     // For this test, we can trigger the operation without removing the event,
                     // allowing multiple events from the same tag to be processed as needed.
                     TriggerWrite(tag);
@@ -89,10 +100,11 @@ namespace OctaneTagWritingTest.TestStrategy
 
         private void TriggerWrite(Tag tag)
         {
+            if (IsCancellationRequested()) return;
+
             string oldEpc = tag.Epc.ToHexString();
             string novoEpc = TagOpController.GetNextEpcForTag();
-            Console.WriteLine("Triggering write: {0} -> {1} on Antenna {2}",
-                oldEpc, novoEpc, tag.AntennaPortNumber);
+            Console.WriteLine($"Triggering write: {oldEpc} -> {novoEpc} on Antenna {tag.AntennaPortNumber}");
 
             // Prepare write operation with BlockWrite enabled
             TagOpSequence seq = new TagOpSequence();
@@ -127,10 +139,12 @@ namespace OctaneTagWritingTest.TestStrategy
 
         private void OnTagOpComplete(ImpinjReader reader, TagOpReport? report)
         {
-            if (report == null) return;
+            if (report == null || IsCancellationRequested()) return;
             
             foreach (TagOpResult result in report)
             {
+                if (IsCancellationRequested()) return;
+
                 if (result is TagWriteOpResult writeResult)
                 {
                     long writeTime;
@@ -152,10 +166,12 @@ namespace OctaneTagWritingTest.TestStrategy
                     if (writeResult.Tag.IsAntennaPortNumberPresent)
                         antennaPort = writeResult.Tag.AntennaPortNumber;
 
-                    Console.WriteLine("Write on Antenna {0} completed: {1} in {2} ms",
-                        antennaPort, res, writeTime);
+                    Console.WriteLine($"Write on Antenna {antennaPort} completed: {res} in {writeTime} ms");
                     LogToCsv($"{timestamp},{tidHex},{oldEpc},{newEpc},{writeTime},{res},{resultRssi},{antennaPort}");
                     TagOpController.RecordResult(tidHex, res);
+
+                    // Reset isTargetTidSet to allow processing of new tags
+                    isTargetTidSet = false;
                 }
             }
         }

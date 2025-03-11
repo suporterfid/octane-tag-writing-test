@@ -21,11 +21,14 @@
         {
         }
 
-        public override void RunTest()
+        public override void RunTest(CancellationToken cancellationToken = default)
         {
             try
             {
+                this.cancellationToken = cancellationToken;
                 Console.WriteLine("Starting verification cycle test (write-verify)...");
+                Console.WriteLine("Press 'q' to stop the test and return to menu.");
+
                 // Configure reader and load EPC list, enabling low latency
                 ConfigureReader();
 
@@ -38,15 +41,21 @@
                 if (!File.Exists(logFile))
                     LogToCsv("Timestamp,TID,Previous_EPC,Expected_EPC,Verified_EPC,WriteTime_ms,VerifyTime_ms,Result,RSSI,AntennaPort");
          
-                Console.WriteLine("Waiting for target tag read. Press Enter to stop.");
-                Console.ReadLine();
+                // Keep the test running until cancellation is requested
+                while (!IsCancellationRequested())
+                {
+                    Thread.Sleep(100); // Small delay to prevent CPU spinning
+                }
 
-                reader.Stop();
-                reader.Disconnect();
+                Console.WriteLine("\nStopping test...");
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Error in verification test: " + ex.Message);
+            }
+            finally
+            {
+                CleanupReader();
             }
         }
 
@@ -55,10 +64,12 @@
         /// </summary>
         private void OnTagsReported(ImpinjReader sender, TagReport? report)
         {
-            if (report == null) return;
+            if (report == null || IsCancellationRequested()) return;
             
             foreach (Tag tag in report)
             {
+                if (IsCancellationRequested()) return;
+
                 string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
                 if (string.IsNullOrEmpty(tidHex))
                     continue;
@@ -67,20 +78,18 @@
                 if (TagOpController.HasResult(tidHex))
                     continue;
 
-                // Set target TID if not set yet
-                if (!isTargetTidSet && !string.IsNullOrEmpty(tidHex))
+                // Reset target TID for each new tag to enable continuous encoding
+                if (!string.IsNullOrEmpty(tidHex))
                 {
                     targetTid = tidHex;
                     isTargetTidSet = true;
-                    Console.WriteLine($"Target TID set to: {tidHex}");
+                    Console.WriteLine($"\nNew target TID found: {tidHex}");
                 }
 
                 // Filter by target TID
                 if (tidHex.Equals(targetTid, StringComparison.OrdinalIgnoreCase))
                 {
-                    Console.WriteLine("Target tag identified: EPC={0}, TID={1}", tag.Epc.ToHexString(), tidHex);
-                    // Unsubscribe to avoid multiple executions for the same tag
-                    reader.TagsReported -= OnTagsReported;
+                    Console.WriteLine($"Processing tag: EPC={tag.Epc.ToHexString()}, TID={tidHex}");
                     currentTargetTag = tag;
                     TriggerWriteAndVerify(tag);
                     break;
@@ -93,10 +102,12 @@
         /// </summary>
         private void TriggerWriteAndVerify(Tag tag)
         {
+            if (IsCancellationRequested()) return;
+
             string oldEpc = tag.Epc.ToHexString();
-            // Get new EPC to be written (e.g., via TagOpController)
+            // Get new EPC to be written
             expectedEpc = TagOpController.GetNextEpcForTag();
-            Console.WriteLine("Starting write operation for TID {0}: {1} -> {2}", tag.Tid.ToHexString(), oldEpc, expectedEpc);
+            Console.WriteLine($"Starting write operation for TID {tag.Tid.ToHexString()}: {oldEpc} -> {expectedEpc}");
 
             TagOpSequence seq = new TagOpSequence();
             seq.BlockWriteEnabled = true;
@@ -123,6 +134,9 @@
 
             swWrite.Restart();
             reader.AddOpSequence(seq);
+            
+            string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
+            TagOpController.RecordExpectedEpc(tidHex, expectedEpc);
         }
 
         /// <summary>
@@ -130,6 +144,8 @@
         /// </summary>
         private void TriggerVerificationRead(Tag tag)
         {
+            if (IsCancellationRequested()) return;
+
             TagOpSequence seq = new TagOpSequence();
             TagReadOp readOp = new TagReadOp();
             readOp.AccessPassword = TagData.FromHexString(newAccessPassword);
@@ -149,15 +165,17 @@
         /// </summary>
         private void OnTagOpComplete(ImpinjReader reader, TagOpReport? report)
         {
-            if (report == null) return;
+            if (report == null || IsCancellationRequested()) return;
             
             foreach (TagOpResult result in report)
             {
+                if (IsCancellationRequested()) return;
+
                 if (result is TagWriteOpResult writeResult)
                 {
                     swWrite.Stop();
                     string tidHex = writeResult.Tag.Tid?.ToHexString() ?? "N/A";
-                    Console.WriteLine("Write completed for TID {0} in {1} ms", tidHex, swWrite.ElapsedMilliseconds);
+                    Console.WriteLine($"Write completed for TID {tidHex} in {swWrite.ElapsedMilliseconds} ms");
                     // After write, start read operation for verification
                     TriggerVerificationRead(currentTargetTag);
                 }
@@ -175,9 +193,12 @@
                     if (readResult.Tag.IsAntennaPortNumberPresent)
                         antennaPort = readResult.Tag.AntennaPortNumber;
 
-                    Console.WriteLine("Verification for TID {0}: EPC read = {1} ({2}) in {3} ms", tidHex, verifiedEpc, resultStatus, swVerify.ElapsedMilliseconds);
+                    Console.WriteLine($"Verification for TID {tidHex}: EPC read = {verifiedEpc} ({resultStatus}) in {swVerify.ElapsedMilliseconds} ms");
                     LogToCsv($"{timestamp},{tidHex},{currentTargetTag.Epc.ToHexString()},{expectedEpc},{verifiedEpc},{swWrite.ElapsedMilliseconds},{swVerify.ElapsedMilliseconds},{resultStatus},{resultRssi},{antennaPort}");
                     TagOpController.RecordResult(tidHex, resultStatus);
+
+                    // Reset isTargetTidSet to allow processing of new tags
+                    isTargetTidSet = false;
                 }
             }
         }

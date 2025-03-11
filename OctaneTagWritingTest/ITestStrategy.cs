@@ -8,6 +8,6 @@ namespace OctaneTagWritingTest
 {
     public interface ITestStrategy
     {
-        void RunTest();
+        void RunTest(CancellationToken cancellationToken = default);
     }
 }

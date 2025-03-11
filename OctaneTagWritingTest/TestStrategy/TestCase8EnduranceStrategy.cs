@@ -15,12 +15,12 @@ namespace OctaneTagWritingTest.TestStrategy
     {
         // Maximum number of test cycles to execute (or undefined)
         private const int maxCycles = 10000;
-        // Cycle counter
-        private int cycleCount;
+        // Cycle counter per TID
+        private readonly Dictionary<string, int> cycleCount = new Dictionary<string, int>();
         // Test execution control flag
         private bool enduranceRunning;
-        // Identified target tag
-        private Tag? targetTag;
+        // Current target tag
+        private Tag? currentTargetTag;
         // New EPC to be written in the cycle
         private string? expectedEpc;
         // Stopwatch to measure each cycle time
@@ -30,11 +30,14 @@ namespace OctaneTagWritingTest.TestStrategy
         {
         }
 
-        public override void RunTest()
+        public override void RunTest(CancellationToken cancellationToken = default)
         {
             try
             {
+                this.cancellationToken = cancellationToken;
                 Console.WriteLine("=== Endurance Test ===");
+                Console.WriteLine("Press 'q' to stop the test and return to menu.");
+
                 // Configure reader (connection, settings, EPC list loading, low latency)
                 ConfigureReader();
 
@@ -43,49 +46,28 @@ namespace OctaneTagWritingTest.TestStrategy
                 reader.TagOpComplete += OnTagOpComplete;
 
                 reader.Start();
+                
                 // Create log file if it doesn't exist
                 if (!File.Exists(logFile))
-                    LogToCsv("Timestamp,TID,Previous_EPC,Expected_EPC,Verified_EPC,WriteTime_ms,VerifyTime_ms,Result,RecoveryAttempts,RSSI,AntennaPort");
-                Console.WriteLine("Waiting for target tag identification to start endurance test...");
-
-                // Wait until target tag is found
-                while (targetTag == null)
-                {
-                    Thread.Sleep(100);
-                    if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.S)
-                    {
-                        Console.WriteLine("Test interrupted by user.");
-                        reader.Stop();
-                        reader.Disconnect();
-                        return;
-                    }
-                }
+                    LogToCsv("Timestamp,TID,Previous_EPC,Expected_EPC,Verified_EPC,WriteTime_ms,VerifyTime_ms,Result,CycleCount,RSSI,AntennaPort");
 
                 enduranceRunning = true;
-                Console.WriteLine("Target tag identified. Starting endurance test. Press 'S' to stop.");
 
-                // Endurance loop: execute write and verification cycles
-                while (enduranceRunning && cycleCount < maxCycles)
+                // Keep the test running until cancellation is requested
+                while (!IsCancellationRequested())
                 {
-                    TriggerWriteAndVerify(targetTag);
-                    cycleCount++;
-                    Console.WriteLine($"Cycle {cycleCount} triggered.");
-                    // Wait for a brief interval between cycles (adjustable)
-                    Thread.Sleep(500);
-                    if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.S)
-                    {
-                        Console.WriteLine("Interruption requested by user.");
-                        enduranceRunning = false;
-                    }
+                    Thread.Sleep(100); // Small delay to prevent CPU spinning
                 }
 
-                reader.Stop();
-                reader.Disconnect();
-                Console.WriteLine("Endurance test completed.");
+                Console.WriteLine("\nStopping test...");
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Error in endurance test: " + ex.Message);
+            }
+            finally
+            {
+                CleanupReader();
             }
         }
 
@@ -94,28 +76,42 @@ namespace OctaneTagWritingTest.TestStrategy
         /// </summary>
         private void OnTagsReported(ImpinjReader sender, TagReport? report)
         {
-            if (report == null) return;
+            if (report == null || IsCancellationRequested()) return;
             
             foreach (Tag tag in report)
             {
+                if (IsCancellationRequested()) return;
+
                 string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
                 if (string.IsNullOrEmpty(tidHex))
                     continue;
-                // Set target TID if not set yet
-                if (!isTargetTidSet && !string.IsNullOrEmpty(tidHex))
+
+                // Initialize cycle count for new TID
+                if (!cycleCount.ContainsKey(tidHex))
+                {
+                    cycleCount[tidHex] = 0;
+                }
+
+                // Skip if max cycles reached for this TID
+                if (cycleCount[tidHex] >= maxCycles)
+                {
+                    continue;
+                }
+
+                // Reset target TID for each new tag to enable continuous encoding
+                if (!string.IsNullOrEmpty(tidHex))
                 {
                     targetTid = tidHex;
                     isTargetTidSet = true;
-                    Console.WriteLine($"Target TID set to: {tidHex}");
+                    Console.WriteLine($"\nNew target TID found: {tidHex}");
                 }
 
-                // If TID matches target and hasn't been set as target yet
-                if (tidHex.Equals(targetTid, StringComparison.OrdinalIgnoreCase) && targetTag == null)
+                // Filter by target TID
+                if (tidHex.Equals(targetTid, StringComparison.OrdinalIgnoreCase))
                 {
-                    targetTag = tag;
-                    Console.WriteLine("Target tag found: EPC={0}, TID={1}", tag.Epc.ToHexString(), tidHex);
-                    // Unsubscribe to avoid target redefinition
-                    reader.TagsReported -= OnTagsReported;
+                    currentTargetTag = tag;
+                    Console.WriteLine($"Processing tag (Cycle {cycleCount[tidHex] + 1}): EPC={tag.Epc.ToHexString()}, TID={tidHex}");
+                    TriggerWriteAndVerify(tag);
                     break;
                 }
             }
@@ -126,10 +122,12 @@ namespace OctaneTagWritingTest.TestStrategy
         /// </summary>
         private void TriggerWriteAndVerify(Tag tag)
         {
+            if (IsCancellationRequested()) return;
+
+            string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
             string oldEpc = tag.Epc.ToHexString();
-            // Get new EPC via helper (generation or extraction from list)
             expectedEpc = TagOpController.GetNextEpcForTag();
-            Console.WriteLine("Cycle {0}: Writing new EPC: {1} -> {2}", cycleCount + 1, oldEpc, expectedEpc);
+            Console.WriteLine($"Cycle {cycleCount[tidHex] + 1}: Writing new EPC: {oldEpc} -> {expectedEpc}");
 
             // Create operation sequence
             TagOpSequence seq = new TagOpSequence();
@@ -157,6 +155,8 @@ namespace OctaneTagWritingTest.TestStrategy
 
             swCycle.Restart();
             reader.AddOpSequence(seq);
+
+            TagOpController.RecordExpectedEpc(tidHex, expectedEpc);
         }
 
         /// <summary>
@@ -164,6 +164,8 @@ namespace OctaneTagWritingTest.TestStrategy
         /// </summary>
         private void TriggerVerificationRead(Tag tag)
         {
+            if (IsCancellationRequested()) return;
+
             TagOpSequence seq = new TagOpSequence();
             TagReadOp readOp = new TagReadOp();
             readOp.AccessPassword = TagData.FromHexString(newAccessPassword);
@@ -182,10 +184,12 @@ namespace OctaneTagWritingTest.TestStrategy
         /// </summary>
         private void OnTagOpComplete(ImpinjReader reader, TagOpReport? report)
         {
-            if (report == null) return;
+            if (report == null || IsCancellationRequested()) return;
             
             foreach (TagOpResult result in report)
             {
+                if (IsCancellationRequested()) return;
+
                 string tidHex = result.Tag.Tid?.ToHexString() ?? "N/A";
 
                 // If it's a write operation result
@@ -201,16 +205,18 @@ namespace OctaneTagWritingTest.TestStrategy
 
                     if (writeResult.Result != WriteResultStatus.Success)
                     {
-                        Console.WriteLine("Cycle {0} - Write failure for TID {1}: {2}", cycleCount, tidHex, writeResult.Result);
-                        // In an endurance test, failure can be recorded and cycle can continue
-                        LogToCsv($"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{tidHex},{targetTag.Epc.ToHexString()},{expectedEpc},N/A,{swCycle.ElapsedMilliseconds},0,Failure,{cycleCount},{resultRssi},{antennaPort}");
+                        Console.WriteLine($"Cycle {cycleCount[tidHex]} - Write failure for TID {tidHex}: {writeResult.Result}");
+                        LogToCsv($"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{tidHex},{currentTargetTag.Epc.ToHexString()},{expectedEpc},N/A,{swCycle.ElapsedMilliseconds},0,Failure,{cycleCount[tidHex]},{resultRssi},{antennaPort}");
                         TagOpController.RecordResult(tidHex, "Write Error");
+
+                        // Reset isTargetTidSet to allow processing of new tags
+                        isTargetTidSet = false;
                     }
                     else
                     {
-                        Console.WriteLine("Cycle {0} - Write completed for TID {1} in {2} ms", cycleCount, tidHex, swCycle.ElapsedMilliseconds);
+                        Console.WriteLine($"Cycle {cycleCount[tidHex]} - Write completed for TID {tidHex} in {swCycle.ElapsedMilliseconds} ms");
                         // After write, trigger read operation for verification
-                        TriggerVerificationRead(targetTag);
+                        TriggerVerificationRead(currentTargetTag);
                     }
                 }
                 // If it's a read operation result (verification)
@@ -229,9 +235,15 @@ namespace OctaneTagWritingTest.TestStrategy
                     if (readResult.Tag.IsAntennaPortNumberPresent)
                         antennaPort = readResult.Tag.AntennaPortNumber;
 
-                    Console.WriteLine("Cycle {0} - Verification for TID {1}: EPC read = {2} ({3}) in {4} ms", cycleCount, tidHex, verifiedEpc, resultStatus, operationTime);
-                    LogToCsv($"{timestamp},{tidHex},{targetTag.Epc.ToHexString()},{expectedEpc},{verifiedEpc},{operationTime},0,{resultStatus},{cycleCount},{resultRssi},{antennaPort}");
+                    Console.WriteLine($"Cycle {cycleCount[tidHex]} - Verification for TID {tidHex}: EPC read = {verifiedEpc} ({resultStatus}) in {operationTime} ms");
+                    LogToCsv($"{timestamp},{tidHex},{currentTargetTag.Epc.ToHexString()},{expectedEpc},{verifiedEpc},{operationTime},0,{resultStatus},{cycleCount[tidHex]},{resultRssi},{antennaPort}");
                     TagOpController.RecordResult(tidHex, resultStatus);
+
+                    // Increment cycle count for this TID
+                    cycleCount[tidHex]++;
+
+                    // Reset isTargetTidSet to allow processing of new tags
+                    isTargetTidSet = false;
                 }
             }
         }

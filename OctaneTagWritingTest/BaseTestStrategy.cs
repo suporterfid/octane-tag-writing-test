@@ -23,6 +23,7 @@ namespace OctaneTagWritingTest
         protected bool isTargetTidSet = false;
         protected string logFile;
         protected Stopwatch sw = new Stopwatch();
+        protected CancellationToken cancellationToken;
 
         /// <summary>
         /// Initializes a new instance of the BaseTestStrategy class
@@ -99,8 +100,36 @@ namespace OctaneTagWritingTest
         }
 
         /// <summary>
+        /// Cleans up reader resources
+        /// </summary>
+        protected virtual void CleanupReader()
+        {
+            try
+            {
+                if (reader != null)
+                {
+                    reader.Stop();
+                    reader.Disconnect();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during reader cleanup: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Checks if cancellation has been requested
+        /// </summary>
+        /// <returns>True if cancellation was requested, false otherwise</returns>
+        protected bool IsCancellationRequested()
+        {
+            return cancellationToken.IsCancellationRequested;
+        }
+
+        /// <summary>
         /// Abstract method that each strategy will implement to execute its test
         /// </summary>
-        public abstract void RunTest();
+        public abstract void RunTest(CancellationToken cancellationToken = default);
     }
 }
