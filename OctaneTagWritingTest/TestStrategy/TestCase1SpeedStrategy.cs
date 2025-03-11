@@ -79,7 +79,19 @@ namespace OctaneTagWritingTest.TestStrategy
 
                 string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
                 if (TagOpController.HasResult(tidHex))
+                {
+                    Console.WriteLine($"Tag {tidHex} has been successfully updated with EPC {tag.Epc.ToHexString()}");
                     continue;
+                }
+
+                string newEpcExpected = TagOpController.GetExpectedEpc(tidHex);
+                if(!string.IsNullOrEmpty(newEpcExpected) && newEpcExpected.Equals(tag.Epc.ToHexString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    TagOpController.RecordResult(tidHex, tag.Epc.ToHexString());
+                    Console.WriteLine($"On-read Tag {tidHex} has been successfully updated with EPC {newEpcExpected}");
+                    continue;
+                }
+                    
 
                 // Reset target TID for each new tag to enable continuous encoding
                 if (!string.IsNullOrEmpty(tidHex))
@@ -93,9 +105,9 @@ namespace OctaneTagWritingTest.TestStrategy
                 {
                     Console.WriteLine($"Processing tag: EPC={tag.Epc.ToHexString()}, TID={tidHex}");
                     
-                    string novoEpc = TagOpController.GetNextEpcForTag();
-                    Console.WriteLine($"Writing new EPC: {tag.Epc.ToHexString()} -> {novoEpc}");
-                    TagOpController.RecordExpectedEpc(tidHex, novoEpc);
+                    string newEpcToWrite = TagOpController.GetNextEpcForTag();
+                    Console.WriteLine($"Writing new EPC: {tag.Epc.ToHexString()} -> {newEpcToWrite}");
+                    TagOpController.RecordExpectedEpc(tidHex, newEpcToWrite);
 
                     TagOpSequence seq = new TagOpSequence();
                     seq.BlockWriteEnabled = true;
@@ -117,7 +129,7 @@ namespace OctaneTagWritingTest.TestStrategy
                     writeOp.AccessPassword = TagData.FromHexString(newAccessPassword);
                     writeOp.MemoryBank = MemoryBank.Epc;
                     writeOp.WordPointer = WordPointers.Epc;
-                    writeOp.Data = TagData.FromHexString(novoEpc);
+                    writeOp.Data = TagData.FromHexString(newEpcToWrite);
                     seq.Ops.Add(writeOp);
 
                     sw.Restart();

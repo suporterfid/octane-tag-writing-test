@@ -1,16 +1,11 @@
 ﻿using Impinj.OctaneSdk;
 using OctaneTagWritingTest.Helpers;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.IO;
+using System.Threading;
 
 namespace OctaneTagWritingTest.TestStrategy
 {
-    /// <summary>
-    /// Test Strategy - Example 2: Inline Write Test
-    /// </summary>
     public class TestCase2InlineWriteStrategy : BaseTestStrategy
     {
         public TestCase2InlineWriteStrategy(string hostname, string logFile) : base(hostname, logFile) { }
@@ -29,10 +24,9 @@ namespace OctaneTagWritingTest.TestStrategy
                 reader.TagOpComplete += OnTagOpComplete;
                 reader.Start();
 
-                // Keep the test running until cancellation is requested
                 while (!IsCancellationRequested())
                 {
-                    Thread.Sleep(100); // Small delay to prevent CPU spinning
+                    Thread.Sleep(100);
                 }
 
                 Console.WriteLine("\nStopping test...");
@@ -50,50 +44,55 @@ namespace OctaneTagWritingTest.TestStrategy
         private void OnTagsReported(ImpinjReader sender, TagReport? report)
         {
             if (report == null || IsCancellationRequested()) return;
-            
+
             foreach (Tag tag in report.Tags)
             {
                 if (IsCancellationRequested()) return;
 
                 string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
                 if (TagOpController.HasResult(tidHex))
+                {
                     continue;
+                }
 
-                // Reset target TID for each new tag to enable continuous encoding
-                if (!string.IsNullOrEmpty(tidHex))
+                string expectedEpc = TagOpController.GetExpectedEpc(tidHex);
+                string currentEpc = tag.Epc.ToHexString();
+
+                if (!string.IsNullOrEmpty(expectedEpc) && expectedEpc.Equals(currentEpc, StringComparison.OrdinalIgnoreCase))
+                {
+                    TagOpController.RecordResult(tidHex, currentEpc);
+                    Console.WriteLine($"Tag {tidHex} already has expected EPC: {currentEpc}");
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(targetTid) || !tidHex.Equals(targetTid, StringComparison.OrdinalIgnoreCase))
                 {
                     targetTid = tidHex;
                     isTargetTidSet = true;
                     Console.WriteLine($"\nNew target TID found: {tidHex}");
-                }
 
-                if (!string.IsNullOrEmpty(tidHex) && tidHex.Equals(targetTid, StringComparison.OrdinalIgnoreCase))
-                {
-                    Console.WriteLine($"Processing tag (Inline): EPC={tag.Epc.ToHexString()}, TID={tidHex}");
-                    
-                    string novoEpc = TagOpController.GetNextEpcForTag();
-                    Console.WriteLine($"Writing inline: {tag.Epc.ToHexString()} -> {novoEpc}");
-                    TagOpController.RecordExpectedEpc(tidHex, novoEpc);
+                    string newEpcToWrite = TagOpController.GetNextEpcForTag();
+                    Console.WriteLine($"Assigning new EPC: {currentEpc} -> {newEpcToWrite}");
+                    TagOpController.RecordExpectedEpc(tidHex, newEpcToWrite);
 
-                    TagOpSequence seq = new TagOpSequence();
-                    seq.BlockWriteEnabled = true;
-                    seq.BlockWriteWordCount = 2;
-                    seq.TargetTag.MemoryBank = MemoryBank.Epc;
-                    seq.TargetTag.BitPointer = BitPointers.Epc;
-                    seq.TargetTag.Data = tag.Epc.ToHexString();
+                    TagOpSequence seq = new TagOpSequence
+                    {
+                        BlockWriteEnabled = true,
+                        BlockWriteWordCount = 2,
+                        TargetTag = {
+                            MemoryBank = MemoryBank.Epc,
+                            BitPointer = BitPointers.Epc,
+                            Data = currentEpc
+                        }
+                    };
 
-                    TagWriteOp updateAccessPwd = new TagWriteOp();
-                    updateAccessPwd.AccessPassword = null;
-                    updateAccessPwd.MemoryBank = MemoryBank.Reserved;
-                    updateAccessPwd.WordPointer = WordPointers.AccessPassword;
-                    updateAccessPwd.Data = TagData.FromHexString(newAccessPassword);
-                    seq.Ops.Add(updateAccessPwd);
-
-                    TagWriteOp writeOp = new TagWriteOp();
-                    writeOp.AccessPassword = TagData.FromHexString(newAccessPassword);
-                    writeOp.MemoryBank = MemoryBank.Epc;
-                    writeOp.WordPointer = WordPointers.Epc;
-                    writeOp.Data = TagData.FromHexString(novoEpc);
+                    TagWriteOp writeOp = new TagWriteOp
+                    {
+                        AccessPassword = TagData.FromHexString(newAccessPassword),
+                        MemoryBank = MemoryBank.Epc,
+                        WordPointer = WordPointers.Epc,
+                        Data = TagData.FromHexString(newEpcToWrite)
+                    };
                     seq.Ops.Add(writeOp);
 
                     sw.Restart();
@@ -101,7 +100,6 @@ namespace OctaneTagWritingTest.TestStrategy
 
                     if (!File.Exists(logFile))
                         LogToCsv("Timestamp,TID,OldEPC,NewEPC,WriteTime,Result,RSSI,AntennaPort");
-                    break;
                 }
             }
         }
@@ -109,32 +107,33 @@ namespace OctaneTagWritingTest.TestStrategy
         private void OnTagOpComplete(ImpinjReader reader, TagOpReport? report)
         {
             if (report == null || IsCancellationRequested()) return;
-            
+
             foreach (TagOpResult result in report)
             {
-                if (IsCancellationRequested()) return;
-
                 if (result is TagWriteOpResult writeResult)
                 {
                     sw.Stop();
-                    string tidHex = writeResult.Tag.Tid != null ? writeResult.Tag.Tid.ToHexString() : "N/A";
+                    string tidHex = writeResult.Tag.Tid?.ToHexString() ?? "N/A";
                     string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                     string oldEpc = writeResult.Tag.Epc.ToHexString();
                     string newEpc = TagOpController.GetExpectedEpc(tidHex);
                     long writeTime = sw.ElapsedMilliseconds;
                     string res = writeResult.Result.ToString();
-                    double resultRssi = 0;
-                    if (writeResult.Tag.IsPcBitsPresent)
-                        resultRssi = writeResult.Tag.PeakRssiInDbm;
-                    ushort antennaPort = 0;
-                    if (writeResult.Tag.IsAntennaPortNumberPresent)
-                        antennaPort = writeResult.Tag.AntennaPortNumber;
+                    double resultRssi = writeResult.Tag.IsPcBitsPresent ? writeResult.Tag.PeakRssiInDbm : 0;
+                    ushort antennaPort = writeResult.Tag.IsAntennaPortNumberPresent ? writeResult.Tag.AntennaPortNumber : (ushort)0;
 
                     Console.WriteLine($"Inline write completed: {res} in {writeTime} ms");
-                    LogToCsv($"{timestamp},{tidHex},{oldEpc},{newEpc},{writeTime},{res},{resultRssi},{antennaPort}");
-                    TagOpController.RecordResult(tidHex, res);
+                    LogToCsv($"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{tidHex},{oldEpc},{newEpc},{writeTime},{res},{resultRssi},{antennaPort}");
 
-                    // Reset isTargetTidSet to allow processing of new tags
+                    if (res.Equals("Success"))
+                    {
+                        TagOpController.RecordResult(tidHex, newEpc);
+                    }
+                    else
+                    {
+                        TagOpController.RecordResult(tidHex, res);
+                    }
+
                     isTargetTidSet = false;
                 }
             }

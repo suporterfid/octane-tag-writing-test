@@ -73,35 +73,41 @@ namespace OctaneTagWritingTest.TestStrategy
         private void OnTagsReported(ImpinjReader sender, TagReport? report)
         {
             if (report == null || IsCancellationRequested()) return;
-            
-            foreach (Tag tag in report)
+
+            foreach (Tag tag in report.Tags)
             {
                 if (IsCancellationRequested()) return;
 
                 string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
-                if (string.IsNullOrEmpty(tidHex))
-                    continue;
 
-                // If result already exists for this TID, skip the event
                 if (TagOpController.HasResult(tidHex))
+                {
+                    Console.WriteLine($"Tag {tidHex} already successfully processed.");
                     continue;
+                }
 
-                // Reset target TID for each new tag to enable continuous encoding
-                if (!string.IsNullOrEmpty(tidHex))
+                string currentEpc = tag.Epc.ToHexString();
+                string expectedEpc = TagOpController.GetExpectedEpc(tidHex);
+
+                if (!string.IsNullOrEmpty(expectedEpc) && expectedEpc.Equals(currentEpc, StringComparison.OrdinalIgnoreCase))
+                {
+                    TagOpController.RecordResult(tidHex, currentEpc);
+                    Console.WriteLine($"Tag {tidHex} already has expected EPC: {currentEpc}");
+                    continue;
+                }
+
+                if (!isTargetTidSet || !tidHex.Equals(targetTid, StringComparison.OrdinalIgnoreCase))
                 {
                     targetTid = tidHex;
                     isTargetTidSet = true;
                     Console.WriteLine($"\nNew target TID found: {tidHex}");
-                }
 
-                // Filter by target TID
-                if (tidHex.Equals(targetTid, StringComparison.OrdinalIgnoreCase))
-                {
-                    Console.WriteLine($"Processing tag: EPC={tag.Epc.ToHexString()}, TID={tidHex}");
+                    string newEpcToWrite = TagOpController.GetNextEpcForTag();
+                    Console.WriteLine($"Assigning new EPC: {currentEpc} -> {newEpcToWrite}");
+                    TagOpController.RecordExpectedEpc(tidHex, newEpcToWrite);
+
                     currentTargetTag = tag;
-                    retryCount[tidHex] = 0;
                     TriggerWriteAndVerify(tag);
-                    break;
                 }
             }
         }

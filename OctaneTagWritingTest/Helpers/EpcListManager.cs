@@ -49,7 +49,11 @@ namespace OctaneTagWritingTest.Helpers
                 if (epcQueue.Count > 0)
                     return epcQueue.Dequeue();
                 else
+                {
+                    Console.WriteLine("No more EPCs available in the list.");
                     throw new InvalidOperationException("No more EPCs available in the list.");
+                }
+                    
             }
         }
 

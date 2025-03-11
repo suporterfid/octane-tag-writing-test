@@ -77,45 +77,57 @@ namespace OctaneTagWritingTest.TestStrategy
         private void OnTagsReported(ImpinjReader sender, TagReport? report)
         {
             if (report == null || IsCancellationRequested()) return;
-            
-            foreach (Tag tag in report)
+
+            foreach (Tag tag in report.Tags)
             {
                 if (IsCancellationRequested()) return;
 
                 string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
-                if (string.IsNullOrEmpty(tidHex))
-                    continue;
+                if (string.IsNullOrEmpty(tidHex)) continue;
 
-                // Initialize cycle count for new TID
+                if (TagOpController.HasResult(tidHex))
+                {
+                    Console.WriteLine($"Skipping TID {tidHex}, already processed.");
+                    continue;
+                }
+
+                string expectedEpc = TagOpController.GetExpectedEpc(tidHex);
+                string currentEpc = tag.Epc.ToHexString();
+
+                if (!string.IsNullOrEmpty(expectedEpc) && expectedEpc.Equals(currentEpc, StringComparison.OrdinalIgnoreCase))
+                {
+                    TagOpController.RecordResult(tidHex, currentEpc);
+                    Console.WriteLine($"Tag {tidHex} already has expected EPC: {currentEpc}");
+                    continue;
+                }
+
                 if (!cycleCount.ContainsKey(tidHex))
                 {
                     cycleCount[tidHex] = 0;
                 }
 
-                // Skip if max cycles reached for this TID
                 if (cycleCount[tidHex] >= maxCycles)
                 {
+                    Console.WriteLine($"Max cycles reached for TID {tidHex}, skipping further processing.");
                     continue;
                 }
 
-                // Reset target TID for each new tag to enable continuous encoding
-                if (!string.IsNullOrEmpty(tidHex))
+                if (!isTargetTidSet || !tidHex.Equals(targetTid, StringComparison.OrdinalIgnoreCase))
                 {
                     targetTid = tidHex;
                     isTargetTidSet = true;
                     Console.WriteLine($"\nNew target TID found: {tidHex}");
-                }
 
-                // Filter by target TID
-                if (tidHex.Equals(targetTid, StringComparison.OrdinalIgnoreCase))
-                {
+                    string newEpcToWrite = TagOpController.GetNextEpcForTag();
+                    Console.WriteLine($"Assigning new EPC: {currentEpc} -> {newEpcToWrite}");
+
+                    TagOpController.RecordExpectedEpc(tidHex, newEpcToWrite);
                     currentTargetTag = tag;
-                    Console.WriteLine($"Processing tag (Cycle {cycleCount[tidHex] + 1}): EPC={tag.Epc.ToHexString()}, TID={tidHex}");
                     TriggerWriteAndVerify(tag);
-                    break;
                 }
             }
         }
+
 
         /// <summary>
         /// Triggers write operation (with Access password update) and starts verification

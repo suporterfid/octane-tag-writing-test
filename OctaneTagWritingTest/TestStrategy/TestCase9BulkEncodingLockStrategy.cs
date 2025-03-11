@@ -13,7 +13,7 @@ namespace OctaneTagWritingTest.TestStrategy
     /// Tests the ability to encode multiple tags in bulk with either a pre-encoded EPC or default state.
     /// Falls back to individual tag processing if TID list is unavailable.
     /// </summary>
-    public class TestCase9BulkEncodingStrategy : BaseTestStrategy
+    public class TestCase9BulkEncodingLockStrategy : BaseTestStrategy
     {
         private const ushort EPC_ENCODED_OP_ID = 100;
         private int tagsNumber;
@@ -26,7 +26,7 @@ namespace OctaneTagWritingTest.TestStrategy
         private HashSet<string> processedTids;
         private readonly object lockObject = new object();
 
-        public TestCase9BulkEncodingStrategy(string hostname, string logFile) : base(hostname, logFile) 
+        public TestCase9BulkEncodingLockStrategy(string hostname, string logFile) : base(hostname, logFile) 
         {
             loadedSequences = new List<TagOpSequence>();
             processedTids = new HashSet<string>();
@@ -205,34 +205,52 @@ namespace OctaneTagWritingTest.TestStrategy
         {
             if (!isFallbackMode || report == null || IsCancellationRequested()) return;
 
-            foreach (Tag tag in report)
+            foreach (Tag tag in report.Tags)
             {
                 if (IsCancellationRequested()) return;
 
                 string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
-                if (string.IsNullOrEmpty(tidHex)) continue;
 
-                // Reset target TID for each new tag to enable continuous encoding
-                if (!string.IsNullOrEmpty(tidHex))
-                {
-                    targetTid = tidHex;
-                    isTargetTidSet = true;
-                    Console.WriteLine($"\nNew target TID found: {tidHex}");
-                }
+                if (string.IsNullOrEmpty(tidHex)) continue;
 
                 lock (lockObject)
                 {
-                    if (!processedTids.Contains(tidHex))
+                    if (processedTids.Contains(tidHex))
                     {
-                        Console.WriteLine($"Processing tag: EPC={tag.Epc.ToHexString()}, TID={tidHex}");
-                        processedTids.Add(tidHex);
-                        ProcessNewTag(tag);
+                        Console.WriteLine($"Skipping already processed TID {tidHex}.");
+                        continue;
+                    }
+
+                    string expectedEpc = TagOpController.GetExpectedEpc(tidHex);
+                    string currentEpc = tag.Epc.ToHexString();
+
+                    if (!string.IsNullOrEmpty(expectedEpc) && expectedEpc.Equals(currentEpc, StringComparison.OrdinalIgnoreCase))
+                    {
+                        TagOpController.RecordResult(tidHex, currentEpc);
+                        Console.WriteLine($"Tag {tidHex} already has expected EPC: {currentEpc}");
+                        continue;
+                    }
+
+                    lock (lockObject)
+                    {
+                        if (!processedTids.Contains(tidHex))
+                        {
+                            processedTids.Add(tidHex);
+                            targetTid = tidHex;
+                            isTargetTidSet = true;
+                            Console.WriteLine($"\nNew target TID found: {tidHex}");
+
+                            string newEpcToWrite = TagOpController.GetNextEpcForTag();
+                            TagOpController.RecordExpectedEpc(tidHex, newEpcToWrite);
+
+                            ProcessNewTag(tag, newEpcToWrite);
+                        }
                     }
                 }
             }
         }
 
-        private void ProcessNewTag(Tag tag)
+        private void ProcessNewTag(Tag tag, string newEpcToWrite)
         {
             if (IsCancellationRequested()) return;
 
@@ -252,12 +270,11 @@ namespace OctaneTagWritingTest.TestStrategy
                 writeEpc.WordPointer = WordPointers.Epc;
                 writeEpc.AccessPassword = TagData.FromHexString(newAccessPassword);
 
-                // Get new EPC via helper
-                var expectedEpc = TagOpController.GetNextEpcForTag();
+               
 
                 // Set EPC data based on encoding choice
                 string epcData = encodeOrDefault ?
-                    expectedEpc :
+                    newEpcToWrite :
                     $"B071000000000000000000{processedTids.Count:D2}";
                 writeEpc.Data = TagData.FromHexString(epcData);
 
@@ -265,7 +282,7 @@ namespace OctaneTagWritingTest.TestStrategy
                 reader.AddOpSequence(seq);
 
                 string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
-                TagOpController.RecordExpectedEpc(tidHex, expectedEpc);
+                TagOpController.RecordExpectedEpc(tidHex, newEpcToWrite);
 
                 Console.WriteLine($"Scheduled write operation for TID: {tag.Tid.ToHexString()}");
             }
@@ -277,12 +294,8 @@ namespace OctaneTagWritingTest.TestStrategy
 
         private void OnTagOpComplete(ImpinjReader reader, TagOpReport report)
         {
-            if (report == null || IsCancellationRequested()) return;
-
             foreach (TagOpResult result in report)
             {
-                if (IsCancellationRequested()) return;
-
                 if (result is TagWriteOpResult writeResult)
                 {
                     string tidHex = writeResult.Tag.Tid?.ToHexString() ?? "N/A";
@@ -292,38 +305,78 @@ namespace OctaneTagWritingTest.TestStrategy
 
                     if (writeResult.Result == WriteResultStatus.Success)
                     {
-                        if (!isFallbackMode)
-                        {
-                            reader.DeleteOpSequence(writeResult.SequenceId);
-                            encodeRemaining--;
-                        }
-
                         Console.WriteLine($"Successfully wrote EPC for TID: {tidHex}");
-                        LogToCsv($"{timestamp},{tidHex},{writeResult.Tag.Epc},{writeResult.Result},{resultRssi},{antennaPort}");
-
-                        // Reset isTargetTidSet to allow processing of new tags
-                        isTargetTidSet = false;
+                        LogToCsv($"{timestamp},{tidHex},{writeResult.Tag.Epc},Success,{resultRssi},{antennaPort}");
+                        TagOpController.RecordResult(tidHex, writeResult.Tag.Epc.ToHexString());
+                        LockTag(writeResult.Tag, "11112222"); // Example access password
                     }
                     else
                     {
                         Console.WriteLine($"Failed to write EPC for TID: {tidHex}, Status: {writeResult.Result}");
                         LogToCsv($"{timestamp},{tidHex},{writeResult.Tag.Epc},Failed-{writeResult.Result},{resultRssi},{antennaPort}");
-
-                        // Reset isTargetTidSet to allow processing of new tags
-                        isTargetTidSet = false;
-                    }
-
-                    if (!isFallbackMode && encodeRemaining == 0)
-                    {
-                        sw.Stop();
-                        Console.WriteLine("------------------------------------------");
-                        Console.WriteLine($"Total test time to encode {tagsNumber} tags: {sw.Elapsed}");
-                        Console.WriteLine("------------------------------------------\n");
-                        Console.WriteLine("All tags encoded. Press 'q' to return to menu.");
-
-                        sw.Reset();
+                        TagOpController.RecordResult(tidHex, "Write Error");
                     }
                 }
+
+                if (result is TagLockOpResult lockResult)
+                {
+                    string tidHex = lockResult.Tag.Tid?.ToHexString() ?? "N/A";
+                    string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    double resultRssi = lockResult.Tag.IsPcBitsPresent ? lockResult.Tag.PeakRssiInDbm : 0;
+                    ushort antennaPort = lockResult.Tag.IsAntennaPortNumberPresent ? lockResult.Tag.AntennaPortNumber : (ushort)0;
+
+                    if (lockResult.Result == LockResultStatus.Success)
+                    {
+                        Console.WriteLine($"Successfully locked tag with TID: {tidHex}");
+                        LogToCsv($"{timestamp},{tidHex},{lockResult.Tag.Epc},LockSuccess,{resultRssi},{antennaPort}");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Failed to lock tag with TID: {tidHex}, Status: {lockResult.Result}");
+                        LogToCsv($"{timestamp},{tidHex},{lockResult.Tag.Epc},LockFailed-{lockResult.Result},{resultRssi},{antennaPort}");
+                    }
+                }
+            }
+        }
+
+
+        private void LockTag(Tag tag, string accessPassword)
+        {
+            try
+            {
+                TagOpSequence seq = new TagOpSequence();
+
+                // Set target tag using TID
+                seq.TargetTag.MemoryBank = MemoryBank.Tid;
+                seq.TargetTag.BitPointer = 0;
+                seq.TargetTag.Data = tag.Tid.ToHexString();
+
+                // Create a lock operation
+                TagLockOp lockOp = new TagLockOp
+                {
+                    AccessPasswordLockType = TagLockState.Lock,
+                    EpcLockType = TagLockState.Lock,
+                };
+
+                // Add lock operation to sequence
+                seq.Ops.Add(lockOp);
+
+                // Set access password for locking
+                seq.Ops.Add(new TagWriteOp
+                {
+                    MemoryBank = MemoryBank.Reserved,
+                    WordPointer = WordPointers.AccessPassword,
+                    Data = TagData.FromHexString(accessPassword)
+                });
+
+                // Add sequence to the reader
+                reader.AddOpSequence(seq);
+
+                Console.WriteLine($"Scheduled lock operation for TID: {tag.Tid.ToHexString()}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error locking tag: {ex.Message}");
             }
         }
     }
