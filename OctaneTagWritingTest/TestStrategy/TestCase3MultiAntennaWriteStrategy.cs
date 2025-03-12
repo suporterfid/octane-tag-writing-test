@@ -58,8 +58,7 @@ namespace OctaneTagWritingTest.TestStrategy
             settings.Report.IncludePeakRssi = true;
             settings.Report.IncludeAntennaPortNumber = true;
             settings.Report.Mode = ReportMode.Individual;
-            settings.RfMode = 0;
-
+            
             settings.Antennas.DisableAll();
             for (ushort port = 1; port <= 2; port++)
             {
@@ -68,6 +67,7 @@ namespace OctaneTagWritingTest.TestStrategy
                 settings.Antennas.GetAntenna(port).MaxRxSensitivity = true;
             }
 
+            settings.RfMode = 0;
             settings.SearchMode = SearchMode.DualTarget;
             settings.Session = 2;
             EnableLowLatencyReporting(settings);
