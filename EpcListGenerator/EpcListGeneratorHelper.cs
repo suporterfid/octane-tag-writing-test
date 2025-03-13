@@ -7,6 +7,8 @@ namespace EpcListGenerator
 {
     public static class EpcListGeneratorHelper
     {
+        private static readonly object lockObj = new object();
+
         /// <summary>
         /// Generates a list of EPC strings based on the provided GTIN and quantity.
         /// </summary>
@@ -59,43 +61,48 @@ namespace EpcListGenerator
         /// </exception>
         public static List<string> GenerateCustomEpcList(string epcHeader, string middlePart, long quantity, long initSerial)
         {
-            // Validate epcHeader is exactly 4 characters.
-            if (string.IsNullOrWhiteSpace(epcHeader) || epcHeader.Length != 4)
-            {
-                throw new ArgumentException("EPC header must be exactly 4 characters long.", nameof(epcHeader));
-            }
-
-            // Validate middlePart is exactly 14 characters.
-            if (string.IsNullOrWhiteSpace(middlePart) || middlePart.Length != 14)
-            {
-                throw new ArgumentException("The middle part must be exactly 14 characters long.", nameof(middlePart));
-            }
-
-            // Validate that quantity does not exceed the maximum unique serial numbers available (6 digits).
-            if (quantity > 999999)
-            {
-                throw new ArgumentException("Quantity too high: the unique serial number must be 6 digits. Provide a quantity of 999999 or less.", nameof(quantity));
-            }
-
             var epcList = new List<string>();
-
-            // Generate EPCs sequentially.
-            for (long i = 1; i <= quantity; i++)
+            lock (lockObj)
             {
-                // Generate a unique 6-digit serial number with leading zeros.
-                string serial = initSerial.ToString("D6");
-                string epc = epcHeader + middlePart + serial;
-
-
-                // Ensure the resulting EPC is 24 characters long.
-                if (epc.Length != 24)
+                // Validate epcHeader is exactly 4 characters.
+                if (string.IsNullOrWhiteSpace(epcHeader) || epcHeader.Length != 4)
                 {
-                    throw new InvalidOperationException("The generated EPC must be 24 characters long.");
+                    throw new ArgumentException("EPC header must be exactly 4 characters long.", nameof(epcHeader));
                 }
 
-                epcList.Add(epc);
-                initSerial = initSerial + 1;
+                // Validate middlePart is exactly 14 characters.
+                if (string.IsNullOrWhiteSpace(middlePart) || middlePart.Length != 14)
+                {
+                    throw new ArgumentException("The middle part must be exactly 14 characters long.", nameof(middlePart));
+                }
+
+                // Validate that quantity does not exceed the maximum unique serial numbers available (6 digits).
+                if (quantity > 999999)
+                {
+                    throw new ArgumentException("Quantity too high: the unique serial number must be 6 digits. Provide a quantity of 999999 or less.", nameof(quantity));
+                }
+
+                
+
+                // Generate EPCs sequentially.
+                for (long i = 1; i <= quantity; i++)
+                {
+                    // Generate a unique 6-digit serial number with leading zeros.
+                    string serial = initSerial.ToString("D6");
+                    string epc = epcHeader + middlePart + serial;
+
+
+                    // Ensure the resulting EPC is 24 characters long.
+                    if (epc.Length != 24)
+                    {
+                        throw new InvalidOperationException("The generated EPC must be 24 characters long.");
+                    }
+
+                    epcList.Add(epc);
+                    initSerial = initSerial + 1;
+                }
             }
+                
 
             return epcList;
         }

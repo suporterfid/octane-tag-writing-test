@@ -11,8 +11,8 @@ namespace OctaneTagWritingTest.TestStrategy
     {
         private readonly Dictionary<string, int> tagReadCounts = new();
 
-        public TestCase0ReadOnlyLoggingStrategy(string hostname, string logFile)
-            : base(hostname, logFile)
+        public TestCase0ReadOnlyLoggingStrategy(string hostname, string logFile, ReaderSettings readerSettings)
+            : base(hostname, logFile, readerSettings)
         {
         }
 
@@ -80,29 +80,6 @@ namespace OctaneTagWritingTest.TestStrategy
             }
         }
 
-        protected override Settings ConfigureReader()
-        {
-            reader.Connect(hostname);
-            Settings settings = reader.QueryDefaultSettings();
-
-            settings.Report.IncludeAntennaPortNumber = true;
-            settings.Report.IncludePeakRssi = true;
-            settings.Report.IncludeFastId = true;
-            settings.Report.Mode = ReportMode.Individual;
-            settings.RfMode = 2;
-            settings.SearchMode = SearchMode.SingleTarget;
-            settings.Session = 1;
-            settings.TagPopulationEstimate = 32;
-
-            settings.Antennas.DisableAll();
-            settings.Antennas.GetAntenna(1).IsEnabled = true;
-            settings.Antennas.GetAntenna(1).TxPowerInDbm = 30;
-            settings.Antennas.GetAntenna(1).MaxRxSensitivity = true;
-
-            EnableLowLatencyReporting(settings);
-            reader.ApplySettings(settings);
-
-            return settings;
-        }
+        
     }
 }

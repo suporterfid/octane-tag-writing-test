@@ -1,4 +1,6 @@
-﻿namespace OctaneTagWritingTest
+﻿using OctaneTagWritingTest.Helpers;
+
+namespace OctaneTagWritingTest
 {
     internal class Program
     {
@@ -10,7 +12,49 @@
                 return;
             }
             string hostname = args[0];
-            TestManager manager = new TestManager(hostname);
+            string testDescription = "Gravacao-Teste-1-Rodada-1";
+            string epcHeader = "F002";
+            string epcPlainItemCode = "99999999999999";
+            long quantity = 1;
+            EpcListManager.InitEpcData(epcHeader, epcPlainItemCode, quantity);
+
+            string settingsFilePath = "reader_settings.json";
+
+            bool forceCreateFile = true;
+
+            if (!File.Exists(settingsFilePath) || forceCreateFile)
+            {
+                Console.WriteLine($"Settings file '{settingsFilePath}' not found. Creating default settings...");
+
+                var defaultSettings = new ReaderSettings
+                {
+                    Hostname = "192.168.68.248",
+                    LogFile = "test_log.csv",
+                    IncludeFastId = true,
+                    IncludePeakRssi = true,
+                    IncludeAntennaPortNumber = true,
+                    ReportMode = "Individual",
+                    RfMode = 1002,
+                    TxPowerInDbm = 29,
+                    MaxRxSensitivity = false,
+                    RxSensitivityInDbm = -70,
+                    SearchMode = "DualTarget",
+                    Session = 2,
+                    MemoryBank = "Epc",
+                    BitPointer = 32,
+                    TagMask = "0017",
+                    BitCount = 16,
+                    FilterOp = "NotMatch",
+                    FilterMode = "OnlyFilter1"
+                };
+
+                defaultSettings.Save(settingsFilePath);
+            }
+
+            var settings = ReaderSettings.Load(settingsFilePath);
+
+            TestManager manager = new TestManager(hostname, testDescription, settings);
+
 
             while (true)
             {

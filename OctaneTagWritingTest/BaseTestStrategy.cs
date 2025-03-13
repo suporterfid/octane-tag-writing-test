@@ -18,23 +18,25 @@ namespace OctaneTagWritingTest
     {
         protected ImpinjReader reader;
         protected string hostname;
-        protected string newAccessPassword = "AABBCCDD";
+        protected string newAccessPassword = "00000000";
         protected string targetTid;  // Will be set with first TID read
         protected bool isTargetTidSet = false;
         protected string logFile;
         protected Stopwatch sw = new Stopwatch();
         protected CancellationToken cancellationToken;
+        protected ReaderSettings settings;
 
         /// <summary>
         /// Initializes a new instance of the BaseTestStrategy class
         /// </summary>
         /// <param name="hostname">The hostname of the RFID reader</param>
         /// <param name="logFile">The path to the log file for test results</param>
-        public BaseTestStrategy(string hostname, string logFile)
+        public BaseTestStrategy(string hostname, string logFile, ReaderSettings readerSettings)
         {
             this.hostname = hostname;
             this.logFile = logFile;
             reader = new ImpinjReader();
+            this.settings = readerSettings;
         }
 
         /// <summary>
@@ -75,29 +77,40 @@ namespace OctaneTagWritingTest
         /// </remarks>
         protected virtual Settings ConfigureReader()
         {
-            // Load the predefined EPC list
             EpcListManager.LoadEpcList("epc_list.txt");
 
-            reader.Connect(hostname);
+            reader.Connect(settings.Hostname);
             reader.ApplyDefaultSettings();
 
-            Settings settings = reader.QueryDefaultSettings();
-            settings.Report.IncludeFastId = true;
-            settings.Report.IncludePeakRssi = true;
-            settings.Report.IncludeAntennaPortNumber = true;
-            settings.Report.Mode = ReportMode.Individual;
-            settings.RfMode = 0;
-            settings.Antennas.DisableAll();
-            settings.Antennas.GetAntenna(1).IsEnabled = true;
-            settings.Antennas.GetAntenna(1).TxPowerInDbm = 30;
-            settings.Antennas.GetAntenna(1).MaxRxSensitivity = true;
-            settings.SearchMode = SearchMode.DualTarget;
-            settings.Session = 2;
-            EnableLowLatencyReporting(settings);
-            reader.ApplySettings(settings);
+            Settings readerSettings = reader.QueryDefaultSettings();
+            readerSettings.Report.IncludeFastId = settings.IncludeFastId;
+            readerSettings.Report.IncludePeakRssi = settings.IncludePeakRssi;
+            readerSettings.Report.IncludeAntennaPortNumber = settings.IncludeAntennaPortNumber;
+            readerSettings.Report.Mode = (ReportMode)Enum.Parse(typeof(ReportMode), settings.ReportMode);
+            readerSettings.RfMode = (uint) settings.RfMode;
 
-            return settings;
+            readerSettings.Antennas.DisableAll();
+            readerSettings.Antennas.GetAntenna(1).IsEnabled = true;
+            readerSettings.Antennas.GetAntenna(1).TxPowerInDbm = settings.TxPowerInDbm;
+            readerSettings.Antennas.GetAntenna(1).MaxRxSensitivity = settings.MaxRxSensitivity;
+            readerSettings.Antennas.GetAntenna(1).RxSensitivityInDbm = settings.RxSensitivityInDbm;
+
+            readerSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), settings.SearchMode);
+            readerSettings.Session = (ushort)settings.Session;
+
+            readerSettings.Filters.TagFilter1.MemoryBank = (MemoryBank)Enum.Parse(typeof(MemoryBank), settings.MemoryBank);
+            readerSettings.Filters.TagFilter1.BitPointer = (ushort)settings.BitPointer;
+            readerSettings.Filters.TagFilter1.TagMask = settings.TagMask;
+            readerSettings.Filters.TagFilter1.BitCount = settings.BitCount;
+            readerSettings.Filters.TagFilter1.FilterOp = (TagFilterOp)Enum.Parse(typeof(TagFilterOp), settings.FilterOp);
+            readerSettings.Filters.Mode = (TagFilterMode)Enum.Parse(typeof(TagFilterMode), settings.FilterMode);
+
+            EnableLowLatencyReporting(readerSettings);
+            reader.ApplySettings(readerSettings);
+
+            return readerSettings;
         }
+
 
         /// <summary>
         /// Cleans up reader resources

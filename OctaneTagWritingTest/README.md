@@ -38,7 +38,7 @@ This application provides a structured testing framework for RFID tag writing op
 OctaneTagWritingTest/
 ├── Helpers/
 │   ├── EpcListManager.cs     # Manages EPC list operations
-│   └── TagOpController.cs    # Controls tag operations
+│   └── TagOpController.Instance.cs    # Controls tag operations
 ├── TestStrategy/
 │   ├── TestCase1SpeedStrategy.cs           # Optimal write speed testing
 │   ├── TestCase2InlineWriteStrategy.cs     # Inline writing operations

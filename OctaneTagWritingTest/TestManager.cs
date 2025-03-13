@@ -11,24 +11,30 @@ namespace OctaneTagWritingTest
     {
         private Dictionary<string, ITestStrategy> strategies = new Dictionary<string, ITestStrategy>();
 
-        public TestManager(string hostname)
+        private ReaderSettings readerSettings;
+
+        public TestManager(string hostname, string testDescription, ReaderSettings settings)
         {
+            this.readerSettings = settings;
+
             // Register available test strategies
+            if(string.IsNullOrEmpty(testDescription))
+            {
+                testDescription = "Gravacao-Teste-1-Rodada-1";
+            }
             
-            strategies.Add("0", new TestCase0ReadOnlyLoggingStrategy(hostname, "TestCase0_Log.csv"));
-            strategies.Add("1", new TestCase1SpeedStrategy(hostname, "TestCase1_Log.csv"));
-            strategies.Add("2", new TestCase2InlineWriteStrategy(hostname, "TestCase2_Log.csv"));
-            strategies.Add("3", new TestCase3MultiAntennaWriteStrategy(hostname, "TestCase3_MultiAntenna_Log.csv"));
-            strategies.Add("4", new TestCase4BatchSerializationPermalockStrategy(hostname, "TestCase4_Log.csv"));
-            strategies.Add("5", new TestCase5VerificationCycleStrategy(hostname, "TestCase5_VerificationCycle_Log.csv"));
-            strategies.Add("6", new TestCase6RobustnessStrategy(hostname, "TestCase6_Robustness_Log.csv"));
-            strategies.Add("7", new TestCase7ErrorRecoveryStrategy(hostname, "TestCase7_ErrorRecovery_Log.csv"));
-            strategies.Add("8", new TestCase8EnduranceStrategy(hostname, "TestCase8_Endurance_Log.csv"));
-            strategies.Add("9", new TestCase9BulkEncodingLockStrategy(hostname, "TestCase9_Log.csv"));
-            strategies.Add("10", new TestCase10OptimizedStrategy(hostname, "TestCase10_Log.csv"));
+            strategies.Add("0", new TestCase0ReadOnlyLoggingStrategy(hostname, $"TestCase0_Log-{testDescription}.csv", readerSettings));
+            strategies.Add("1", new TestCase1SpeedStrategy(hostname, $"TestCase1_Log-{testDescription}.csv", readerSettings));    
+            strategies.Add("2", new TestCase2MultiAntennaWriteStrategy(hostname, $"TestCase3_MultiAntenna_Log-{testDescription}.csv", readerSettings));
+            strategies.Add("3", new TestCase3BatchSerializationPermalockStrategy(hostname, $"TestCase3_Log-{testDescription}.csv", readerSettings));
+            strategies.Add("4", new TestCase4VerificationCycleStrategy(hostname, $"TestCase4_VerificationCycle_Log-{testDescription}.csv", readerSettings));
+            strategies.Add("5", new TestCase5EnduranceStrategy(hostname, $"TestCase8_Endurance_Log-{testDescription}.csv", readerSettings));
+            strategies.Add("6", new TestCase6RobustnessStrategy(hostname, $"TestCase6_Robustness_Log-{testDescription}.csv", readerSettings));
+            strategies.Add("7", new TestCase7OptimizedStrategy(hostname, $"TestCase7_Log-{testDescription}.csv", readerSettings));
 
             
         }
+
 
         public void DisplayMenu()
         {
@@ -44,6 +50,7 @@ namespace OctaneTagWritingTest
         {
             if (strategies.ContainsKey(key))
             {
+                
                 strategies[key].RunTest(cancellationToken);
             }
             else

@@ -1,15 +1,19 @@
-﻿using Impinj.OctaneSdk;
-using OctaneTagWritingTest.Helpers;
-using System;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using Impinj.OctaneSdk;
+using OctaneTagWritingTest.Helpers;
 
 namespace OctaneTagWritingTest.TestStrategy
 {
-    public class TestCase3MultiAntennaWriteStrategy : BaseTestStrategy
+    public class TestCase2MultiAntennaWriteStrategy : BaseTestStrategy
     {
-        public TestCase3MultiAntennaWriteStrategy(string hostname, string logFile)
-            : base(hostname, logFile)
+        private readonly ConcurrentDictionary<string, Stopwatch> writeTimers = new ConcurrentDictionary<string, Stopwatch>();
+
+        public TestCase2MultiAntennaWriteStrategy(string hostname, string logFile, ReaderSettings readerSettings)
+            : base(hostname, logFile, readerSettings)
         {
         }
 
@@ -19,9 +23,6 @@ namespace OctaneTagWritingTest.TestStrategy
             {
                 this.cancellationToken = cancellationToken;
 
-                if (reader == null)
-                    reader = new ImpinjReader();
-
                 ConfigureReader();
 
                 reader.TagsReported += OnTagsReported;
@@ -29,7 +30,7 @@ namespace OctaneTagWritingTest.TestStrategy
                 reader.Start();
 
                 if (!File.Exists(logFile))
-                    LogToCsv("Timestamp,TID,OldEPC,NewEPC,WriteTime,Result,RSSI,AntennaPort");
+                    TagOpController.Instance.LogToCsv(logFile, "Timestamp,TID,OldEPC,NewEPC,WriteTime,Result,RSSI,AntennaPort");
 
                 while (!IsCancellationRequested())
                     Thread.Sleep(100);
@@ -58,7 +59,7 @@ namespace OctaneTagWritingTest.TestStrategy
             settings.Report.IncludePeakRssi = true;
             settings.Report.IncludeAntennaPortNumber = true;
             settings.Report.Mode = ReportMode.Individual;
-            
+
             settings.Antennas.DisableAll();
             for (ushort port = 1; port <= 2; port++)
             {
@@ -67,7 +68,7 @@ namespace OctaneTagWritingTest.TestStrategy
                 settings.Antennas.GetAntenna(port).MaxRxSensitivity = true;
             }
 
-            settings.RfMode = 0;
+            settings.RfMode = 1111;
             settings.SearchMode = SearchMode.DualTarget;
             settings.Session = 2;
             EnableLowLatencyReporting(settings);
@@ -76,7 +77,7 @@ namespace OctaneTagWritingTest.TestStrategy
             return settings;
         }
 
-        private void OnTagsReported(ImpinjReader sender, TagReport? report)
+        private void OnTagsReported(ImpinjReader sender, TagReport report)
         {
             if (report == null || IsCancellationRequested()) return;
 
@@ -86,62 +87,34 @@ namespace OctaneTagWritingTest.TestStrategy
 
                 string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
 
-                if (TagOpController.HasResult(tidHex))
+                if (TagOpController.Instance.IsTidProcessed(tidHex))
                 {
                     Console.WriteLine($"Skipping tag {tidHex}, EPC already assigned.");
                     continue;
                 }
 
-                string expectedEpc = TagOpController.GetExpectedEpc(tidHex);
                 string currentEpc = tag.Epc.ToHexString();
+                string expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
 
                 if (!string.IsNullOrEmpty(expectedEpc) && expectedEpc.Equals(currentEpc, StringComparison.OrdinalIgnoreCase))
                 {
-                    TagOpController.RecordResult(tidHex, currentEpc);
+                    TagOpController.Instance.RecordResult(tidHex, currentEpc, true);
                     continue;
                 }
 
-                if (!isTargetTidSet || !tidHex.Equals(targetTid, StringComparison.OrdinalIgnoreCase))
+                if (!TagOpController.Instance.IsLocalTargetTidSet || !tidHex.Equals(TagOpController.Instance.LocalTargetTid))
                 {
-                    targetTid = tidHex;
-                    isTargetTidSet = true;
-                    Console.WriteLine($"\nNew target TID found: {tidHex}");
+                    string newEpcToWrite = TagOpController.Instance.GetNextEpcForTag();
+                    TagOpController.Instance.RecordExpectedEpc(tidHex, newEpcToWrite);
+                    Console.WriteLine($"New target TID: {tidHex}, writing new EPC: {newEpcToWrite}");
 
-                    string newEpcToWrite = TagOpController.GetNextEpcForTag();
-                    TagOpController.RecordExpectedEpc(tidHex, newEpcToWrite);
-                    TriggerWrite(tag, newEpcToWrite);
+                    writeTimers[tidHex] = Stopwatch.StartNew();
+                    TagOpController.Instance.TriggerWriteAndVerify(tag, newEpcToWrite, reader, cancellationToken, writeTimers[tidHex], newAccessPassword, true);
                 }
             }
         }
 
-        private void TriggerWrite(Tag tag, string newEpcToWrite)
-        {
-            TagOpSequence seq = new TagOpSequence
-            {
-                BlockWriteEnabled = true,
-                BlockWriteWordCount = 2,
-                TargetTag = {
-                    MemoryBank = MemoryBank.Epc,
-                    BitPointer = BitPointers.Epc,
-                    Data = tag.Epc.ToHexString()
-                }
-            };
-
-            TagWriteOp writeOp = new TagWriteOp
-            {
-                AccessPassword = TagData.FromHexString(newAccessPassword),
-                MemoryBank = MemoryBank.Epc,
-                WordPointer = WordPointers.Epc,
-                Data = TagData.FromHexString(newEpcToWrite)
-            };
-
-            seq.Ops.Add(writeOp);
-
-            sw.Restart();
-            reader.AddOpSequence(seq);
-        }
-
-        private void OnTagOpComplete(ImpinjReader reader, TagOpReport? report)
+        private void OnTagOpComplete(ImpinjReader reader, TagOpReport report)
         {
             if (report == null || IsCancellationRequested()) return;
 
@@ -149,18 +122,20 @@ namespace OctaneTagWritingTest.TestStrategy
             {
                 if (result is TagWriteOpResult writeResult)
                 {
-                    sw.Stop();
+                    writeTimers.TryGetValue(writeResult.Tag.Tid.ToHexString(), out Stopwatch writeTimer);
+                    writeTimer?.Stop();
+
                     string tidHex = writeResult.Tag.Tid?.ToHexString() ?? "N/A";
                     string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                     string oldEpc = writeResult.Tag.Epc.ToHexString();
-                    string newEpc = TagOpController.GetExpectedEpc(tidHex);
+                    string newEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
                     string res = writeResult.Result.ToString();
                     double resultRssi = writeResult.Tag.PeakRssiInDbm;
                     ushort antennaPort = writeResult.Tag.AntennaPortNumber;
 
-                    LogToCsv($"{timestamp},{tidHex},{oldEpc},{newEpc},{sw.ElapsedMilliseconds},{res},{resultRssi},{antennaPort}");
-                    TagOpController.RecordResult(tidHex, res);
-                    isTargetTidSet = false;
+                    bool wasSuccess = res == "Success";
+                    TagOpController.Instance.LogToCsv(logFile, $"{timestamp},{tidHex},{oldEpc},{newEpc},{writeTimer?.ElapsedMilliseconds},{res},{resultRssi},{antennaPort}");
+                    TagOpController.Instance.RecordResult(tidHex, res, wasSuccess);
                 }
             }
         }
