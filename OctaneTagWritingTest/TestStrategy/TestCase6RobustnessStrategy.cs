@@ -17,6 +17,7 @@ namespace OctaneTagWritingTest.TestStrategy
         public TestCase6RobustnessStrategy(string hostname, string logFile, ReaderSettings readerSettings)
             : base(hostname, logFile, readerSettings)
         {
+            TagOpController.Instance.CleanUp();
         }
 
         public override void RunTest(CancellationToken cancellationToken = default)
@@ -77,13 +78,14 @@ namespace OctaneTagWritingTest.TestStrategy
 
                 if (string.IsNullOrEmpty(expectedEpc))
                 {
-                    Console.WriteLine($"\nNew target TID found: {tidHex}");
+                    Console.WriteLine($"\nNew target TID found: {tidHex} Chip {TagOpController.Instance.GetChipModel(tag)}");
 
                     expectedEpc = TagOpController.Instance.GetNextEpcForTag();
                     Console.WriteLine($"Assigning new EPC: {currentEpc} -> {expectedEpc}");
                     TagOpController.Instance.RecordExpectedEpc(tidHex, expectedEpc);
 
                     TagOpController.Instance.TriggerWriteAndVerify(tag, expectedEpc, reader, cancellationToken, swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()), newAccessPassword, true);
+                    Console.WriteLine($" Success count: {TagOpController.Instance.GetSuccessCount()}");
                 }
             }
         }
@@ -105,7 +107,11 @@ namespace OctaneTagWritingTest.TestStrategy
                 }
                 else if (result is TagReadOpResult readResult)
                 {
-                    swVerifyTimers[tidHex].Stop();
+                    if(swVerifyTimers.ContainsKey(tidHex))
+                    {
+                        swVerifyTimers[tidHex].Stop();
+                    }
+                    
 
                     string verifiedEpc = readResult.Data?.ToHexString() ?? "N/A";
                     string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");

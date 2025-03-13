@@ -85,15 +85,21 @@ namespace OctaneTagWritingTest
             Settings readerSettings = reader.QueryDefaultSettings();
             readerSettings.Report.IncludeFastId = settings.IncludeFastId;
             readerSettings.Report.IncludePeakRssi = settings.IncludePeakRssi;
+            readerSettings.Report.IncludePcBits = true;
             readerSettings.Report.IncludeAntennaPortNumber = settings.IncludeAntennaPortNumber;
             readerSettings.Report.Mode = (ReportMode)Enum.Parse(typeof(ReportMode), settings.ReportMode);
             readerSettings.RfMode = (uint) settings.RfMode;
 
             readerSettings.Antennas.DisableAll();
-            readerSettings.Antennas.GetAntenna(1).IsEnabled = true;
-            readerSettings.Antennas.GetAntenna(1).TxPowerInDbm = settings.TxPowerInDbm;
-            readerSettings.Antennas.GetAntenna(1).MaxRxSensitivity = settings.MaxRxSensitivity;
-            readerSettings.Antennas.GetAntenna(1).RxSensitivityInDbm = settings.RxSensitivityInDbm;
+            readerSettings.Antennas.GetAntenna((ushort)settings.AntennaPort).IsEnabled = true;
+            readerSettings.Antennas.GetAntenna((ushort)settings.AntennaPort).TxPowerInDbm = settings.TxPowerInDbm;
+            readerSettings.Antennas.GetAntenna((ushort)settings.AntennaPort).MaxRxSensitivity = settings.MaxRxSensitivity;
+            readerSettings.Antennas.GetAntenna((ushort)settings.AntennaPort).RxSensitivityInDbm = settings.RxSensitivityInDbm;
+
+            readerSettings.Antennas.GetAntenna(2).IsEnabled = true;
+            readerSettings.Antennas.GetAntenna(2).TxPowerInDbm = settings.TxPowerInDbm;
+            readerSettings.Antennas.GetAntenna(2).MaxRxSensitivity = settings.MaxRxSensitivity;
+            readerSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = settings.RxSensitivityInDbm;
 
             readerSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), settings.SearchMode);
             readerSettings.Session = (ushort)settings.Session;

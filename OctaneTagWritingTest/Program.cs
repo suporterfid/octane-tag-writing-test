@@ -12,8 +12,8 @@ namespace OctaneTagWritingTest
                 return;
             }
             string hostname = args[0];
-            string testDescription = "Gravacao-Teste-1-Rodada-1";
-            string epcHeader = "E006";
+            string testDescription = "Gravacao-Teste-3-Rodada-13";
+            string epcHeader = "C100";
             string epcPlainItemCode = "99999999999999";
             long quantity = 1;
             EpcListManager.InitEpcData(epcHeader, epcPlainItemCode, quantity);
@@ -21,6 +21,7 @@ namespace OctaneTagWritingTest
             string settingsFilePath = "reader_settings.json";
 
             bool forceCreateFile = true;
+            Console.WriteLine($"epcHeader '{epcHeader}' - Descrição do Teste {testDescription}");
 
             if (!File.Exists(settingsFilePath) || forceCreateFile)
             {
@@ -34,12 +35,13 @@ namespace OctaneTagWritingTest
                     IncludePeakRssi = true,
                     IncludeAntennaPortNumber = true,
                     ReportMode = "Individual",
-                    RfMode = 1002,
-                    TxPowerInDbm = 29,
-                    MaxRxSensitivity = false,
-                    RxSensitivityInDbm = -70,
-                    SearchMode = "DualTarget",
-                    Session = 2,
+                    RfMode = 0,
+                    AntennaPort = 1,
+                    TxPowerInDbm = 33,
+                    MaxRxSensitivity = true,
+                    RxSensitivityInDbm = -90,
+                    SearchMode = "SingleTarget",
+                    Session = 0,
                     MemoryBank = "Epc",
                     BitPointer = 32,
                     TagMask = "0017",

@@ -17,6 +17,7 @@ namespace OctaneTagWritingTest.Helpers
 
         private readonly object lockObj = new object();
         private HashSet<string> processedTids = new HashSet<string>();
+        private HashSet<string> addedSequences = new HashSet<string>();
 
         // Private constructor for singleton.
         private TagOpController() { }
@@ -29,6 +30,27 @@ namespace OctaneTagWritingTest.Helpers
         public string LocalTargetTid { get; private set; }
         public bool IsLocalTargetTidSet { get; private set; }
 
+        public void CleanUp()
+        {
+            lock (lockObj)
+            {
+                try
+                {
+                    addedSequences.Clear();
+                    processedTids.Clear();
+                    expectedEpcByTid.Clear();
+                    operationResultByTid.Clear();
+                    operationResultWithSuccessByTid.Clear();
+                }
+                catch (Exception)
+                {
+
+
+                }
+
+            }
+        }
+
         public bool HasResult(string tid)
         {
             lock (lockObj)
@@ -36,6 +58,8 @@ namespace OctaneTagWritingTest.Helpers
                 return operationResultByTid.ContainsKey(tid);
             }
         }
+
+        
 
         public void RecordExpectedEpc(string tid, string expectedEpc)
         {
@@ -78,6 +102,7 @@ namespace OctaneTagWritingTest.Helpers
                 if (wasSuccess)
                 {
                     operationResultWithSuccessByTid[tid] = result;
+                    Console.WriteLine($"Success TID: {tid} result: {result} - Success count: {GetSuccessCount()}");
                 }
 
                 if (!operationResultByTid.ContainsKey(tid))
@@ -140,6 +165,18 @@ namespace OctaneTagWritingTest.Helpers
                 };
 
                 seq.Ops.Add(permalockOp);
+
+                try
+                {
+                    addedSequences.Add(seq.Id.ToString());
+                }
+                catch (Exception)
+                {
+
+                }
+
+                CheckAndCleanAccessSequencesOnReader(reader);
+
                 reader.AddOpSequence(seq);
                 Console.WriteLine($"Scheduled lock operation for TID: {tag.Tid.ToHexString()}");
             }
@@ -172,6 +209,16 @@ namespace OctaneTagWritingTest.Helpers
                     Data = TagData.FromHexString(accessPassword)
                 });
 
+                try
+                {
+                    addedSequences.Add(seq.Id.ToString());
+                }
+                catch (Exception)
+                {
+
+                }
+                CheckAndCleanAccessSequencesOnReader(reader);
+
                 reader.AddOpSequence(seq);
                 Console.WriteLine($"Scheduled lock operation for TID: {tag.Tid.ToHexString()}");
             }
@@ -181,6 +228,26 @@ namespace OctaneTagWritingTest.Helpers
             }
         }
 
+        public void CheckAndCleanAccessSequencesOnReader(ImpinjReader reader)
+        {
+            try
+            {
+                if(addedSequences.Count > 80)
+                {
+                    Console.WriteLine($"Cleaning-up Access Sequences {addedSequences}...");
+                    reader.DeleteAllOpSequences();
+                    addedSequences.Clear();
+                    Console.WriteLine($" ********************* Reader Sequences cleaned-up *********************");
+                }
+
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Warning while trying to clean-up {addedSequences} sequences");
+                
+            }
+
+        }
         public void TriggerWriteAndVerify(Tag tag, string newEpcToWrite, ImpinjReader reader, CancellationToken cancellationToken, Stopwatch swWrite, string newAccessPassword, bool encodeOrDefault, ushort targetAntennaPort = 1, bool useBlockWrite = true, ushort sequenceMaxRetries = 5)
         {
             if (cancellationToken.IsCancellationRequested) return;
@@ -192,17 +259,17 @@ namespace OctaneTagWritingTest.Helpers
             Console.WriteLine($"Attempting robust operation for TID {currentTid}: {oldEpc} -> {newEpcToWrite}");
 
             TagOpSequence seq = new TagOpSequence();
-            seq.AntennaId = targetAntennaPort;
+            //seq.AntennaId = targetAntennaPort;
             seq.SequenceStopTrigger = SequenceTriggerType.None;
             seq.TargetTag.MemoryBank = MemoryBank.Tid;
             seq.TargetTag.BitPointer = 0;
             seq.TargetTag.Data = currentTid;
-            if(useBlockWrite) // If block write is enabled, set the block write parameters.
-            {
-                seq.BlockWriteEnabled = true;
-                seq.BlockWriteWordCount = 2;
-                seq.BlockWriteRetryCount = 3;
-            }
+            //if(useBlockWrite) // If block write is enabled, set the block write parameters.
+            //{
+            //    seq.BlockWriteEnabled = true;
+            //    seq.BlockWriteWordCount = 2;
+            //    seq.BlockWriteRetryCount = 3;
+            //}
 
             if(sequenceMaxRetries > 0)
             {
@@ -238,7 +305,23 @@ namespace OctaneTagWritingTest.Helpers
             }
 
             swWrite.Restart();
+
+            try
+            {
+                addedSequences.Add(seq.Id.ToString());
+            }
+            catch (Exception)
+            {
+
+            }
+
+            CheckAndCleanAccessSequencesOnReader(reader);
+
             reader.AddOpSequence(seq);
+            Console.WriteLine($"Added Write OpSequence {seq.Id} to TID {currentTid} - Current EPC: {oldEpc} -> Expected EPC {epcData}");
+            
+            
+
             RecordExpectedEpc(currentTid, epcData);
         }
 
@@ -266,6 +349,17 @@ namespace OctaneTagWritingTest.Helpers
             ushort wordCount = (ushort)(expectedEpc.Length / 4);
             readOp.WordCount = wordCount;
             seq.Ops.Add(readOp);
+
+            try
+            {
+                addedSequences.Add(seq.Id.ToString());
+            }
+            catch (Exception)
+            {
+
+            }
+
+            CheckAndCleanAccessSequencesOnReader(reader);
 
             swVerify.Restart();
             reader.AddOpSequence(seq);

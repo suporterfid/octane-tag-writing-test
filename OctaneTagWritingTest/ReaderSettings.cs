@@ -13,6 +13,9 @@ namespace OctaneTagWritingTest
         public bool IncludeAntennaPortNumber { get; set; }
         public string ReportMode { get; set; }
         public int RfMode { get; set; }
+
+        public int AntennaPort { get; set; }
+
         public int TxPowerInDbm { get; set; }
         public bool MaxRxSensitivity { get; set; }
         public int RxSensitivityInDbm { get; set; }

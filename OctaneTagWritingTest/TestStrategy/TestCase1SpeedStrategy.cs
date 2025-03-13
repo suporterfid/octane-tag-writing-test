@@ -13,7 +13,10 @@ namespace OctaneTagWritingTest.TestStrategy
     /// </summary>
     public class TestCase1SpeedStrategy : BaseTestStrategy
     {
-        public TestCase1SpeedStrategy(string hostname, string logFile, ReaderSettings readerSettings) : base(hostname, logFile, readerSettings) { }
+        public TestCase1SpeedStrategy(string hostname, string logFile, ReaderSettings readerSettings) : base(hostname, logFile, readerSettings) 
+        {
+            TagOpController.Instance.CleanUp();
+        }
 
         public override void RunTest(CancellationToken cancellationToken = default)
         {

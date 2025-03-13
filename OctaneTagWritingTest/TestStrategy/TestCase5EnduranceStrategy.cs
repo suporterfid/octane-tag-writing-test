@@ -17,6 +17,7 @@ namespace OctaneTagWritingTest.TestStrategy
 
         public TestCase5EnduranceStrategy(string hostname, string logFile, ReaderSettings readerSettings) : base(hostname, logFile, readerSettings)
         {
+            TagOpController.Instance.CleanUp();
         }
 
         public override void RunTest(CancellationToken cancellationToken = default)
