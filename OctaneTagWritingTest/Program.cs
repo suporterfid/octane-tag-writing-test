@@ -13,7 +13,7 @@ namespace OctaneTagWritingTest
             }
             string hostname = args[0];
             string testDescription = "Gravacao-Teste-1-Rodada-1";
-            string epcHeader = "F002";
+            string epcHeader = "E006";
             string epcPlainItemCode = "99999999999999";
             long quantity = 1;
             EpcListManager.InitEpcData(epcHeader, epcPlainItemCode, quantity);
@@ -24,7 +24,7 @@ namespace OctaneTagWritingTest
 
             if (!File.Exists(settingsFilePath) || forceCreateFile)
             {
-                Console.WriteLine($"Settings file '{settingsFilePath}' not found. Creating default settings...");
+                Console.WriteLine($"Settings file '{settingsFilePath}' will be created or replaced. Creating default settings...");
 
                 var defaultSettings = new ReaderSettings
                 {

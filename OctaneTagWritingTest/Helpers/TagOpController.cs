@@ -181,7 +181,7 @@ namespace OctaneTagWritingTest.Helpers
             }
         }
 
-        public void TriggerWriteAndVerify(Tag tag, string newEpcToWrite, ImpinjReader reader, CancellationToken cancellationToken, Stopwatch swWrite, string newAccessPassword, bool encodeOrDefault)
+        public void TriggerWriteAndVerify(Tag tag, string newEpcToWrite, ImpinjReader reader, CancellationToken cancellationToken, Stopwatch swWrite, string newAccessPassword, bool encodeOrDefault, ushort targetAntennaPort = 1, bool useBlockWrite = true, ushort sequenceMaxRetries = 5)
         {
             if (cancellationToken.IsCancellationRequested) return;
 
@@ -192,16 +192,28 @@ namespace OctaneTagWritingTest.Helpers
             Console.WriteLine($"Attempting robust operation for TID {currentTid}: {oldEpc} -> {newEpcToWrite}");
 
             TagOpSequence seq = new TagOpSequence();
-            seq.AntennaId = 1;
+            seq.AntennaId = targetAntennaPort;
             seq.SequenceStopTrigger = SequenceTriggerType.None;
             seq.TargetTag.MemoryBank = MemoryBank.Tid;
             seq.TargetTag.BitPointer = 0;
             seq.TargetTag.Data = currentTid;
-            seq.BlockWriteEnabled = true;
-            seq.BlockWriteWordCount = 2;
-            seq.BlockWriteRetryCount = 3;
-            seq.SequenceStopTrigger = SequenceTriggerType.ExecutionCount;
-            seq.ExecutionCount = 3;
+            if(useBlockWrite) // If block write is enabled, set the block write parameters.
+            {
+                seq.BlockWriteEnabled = true;
+                seq.BlockWriteWordCount = 2;
+                seq.BlockWriteRetryCount = 3;
+            }
+
+            if(sequenceMaxRetries > 0)
+            {
+                seq.SequenceStopTrigger = SequenceTriggerType.ExecutionCount;
+                seq.ExecutionCount = sequenceMaxRetries;
+            }
+            else
+            {
+                seq.SequenceStopTrigger = SequenceTriggerType.None;
+            }
+
 
             TagWriteOp writeOp = new TagWriteOp();
             writeOp.AccessPassword = TagData.FromHexString(newAccessPassword);

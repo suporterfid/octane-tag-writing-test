@@ -23,6 +23,8 @@ namespace OctaneTagWritingTest.TestStrategy
             {
                 this.cancellationToken = cancellationToken;
 
+                Console.WriteLine("Starting robustness test (write with retries using 2 antennas)...");
+
                 ConfigureReader();
 
                 reader.TagsReported += OnTagsReported;
@@ -47,43 +49,71 @@ namespace OctaneTagWritingTest.TestStrategy
             }
         }
 
-        protected override Settings ConfigureReader()
+        /// <summary>
+        /// Configures the reader including connection, settings, and EPC list loading
+        /// </summary>
+        /// <returns>The configured reader settings</returns>
+        /// <remarks>
+        /// This method:
+        /// - Loads the predefined EPC list
+        /// - Connects to the reader
+        /// - Applies default settings
+        /// - Enables FastId and Individual reporting mode
+        /// - Enables low latency reporting
+        /// </remarks>
+        protected virtual Settings ConfigureReader()
         {
             EpcListManager.LoadEpcList("epc_list.txt");
 
-            reader.Connect(hostname);
+            reader.Connect(settings.Hostname);
             reader.ApplyDefaultSettings();
 
-            Settings settings = reader.QueryDefaultSettings();
-            settings.Report.IncludeFastId = true;
-            settings.Report.IncludePeakRssi = true;
-            settings.Report.IncludeAntennaPortNumber = true;
-            settings.Report.Mode = ReportMode.Individual;
+            Settings readerSettings = reader.QueryDefaultSettings();
+            readerSettings.Report.IncludeFastId = settings.IncludeFastId;
+            readerSettings.Report.IncludePeakRssi = settings.IncludePeakRssi;
+            readerSettings.Report.IncludeAntennaPortNumber = settings.IncludeAntennaPortNumber;
+            readerSettings.Report.Mode = (ReportMode)Enum.Parse(typeof(ReportMode), settings.ReportMode);
+            readerSettings.RfMode = (uint)settings.RfMode;
 
-            settings.Antennas.DisableAll();
-            for (ushort port = 1; port <= 2; port++)
-            {
-                settings.Antennas.GetAntenna(port).IsEnabled = true;
-                settings.Antennas.GetAntenna(port).TxPowerInDbm = 30;
-                settings.Antennas.GetAntenna(port).MaxRxSensitivity = true;
-            }
+            readerSettings.Antennas.DisableAll();
+            readerSettings.Antennas.GetAntenna(1).IsEnabled = true;
+            readerSettings.Antennas.GetAntenna(1).TxPowerInDbm = settings.TxPowerInDbm;
+            readerSettings.Antennas.GetAntenna(1).MaxRxSensitivity = settings.MaxRxSensitivity;
+            readerSettings.Antennas.GetAntenna(1).RxSensitivityInDbm = settings.RxSensitivityInDbm;
 
-            settings.RfMode = 1111;
-            settings.SearchMode = SearchMode.DualTarget;
-            settings.Session = 2;
-            EnableLowLatencyReporting(settings);
-            reader.ApplySettings(settings);
+            readerSettings.Antennas.GetAntenna(2).IsEnabled = true;
+            readerSettings.Antennas.GetAntenna(2).TxPowerInDbm = 33.0;
+            readerSettings.Antennas.GetAntenna(2).MaxRxSensitivity = true;
+            readerSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = settings.RxSensitivityInDbm;
 
-            return settings;
+            readerSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), settings.SearchMode);
+            readerSettings.Session = (ushort)settings.Session;
+
+            readerSettings.Filters.TagFilter1.MemoryBank = (MemoryBank)Enum.Parse(typeof(MemoryBank), settings.MemoryBank);
+            readerSettings.Filters.TagFilter1.BitPointer = (ushort)settings.BitPointer;
+            readerSettings.Filters.TagFilter1.TagMask = settings.TagMask;
+            readerSettings.Filters.TagFilter1.BitCount = settings.BitCount;
+            readerSettings.Filters.TagFilter1.FilterOp = (TagFilterOp)Enum.Parse(typeof(TagFilterOp), settings.FilterOp);
+            readerSettings.Filters.Mode = (TagFilterMode)Enum.Parse(typeof(TagFilterMode), settings.FilterMode);
+
+            EnableLowLatencyReporting(readerSettings);
+            reader.ApplySettings(readerSettings);
+
+            return readerSettings;
         }
 
         private void OnTagsReported(ImpinjReader sender, TagReport report)
         {
             if (report == null || IsCancellationRequested()) return;
 
+
+
             foreach (Tag tag in report.Tags)
             {
                 if (IsCancellationRequested()) return;
+
+                // Antenna 2 should only be used for writing
+                if (tag.AntennaPortNumber == 2) continue;
 
                 string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
 
@@ -102,14 +132,14 @@ namespace OctaneTagWritingTest.TestStrategy
                     continue;
                 }
 
-                if (!TagOpController.Instance.IsLocalTargetTidSet || !tidHex.Equals(TagOpController.Instance.LocalTargetTid))
+                if (string.IsNullOrEmpty(expectedEpc))
                 {
                     string newEpcToWrite = TagOpController.Instance.GetNextEpcForTag();
                     TagOpController.Instance.RecordExpectedEpc(tidHex, newEpcToWrite);
                     Console.WriteLine($"New target TID: {tidHex}, writing new EPC: {newEpcToWrite}");
 
                     writeTimers[tidHex] = Stopwatch.StartNew();
-                    TagOpController.Instance.TriggerWriteAndVerify(tag, newEpcToWrite, reader, cancellationToken, writeTimers[tidHex], newAccessPassword, true);
+                    TagOpController.Instance.TriggerWriteAndVerify(tag, newEpcToWrite, reader, cancellationToken, writeTimers[tidHex], newAccessPassword, true, 2, true, 0);
                 }
             }
         }
@@ -136,6 +166,7 @@ namespace OctaneTagWritingTest.TestStrategy
                     bool wasSuccess = res == "Success";
                     TagOpController.Instance.LogToCsv(logFile, $"{timestamp},{tidHex},{oldEpc},{newEpc},{writeTimer?.ElapsedMilliseconds},{res},{resultRssi},{antennaPort}");
                     TagOpController.Instance.RecordResult(tidHex, res, wasSuccess);
+                    Console.WriteLine($"Success TID: {tidHex} new EPC: {result.Tag.Epc.ToHexString()} - Success count: {TagOpController.Instance.GetSuccessCount()}");
                 }
             }
         }
