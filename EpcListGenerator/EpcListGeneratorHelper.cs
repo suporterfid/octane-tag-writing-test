@@ -121,6 +121,89 @@ namespace EpcListGenerator
 
             return epcList;
         }
+		
+		 /// <summary>
+		/// Generates a single EPC string from a given TID (hexadecimal string) by extracting the unique serial
+		/// portion from the TID after skipping the first 2 words.
+		/// 
+		/// This method expects:
+		///   - The EPC header to be exactly 4 characters.
+		///   - The middle part to be exactly 4 characters.
+		/// 
+		/// Given that the final EPC must be 24 characters long, the extracted serial portion will occupy
+		/// 24 - (4 + 4) = 16 characters.
+		/// 
+		/// The TID is expected to be in hexadecimal, with each 16-bit word represented by 4 characters.
+		/// For a typical 6-word TID (24 hex characters), the first 2 words (8 hex characters) are skipped,
+		/// and the remaining 4 words (16 hex characters) form the unique serial.
+		/// 
+		/// If the remaining portion is shorter than 16 characters, it is left-padded with zeros.
+		/// If it is longer, only the rightmost 16 characters are used.
+		/// 
+		/// The final EPC is formed as: EPC = epcHeader (4 chars) + middlePart (4 chars) + serial (16 chars)
+		/// which yields a 24-character EPC.
+		/// 
+		/// For example, given TID "E2801190200072B8D8830332":
+		///   - TID words: "E280", "1190", "2000", "72B8", "D883", "0332"
+		///   - Skipping the first two words leaves "200072B8D8830332" (16 characters),
+		///   - And if epcHeader = "B071" and middlePart = "ABCD", then the EPC is "B071ABCD200072B8D8830332".
+		///   (Note: In this example the final EPC is 4 + 4 + 16 = 24 characters.)
+		/// </summary>
+		/// <param name="tidHexString">The full TID memory as a hexadecimal string (each word is 4 hex digits).</param>
+		/// <param name="epcHeader">A 4-character string representing the EPC header.</param>
+		/// <param name="middlePart">A 4-character string representing the EPC middle part.</param>
+		/// <returns>A single EPC string of 24 characters.</returns>
+		/// <exception cref="ArgumentException">Thrown when inputs are invalid.</exception>
+		public string GenerateEpcFromTid(string tidHexString, string epcHeader, string middlePart)
+		{
+			if (string.IsNullOrWhiteSpace(tidHexString))
+				throw new ArgumentException("TID string cannot be null or empty.", nameof(tidHexString));
+			tidHexString = tidHexString.Replace(" ", "").Trim().ToUpper();
+			if (tidHexString.Length % 4 != 0)
+				throw new ArgumentException("TID string length must be a multiple of 4.", nameof(tidHexString));
+
+			// Convert the TID string into an array of 16-bit words.
+			int totalWords = tidHexString.Length / 4;
+			ushort[] tidWords = new ushort[totalWords];
+			for (int i = 0; i < totalWords; i++)
+			{
+				string wordHex = tidHexString.Substring(i * 4, 4);
+				tidWords[i] = Convert.ToUInt16(wordHex, 16);
+			}
+
+			if (totalWords <= 2)
+				throw new ArgumentException("TID does not contain enough words to extract a serial.", nameof(tidHexString));
+
+			// Skip the first 2 words.
+			int serialStartIndex = 2;
+			int serialLengthInChars = (totalWords - serialStartIndex) * 4; // total hex digits in remaining words
+
+			string serialHex = tidHexString.Substring(serialStartIndex * 4);
+			// Adjust the serial portion to be exactly 16 characters.
+			if (serialHex.Length > 16)
+			{
+				// Take the rightmost 16 characters.
+				serialHex = serialHex.Substring(serialHex.Length - 16, 16);
+			}
+			else if (serialHex.Length < 16)
+			{
+				// Left-pad with zeros.
+				serialHex = serialHex.PadLeft(16, '0');
+			}
+
+			// Validate EPC header and middle part.
+			if (string.IsNullOrWhiteSpace(epcHeader) || epcHeader.Length != 4)
+				throw new ArgumentException("EPC header must be exactly 4 characters long.", nameof(epcHeader));
+			if (string.IsNullOrWhiteSpace(middlePart) || middlePart.Length != 4)
+				throw new ArgumentException("EPC middle part must be exactly 4 characters long.", nameof(middlePart));
+
+			// Construct the final EPC.
+			string epc = epcHeader + middlePart + serialHex;
+			if (epc.Length != 24)
+				throw new InvalidOperationException("The generated EPC must be 24 characters long.");
+
+			return epc;
+		}
 
         /// <summary>
         /// Saves the EPC list to a file.
