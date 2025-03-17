@@ -101,8 +101,17 @@ namespace OctaneTagWritingTest.Helpers
 
                 if (wasSuccess)
                 {
-                    operationResultWithSuccessByTid[tid] = result;
-                    Console.WriteLine($"Success TID: {tid} result: {result} - Success count: {GetSuccessCount()}");
+                    if(operationResultWithSuccessByTid.ContainsKey(tid))
+                    {
+                        operationResultWithSuccessByTid[tid] = result;
+                    }
+                    else
+                    {
+                        operationResultWithSuccessByTid.TryAdd(tid, result);
+                        Console.WriteLine($"RecordResult - Success count: TID: {tid} result: {result} - Success count: {operationResultWithSuccessByTid.Count()}");
+                    }
+                    
+                    
                 }
 
                 if (!operationResultByTid.ContainsKey(tid))
@@ -125,10 +134,7 @@ namespace OctaneTagWritingTest.Helpers
 
         public int GetSuccessCount()
         {
-            lock (lockObj)
-            {
-                return operationResultWithSuccessByTid.Count;
-            }
+            return operationResultWithSuccessByTid.Count();
         }
 
         public bool GetExistingEpc(string epc)
@@ -234,7 +240,7 @@ namespace OctaneTagWritingTest.Helpers
             {
                 if(addedSequences.Count > 80)
                 {
-                    Console.WriteLine($"Cleaning-up Access Sequences {addedSequences}...");
+                    Console.WriteLine($"Cleaning-up Access Sequences {addedSequences.Count()}...");
                     reader.DeleteAllOpSequences();
                     addedSequences.Clear();
                     Console.WriteLine($" ********************* Reader Sequences cleaned-up *********************");
@@ -256,22 +262,22 @@ namespace OctaneTagWritingTest.Helpers
             // Set EPC data based on encoding choice.
             string epcData = encodeOrDefault ? newEpcToWrite : $"B071000000000000000000{processedTids.Count:D2}";
             string currentTid = tag.Tid.ToHexString();
-            Console.WriteLine($"Attempting robust operation for TID {currentTid}: {oldEpc} -> {newEpcToWrite}");
-
+            Console.WriteLine($"Attempting robust operation for TID {currentTid}: {oldEpc} -> {newEpcToWrite} - Read RSSI {tag.PeakRssiInDbm}");
+            
             TagOpSequence seq = new TagOpSequence();
             //seq.AntennaId = targetAntennaPort;
             seq.SequenceStopTrigger = SequenceTriggerType.None;
             seq.TargetTag.MemoryBank = MemoryBank.Tid;
             seq.TargetTag.BitPointer = 0;
             seq.TargetTag.Data = currentTid;
-            //if(useBlockWrite) // If block write is enabled, set the block write parameters.
-            //{
-            //    seq.BlockWriteEnabled = true;
-            //    seq.BlockWriteWordCount = 2;
-            //    seq.BlockWriteRetryCount = 3;
-            //}
+            if (useBlockWrite) // If block write is enabled, set the block write parameters.
+            {
+                seq.BlockWriteEnabled = true;
+                seq.BlockWriteWordCount = 2;
+                seq.BlockWriteRetryCount = 3;
+            }
 
-            if(sequenceMaxRetries > 0)
+            if (sequenceMaxRetries > 0)
             {
                 seq.SequenceStopTrigger = SequenceTriggerType.ExecutionCount;
                 seq.ExecutionCount = sequenceMaxRetries;
@@ -287,6 +293,7 @@ namespace OctaneTagWritingTest.Helpers
             writeOp.MemoryBank = MemoryBank.Epc;
             writeOp.WordPointer = WordPointers.Epc;
             writeOp.Data = TagData.FromHexString(epcData);
+
             seq.Ops.Add(writeOp);
 
             // If the new EPC is a different length, update the PC bits.
@@ -333,7 +340,7 @@ namespace OctaneTagWritingTest.Helpers
             string expectedEpc = GetExpectedEpc(currentTid);
 
             TagOpSequence seq = new TagOpSequence();
-            seq.AntennaId = 1;
+            //seq.AntennaId = ;
             seq.SequenceStopTrigger = SequenceTriggerType.None;
             seq.TargetTag.MemoryBank = MemoryBank.Tid;
             seq.TargetTag.BitPointer = 0;

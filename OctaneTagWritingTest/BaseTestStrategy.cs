@@ -97,7 +97,7 @@ namespace OctaneTagWritingTest
             readerSettings.Antennas.GetAntenna((ushort)settings.AntennaPort).RxSensitivityInDbm = settings.RxSensitivityInDbm;
 
             readerSettings.Antennas.GetAntenna(2).IsEnabled = true;
-            readerSettings.Antennas.GetAntenna(2).TxPowerInDbm = settings.TxPowerInDbm;
+            readerSettings.Antennas.GetAntenna(2).TxPowerInDbm = 29;//settings.TxPowerInDbm;
             readerSettings.Antennas.GetAntenna(2).MaxRxSensitivity = settings.MaxRxSensitivity;
             readerSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = settings.RxSensitivityInDbm;
 

@@ -20,7 +20,7 @@ namespace OctaneTagWritingTest
             // Register available test strategies
             if(string.IsNullOrEmpty(testDescription))
             {
-                testDescription = "Gravacao-Teste-1-Rodada-1";
+                testDescription = "Writing-Test-1-Round-1";
             }
             
             strategies.Add("0", new TestCase0ReadOnlyLoggingStrategy(hostname, $"TestCase0_Log-{testDescription}.csv", readerSettings));

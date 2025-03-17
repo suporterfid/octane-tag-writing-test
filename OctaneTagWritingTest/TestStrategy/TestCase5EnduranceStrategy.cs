@@ -84,8 +84,10 @@ namespace OctaneTagWritingTest.TestStrategy
 
                 if (string.IsNullOrEmpty(expectedEpc))
                 {
+                    Console.WriteLine($" Success count: {TagOpController.Instance.GetSuccessCount()}");
                     expectedEpc = TagOpController.Instance.GetNextEpcForTag();
                     TagOpController.Instance.RecordExpectedEpc(tidHex, expectedEpc);
+                    Console.WriteLine($"New target TID found: {tidHex} Chip {TagOpController.Instance.GetChipModel(tag)}");
                 }
 
                 TagOpController.Instance.TriggerWriteAndVerify(tag, expectedEpc, reader, cancellationToken, swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()), newAccessPassword, true);
@@ -106,11 +108,14 @@ namespace OctaneTagWritingTest.TestStrategy
 
                     if (writeResult.Result == WriteResultStatus.Success)
                     {
+                        Console.WriteLine($"WriteResultStatus {tidHex} - Success count: {TagOpController.Instance.GetSuccessCount()} {result.Tag.AntennaPortNumber}");
                         TagOpController.Instance.TriggerVerificationRead(result.Tag, reader, cancellationToken, swVerifyTimers.GetOrAdd(tidHex, _ => new Stopwatch()), newAccessPassword);
+                    
                     }
                     else
                     {
                         LogFailure(tidHex, "Write failure", result.Tag);
+                        Console.WriteLine($"WriteResultStatus {tidHex}- Write failure. {result.Tag.AntennaPortNumber}");
                     }
                 }
                 else if (result is TagReadOpResult readResult)
@@ -118,12 +123,13 @@ namespace OctaneTagWritingTest.TestStrategy
                     swVerifyTimers[tidHex].Stop();
 
                     var expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
-                    var verifiedEpc = readResult.Data?.ToHexString() ?? "N/A";
+                    var verifiedEpc = readResult.Tag.Epc?.ToHexString() ?? "N/A";
                     var success = verifiedEpc.Equals(expectedEpc, StringComparison.OrdinalIgnoreCase);
                     var status = success ? "Success" : "Failure";
 
                     LogToCsv($"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{tidHex},{result.Tag.Epc.ToHexString()},{expectedEpc},{verifiedEpc},{swWriteTimers[tidHex].ElapsedMilliseconds},{swVerifyTimers[tidHex].ElapsedMilliseconds},{status},{cycleCount[tidHex]},RSSI,AntennaPort");
                     TagOpController.Instance.RecordResult(tidHex, status, success);
+                    Console.WriteLine($"WriteResultStatus {tidHex} - Status {status} Success count: {TagOpController.Instance.GetSuccessCount()} Port:  {result.Tag.AntennaPortNumber}");
 
                     cycleCount[tidHex]++;
                 }

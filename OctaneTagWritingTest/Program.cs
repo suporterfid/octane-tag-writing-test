@@ -8,20 +8,20 @@ namespace OctaneTagWritingTest
         {
             if (args.Length != 1)
             {
-                Console.WriteLine("Erro: Informe o hostname do leitor como argumento.");
+                Console.WriteLine("Error: Please provide the reader hostname as an argument.");
                 return;
             }
             string hostname = args[0];
-            string testDescription = "Gravacao-Teste-3-Rodada-13";
-            string epcHeader = "C100";
-            string epcPlainItemCode = "99999999999999";
+            string testDescription = "Writing-Test-1-Round-1";
+            string epcHeader = "C300";
+            string epcPlainItemCode = "76788888888888";
             long quantity = 1;
             EpcListManager.InitEpcData(epcHeader, epcPlainItemCode, quantity);
 
             string settingsFilePath = "reader_settings.json";
 
             bool forceCreateFile = true;
-            Console.WriteLine($"epcHeader '{epcHeader}' - Descrição do Teste {testDescription}");
+            Console.WriteLine($"epcHeader '{epcHeader}' - Test Description {testDescription}");
 
             if (!File.Exists(settingsFilePath) || forceCreateFile)
             {
@@ -61,7 +61,7 @@ namespace OctaneTagWritingTest
             while (true)
             {
                 manager.DisplayMenu();
-                Console.Write("Escolha uma opção (ou 'q' para sair): ");
+                Console.Write("Choose an option (or 'q' to quit): ");
                 string option = Console.ReadLine();
                 if (option?.ToLower() == "q")
                     break;

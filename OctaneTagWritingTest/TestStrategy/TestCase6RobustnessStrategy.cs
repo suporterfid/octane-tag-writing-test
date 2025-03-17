@@ -78,14 +78,14 @@ namespace OctaneTagWritingTest.TestStrategy
 
                 if (string.IsNullOrEmpty(expectedEpc))
                 {
-                    Console.WriteLine($"\nNew target TID found: {tidHex} Chip {TagOpController.Instance.GetChipModel(tag)}");
-
+                    
+                    Console.WriteLine($" Success count: {TagOpController.Instance.GetSuccessCount()}");
                     expectedEpc = TagOpController.Instance.GetNextEpcForTag();
                     Console.WriteLine($"Assigning new EPC: {currentEpc} -> {expectedEpc}");
                     TagOpController.Instance.RecordExpectedEpc(tidHex, expectedEpc);
 
                     TagOpController.Instance.TriggerWriteAndVerify(tag, expectedEpc, reader, cancellationToken, swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()), newAccessPassword, true);
-                    Console.WriteLine($" Success count: {TagOpController.Instance.GetSuccessCount()}");
+                    Console.WriteLine($"\nNew target TID found: {tidHex} Chip {TagOpController.Instance.GetChipModel(tag)}");
                 }
             }
         }
