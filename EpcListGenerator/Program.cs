@@ -33,7 +33,7 @@ namespace EpcListGenerator
                 Console.WriteLine("Generating EPC list...");
 
                 // Generate the custom EPC list.
-                List<string> epcList = EpcListGeneratorHelper.GenerateCustomEpcList(epcHeader, gtin, quantity, initalSerial);
+                List<string> epcList = EpcListGeneratorHelper.Instance.GenerateCustomEpcList(epcHeader, gtin, quantity, initalSerial);
 
                 Console.WriteLine("Saving EPC list to file...");
                 // Use asynchronous file writing for responsiveness.

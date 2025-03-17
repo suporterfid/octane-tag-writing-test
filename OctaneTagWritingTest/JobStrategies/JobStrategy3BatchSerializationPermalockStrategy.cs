@@ -7,20 +7,20 @@ using System.Threading;
 using Impinj.OctaneSdk;
 using OctaneTagWritingTest.Helpers;
 
-namespace OctaneTagWritingTest.TestStrategy
+namespace OctaneTagWritingTest.JobStrategies
 {
-    public class TestCase3BatchSerializationPermalockStrategy : BaseTestStrategy
+    public class JobStrategy3BatchSerializationPermalockStrategy : BaseTestStrategy
     {
         private readonly ConcurrentDictionary<string, Stopwatch> writeTimers = new();
         private readonly ConcurrentQueue<Tag> tagsQueue = new();
 
-        public TestCase3BatchSerializationPermalockStrategy(string hostname, string logFile, ReaderSettings readerSettings)
+        public JobStrategy3BatchSerializationPermalockStrategy(string hostname, string logFile, ReaderSettings readerSettings)
             : base(hostname, logFile, readerSettings)
         {
             TagOpController.Instance.CleanUp();
         }
 
-        public override void RunTest(CancellationToken cancellationToken = default)
+        public override void RunJob(CancellationToken cancellationToken = default)
         {
             try
             {

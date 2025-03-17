@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace OctaneTagWritingTest
 {
-    public interface ITestStrategy
+    public interface IJobStrategy
     {
-        void RunTest(CancellationToken cancellationToken = default);
+        void RunJob(CancellationToken cancellationToken = default);
     }
 }

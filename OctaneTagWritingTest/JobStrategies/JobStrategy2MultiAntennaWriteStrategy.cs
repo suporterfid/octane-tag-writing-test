@@ -6,19 +6,19 @@ using System.Threading;
 using Impinj.OctaneSdk;
 using OctaneTagWritingTest.Helpers;
 
-namespace OctaneTagWritingTest.TestStrategy
+namespace OctaneTagWritingTest.JobStrategies
 {
-    public class TestCase2MultiAntennaWriteStrategy : BaseTestStrategy
+    public class JobStrategy2MultiAntennaWriteStrategy : BaseTestStrategy
     {
         private readonly ConcurrentDictionary<string, Stopwatch> writeTimers = new ConcurrentDictionary<string, Stopwatch>();
 
-        public TestCase2MultiAntennaWriteStrategy(string hostname, string logFile, ReaderSettings readerSettings)
+        public JobStrategy2MultiAntennaWriteStrategy(string hostname, string logFile, ReaderSettings readerSettings)
             : base(hostname, logFile, readerSettings)
         {
             TagOpController.Instance.CleanUp();
         }
 
-        public override void RunTest(CancellationToken cancellationToken = default)
+        public override void RunJob(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -64,7 +64,7 @@ namespace OctaneTagWritingTest.TestStrategy
         /// </remarks>
         protected virtual Settings ConfigureReader()
         {
-            EpcListManager.LoadEpcList("epc_list.txt");
+            EpcListManager.Instance.LoadEpcList("epc_list.txt");
 
             reader.Connect(settings.Hostname);
             reader.ApplyDefaultSettings();

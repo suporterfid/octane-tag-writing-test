@@ -6,21 +6,21 @@ using System.Threading;
 using Impinj.OctaneSdk;
 using OctaneTagWritingTest.Helpers;
 
-namespace OctaneTagWritingTest.TestStrategy
+namespace OctaneTagWritingTest.JobStrategies
 {
-    public class TestCase5EnduranceStrategy : BaseTestStrategy
+    public class JobStrategy5EnduranceStrategy : BaseTestStrategy
     {
         private const int MaxCycles = 10000;
         private readonly ConcurrentDictionary<string, int> cycleCount = new();
         private readonly ConcurrentDictionary<string, Stopwatch> swWriteTimers = new();
         private readonly ConcurrentDictionary<string, Stopwatch> swVerifyTimers = new();
 
-        public TestCase5EnduranceStrategy(string hostname, string logFile, ReaderSettings readerSettings) : base(hostname, logFile, readerSettings)
+        public JobStrategy5EnduranceStrategy(string hostname, string logFile, ReaderSettings readerSettings) : base(hostname, logFile, readerSettings)
         {
             TagOpController.Instance.CleanUp();
         }
 
-        public override void RunTest(CancellationToken cancellationToken = default)
+        public override void RunJob(CancellationToken cancellationToken = default)
         {
             try
             {

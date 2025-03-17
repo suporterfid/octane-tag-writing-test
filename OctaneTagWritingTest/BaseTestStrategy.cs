@@ -14,7 +14,7 @@ namespace OctaneTagWritingTest
     /// <summary>
     /// Base class for all test strategies implementing common functionality
     /// </summary>
-    public abstract class BaseTestStrategy : ITestStrategy
+    public abstract class BaseTestStrategy : IJobStrategy
     {
         protected ImpinjReader reader;
         protected string hostname;
@@ -77,7 +77,7 @@ namespace OctaneTagWritingTest
         /// </remarks>
         protected virtual Settings ConfigureReader()
         {
-            EpcListManager.LoadEpcList("epc_list.txt");
+            EpcListManager.Instance.LoadEpcList("epc_list.txt");
 
             reader.Connect(settings.Hostname);
             reader.ApplyDefaultSettings();
@@ -149,6 +149,6 @@ namespace OctaneTagWritingTest
         /// <summary>
         /// Abstract method that each strategy will implement to execute its test
         /// </summary>
-        public abstract void RunTest(CancellationToken cancellationToken = default);
+        public abstract void RunJob(CancellationToken cancellationToken = default);
     }
 }

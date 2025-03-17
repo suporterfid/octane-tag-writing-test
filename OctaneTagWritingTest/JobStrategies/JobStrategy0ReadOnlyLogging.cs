@@ -5,19 +5,19 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 
-namespace OctaneTagWritingTest.TestStrategy
+namespace OctaneTagWritingTest.JobStrategies
 {
-    public class TestCase0ReadOnlyLoggingStrategy : BaseTestStrategy
+    public class JobStrategy0ReadOnlyLogging : BaseTestStrategy
     {
         private readonly Dictionary<string, int> tagReadCounts = new();
 
-        public TestCase0ReadOnlyLoggingStrategy(string hostname, string logFile, ReaderSettings readerSettings)
+        public JobStrategy0ReadOnlyLogging(string hostname, string logFile, ReaderSettings readerSettings)
             : base(hostname, logFile, readerSettings)
         {
             TagOpController.Instance.CleanUp();
         }
 
-        public override void RunTest(CancellationToken cancellationToken = default)
+        public override void RunJob(CancellationToken cancellationToken = default)
         {
             try
             {

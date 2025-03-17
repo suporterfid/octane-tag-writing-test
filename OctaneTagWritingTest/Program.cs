@@ -11,12 +11,13 @@ namespace OctaneTagWritingTest
                 Console.WriteLine("Error: Please provide the reader hostname as an argument.");
                 return;
             }
-            string hostname = args[0];
+            string hostnameWriter = args[0];
+            string hostnameVerifier = args[1];
             string testDescription = "Writing-Test-1-Round-1";
             string epcHeader = "C300";
             string epcPlainItemCode = "76788888888888";
             long quantity = 1;
-            EpcListManager.InitEpcData(epcHeader, epcPlainItemCode, quantity);
+            EpcListManager.Instance.InitEpcData(epcHeader, epcPlainItemCode, quantity);
 
             string settingsFilePath = "reader_settings.json";
 
@@ -55,7 +56,7 @@ namespace OctaneTagWritingTest
 
             var settings = ReaderSettings.Load(settingsFilePath);
 
-            TestManager manager = new TestManager(hostname, testDescription, settings);
+            JobManager manager = new JobManager(hostnameWriter, hostnameVerifier, testDescription, settings);
 
 
             while (true)

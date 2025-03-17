@@ -123,14 +123,37 @@ namespace OctaneTagWritingTest.Helpers
 
         public string GetNextEpcForTag()
         {
+            const int maxRetries = 5;
+            int retryCount = 0;
+            string nextEpc;
+
             lock (lockObj)
             {
-                string nextEpc = EpcListManager.GetNextEpc();
+                do
+                {
+                    // Get a new EPC from the manager.
+                    nextEpc = EpcListManager.Instance.GetNextEpc();
+
+                    // If the EPC does not already exist, break out of the loop.
+                    if (!GetExistingEpc(nextEpc))
+                    {
+                        break;
+                    }
+
+                    retryCount++;
+                }
+                while (retryCount < maxRetries);
+
+                // If after the maximum retries the EPC still exists, throw an exception.
                 if (GetExistingEpc(nextEpc))
-                    nextEpc = EpcListManager.GetNextEpc();
+                {
+                    Console.WriteLine("WARNING DUP_EPC: Unable to generate a unique EPC after maximum retries.");
+                }
+
                 return nextEpc;
             }
         }
+
 
         public int GetSuccessCount()
         {

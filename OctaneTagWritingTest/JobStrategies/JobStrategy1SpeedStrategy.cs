@@ -5,20 +5,20 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 
-namespace OctaneTagWritingTest.TestStrategy
+namespace OctaneTagWritingTest.JobStrategies
 {
     /// <summary>
     /// Test Strategy - Example 1: Optimal Write Speed Test
     /// This strategy measures the speed of writing new EPCs to tags
     /// </summary>
-    public class TestCase1SpeedStrategy : BaseTestStrategy
+    public class JobStrategy1SpeedStrategy : BaseTestStrategy
     {
-        public TestCase1SpeedStrategy(string hostname, string logFile, ReaderSettings readerSettings) : base(hostname, logFile, readerSettings) 
+        public JobStrategy1SpeedStrategy(string hostname, string logFile, ReaderSettings readerSettings) : base(hostname, logFile, readerSettings) 
         {
             TagOpController.Instance.CleanUp();
         }
 
-        public override void RunTest(CancellationToken cancellationToken = default)
+        public override void RunJob(CancellationToken cancellationToken = default)
         {
             try
             {
