@@ -73,10 +73,10 @@ namespace OctaneTagWritingTest.JobStrategies
                     continue;
                 }
 
-                var currentEpc = tag.Epc.ToHexString();
+                var epcHex = tag.Epc.ToHexString();
                 var expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
 
-                if (expectedEpc != null && expectedEpc.Equals(currentEpc, StringComparison.OrdinalIgnoreCase))
+                if (expectedEpc != null && expectedEpc.Equals(epcHex, StringComparison.OrdinalIgnoreCase))
                 {
                     TagOpController.Instance.HandleVerifiedTag(tag, tidHex, expectedEpc, swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()), swVerifyTimers.GetOrAdd(tidHex, _ => new Stopwatch()), cycleCount, tag, TagOpController.Instance.GetChipModel(tag), logFile);
                     continue;
@@ -85,7 +85,7 @@ namespace OctaneTagWritingTest.JobStrategies
                 if (string.IsNullOrEmpty(expectedEpc))
                 {
                     Console.WriteLine($" Success count: {TagOpController.Instance.GetSuccessCount()}");
-                    expectedEpc = TagOpController.Instance.GetNextEpcForTag(tidHex);
+                    expectedEpc = TagOpController.Instance.GetNextEpcForTag(epcHex, tidHex);
                     TagOpController.Instance.RecordExpectedEpc(tidHex, expectedEpc);
                     Console.WriteLine($"New target TID found: {tidHex} Chip {TagOpController.Instance.GetChipModel(tag)}");
                 }

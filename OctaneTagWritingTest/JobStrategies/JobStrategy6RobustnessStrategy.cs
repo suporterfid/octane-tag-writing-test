@@ -66,10 +66,10 @@ namespace OctaneTagWritingTest.JobStrategies
                 if (TagOpController.Instance.IsTidProcessed(tidHex) || TagOpController.Instance.HasResult(tidHex))
                     continue;
 
-                string currentEpc = tag.Epc.ToHexString();
+                string epcHex = tag.Epc.ToHexString();
                 string expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
 
-                if (!string.IsNullOrEmpty(expectedEpc) && expectedEpc.Equals(currentEpc, StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrEmpty(expectedEpc) && expectedEpc.Equals(epcHex, StringComparison.OrdinalIgnoreCase))
                 {
                     TagOpController.Instance.HandleVerifiedTag(tag, tidHex, expectedEpc, swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()), swVerifyTimers.GetOrAdd(tidHex, _ => new Stopwatch()), retryCount, tag, TagOpController.Instance.GetChipModel(tag), logFile);
                                              
@@ -80,8 +80,8 @@ namespace OctaneTagWritingTest.JobStrategies
                 {
                     
                     Console.WriteLine($" Success count: {TagOpController.Instance.GetSuccessCount()}");
-                    expectedEpc = TagOpController.Instance.GetNextEpcForTag(tidHex);
-                    Console.WriteLine($"Assigning new EPC: {currentEpc} -> {expectedEpc}");
+                    expectedEpc = TagOpController.Instance.GetNextEpcForTag(epcHex, tidHex);
+                    Console.WriteLine($"Assigning new EPC: {epcHex} -> {expectedEpc}");
                     TagOpController.Instance.RecordExpectedEpc(tidHex, expectedEpc);
 
                     TagOpController.Instance.TriggerWriteAndVerify(tag, expectedEpc, reader, cancellationToken, swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()), newAccessPassword, true);

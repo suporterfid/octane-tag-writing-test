@@ -66,10 +66,10 @@ namespace OctaneTagWritingTest.JobStrategies
 
                 if (!TagOpController.Instance.IsTidProcessed(tidHex))
                 {
-                    string currentEpc = tag.Epc.ToHexString();
-                    string expectedEpc = TagOpController.Instance.GetNextEpcForTag(tidHex);
+                    string epcHex = tag.Epc.ToHexString();
+                    string expectedEpc = TagOpController.Instance.GetNextEpcForTag(epcHex, tidHex);
 
-                    Console.WriteLine($"New tag found. TID: {tidHex}. Assigning new EPC: {currentEpc} -> {expectedEpc}");
+                    Console.WriteLine($"New tag found. TID: {tidHex}. Assigning new EPC: {epcHex} -> {expectedEpc}");
                     TagOpController.Instance.RecordExpectedEpc(tidHex, expectedEpc);
 
                     TagOpController.Instance.TriggerWriteAndVerify(tag, expectedEpc, reader, cancellationToken,

@@ -66,18 +66,18 @@ namespace OctaneTagWritingTest.JobStrategies
                 if (TagOpController.Instance.IsTidProcessed(tidHex) || TagOpController.Instance.HasResult(tidHex))
                     continue;
 
-                var currentEpc = tag.Epc.ToHexString();
+                var epcHex = tag.Epc.ToHexString();
                 var expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
 
-                if (!string.IsNullOrEmpty(expectedEpc) && expectedEpc.Equals(currentEpc, StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrEmpty(expectedEpc) && expectedEpc.Equals(epcHex, StringComparison.OrdinalIgnoreCase))
                 {
-                    TagOpController.Instance.RecordResult(tidHex, currentEpc, true);
+                    TagOpController.Instance.RecordResult(tidHex, epcHex, true);
                     continue;
                 }
 
                 if (string.IsNullOrEmpty(expectedEpc))
                 {
-                    expectedEpc = TagOpController.Instance.GetNextEpcForTag(tidHex);
+                    expectedEpc = TagOpController.Instance.GetNextEpcForTag(epcHex, tidHex);
                     TagOpController.Instance.RecordExpectedEpc(tidHex, expectedEpc);
 
                     TagOpController.Instance.TriggerWriteAndVerify(tag, expectedEpc, reader, cancellationToken,

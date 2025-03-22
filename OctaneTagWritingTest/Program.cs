@@ -6,17 +6,21 @@ namespace OctaneTagWritingTest
     {
         static void Main(string[] args)
         {
-            if (args.Length != 1)
-            {
-                Console.WriteLine("Error: Please provide the reader hostname as an argument.");
-                return;
-            }
-            string hostnameWriter = args[0];
-            string hostnameVerifier = args[1];
+            //if (args.Length < 1)
+            //{
+            //    Console.WriteLine("Error: Please provide the reader hostname as an argument.");
+            //    return;
+            //}
+            //string hostnameWriter = args[0];
+            //string hostnameVerifier = args[1];
+
+            string hostnameWriter = "192.168.68.248";
+            string hostnameVerifier = "192.168.68.94";
+
             string testDescription = "Writing-Test-1-Round-1";
-            string epcHeader = "C300";
+            string epcHeader = "B371";
             //string epcPlainItemCode = "76788888888888";
-            string epcPlainItemCode = "7678";
+            string epcPlainItemCode = "4141123458";
             long quantity = 1;
             EpcListManager.Instance.InitEpcData(epcHeader, epcPlainItemCode, quantity);
 
@@ -33,9 +37,9 @@ namespace OctaneTagWritingTest
             writerSettings.ReportMode = "Individual";
             writerSettings.RfMode = 0;
             writerSettings.AntennaPort = 1;
-            writerSettings.TxPowerInDbm = 33;
+            writerSettings.TxPowerInDbm = 19;
             writerSettings.MaxRxSensitivity = true;
-            writerSettings.RxSensitivityInDbm = -90;
+            writerSettings.RxSensitivityInDbm = -60;
             writerSettings.SearchMode = "SingleTarget";
             writerSettings.Session = 0;
             writerSettings.MemoryBank = "Epc";
@@ -57,7 +61,7 @@ namespace OctaneTagWritingTest
             verifierSettings.ReportMode = "Individual";
             verifierSettings.RfMode = 0;
             verifierSettings.AntennaPort = 1;
-            verifierSettings.TxPowerInDbm = 33;
+            verifierSettings.TxPowerInDbm = 19;
             verifierSettings.MaxRxSensitivity = true;
             verifierSettings.RxSensitivityInDbm = -90;
             verifierSettings.SearchMode = "SingleTarget";

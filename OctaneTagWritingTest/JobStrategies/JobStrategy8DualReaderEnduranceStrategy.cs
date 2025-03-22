@@ -52,8 +52,25 @@ namespace OctaneTagWritingTest.JobStrategies
                 Console.WriteLine("Press 'q' to stop the test and return to menu.");
 
                 // Configure both readers.
-                ConfigureWriterReader();
-                ConfigureVerifierReader();
+                try
+                {
+                    ConfigureWriterReader();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("ConfigureWriterReader - Error in dual reader endurance test: " + ex.Message);
+                    throw ex;
+                }
+                try
+                {
+                    ConfigureVerifierReader();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("ConfigureVerifierReader - Error in dual reader endurance test: " + ex.Message);
+                    throw ex;
+                }
+
 
                 // Register event handlers for the writer reader.
                 writerReader.TagsReported += OnTagsReportedWriter;
@@ -64,8 +81,27 @@ namespace OctaneTagWritingTest.JobStrategies
                 verifierReader.TagOpComplete += OnTagOpComplete;
 
                 // Start both readers.
-                writerReader.Start();
-                verifierReader.Start();
+                try
+                {
+                    writerReader.Start();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("writerReader - Error in dual reader endurance test: " + ex.Message);
+                    throw ex;
+                }
+                try
+                {
+                    verifierReader.Start();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("verifierReader - Error in dual reader endurance test: " + ex.Message);
+                    throw ex;
+                }
+                
+                
+                
 
                 // Create CSV header if the log file does not exist.
                 if (!File.Exists(logFile))
@@ -133,11 +169,15 @@ namespace OctaneTagWritingTest.JobStrategies
             verifierSettings.RfMode = (uint)verifierReaderSettings.RfMode;
 
             verifierSettings.Antennas.DisableAll();
+            verifierSettings.Antennas.GetAntenna((ushort)verifierReaderSettings.AntennaPort).IsEnabled = true;
+            verifierSettings.Antennas.GetAntenna((ushort)verifierReaderSettings.AntennaPort).TxPowerInDbm = verifierReaderSettings.TxPowerInDbm;
+            verifierSettings.Antennas.GetAntenna((ushort)verifierReaderSettings.AntennaPort).MaxRxSensitivity = verifierReaderSettings.MaxRxSensitivity;
+            verifierSettings.Antennas.GetAntenna((ushort)verifierReaderSettings.AntennaPort).RxSensitivityInDbm = verifierReaderSettings.RxSensitivityInDbm;
             // Use a different antenna port for the verifier (e.g., port 2).
-            verifierSettings.Antennas.GetAntenna(2).IsEnabled = true;
-            verifierSettings.Antennas.GetAntenna(2).TxPowerInDbm = verifierReaderSettings.TxPowerInDbm;
-            verifierSettings.Antennas.GetAntenna(2).MaxRxSensitivity = verifierReaderSettings.MaxRxSensitivity;
-            verifierSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = verifierReaderSettings.RxSensitivityInDbm;
+            //verifierSettings.Antennas.GetAntenna(2).IsEnabled = true;
+            //verifierSettings.Antennas.GetAntenna(2).TxPowerInDbm = verifierReaderSettings.TxPowerInDbm;
+            //verifierSettings.Antennas.GetAntenna(2).MaxRxSensitivity = verifierReaderSettings.MaxRxSensitivity;
+            //verifierSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = verifierReaderSettings.RxSensitivityInDbm;
 
             verifierSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), verifierReaderSettings.SearchMode);
             verifierSettings.Session = (ushort)verifierReaderSettings.Session;
@@ -166,6 +206,13 @@ namespace OctaneTagWritingTest.JobStrategies
                     writerReader.Stop();
                     writerReader.Disconnect();
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("writerReader - Error during reader cleanup: " + ex.Message);
+            }
+            try
+            {
                 if (verifierReader != null)
                 {
                     verifierReader.Stop();
@@ -174,7 +221,7 @@ namespace OctaneTagWritingTest.JobStrategies
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error during reader cleanup: " + ex.Message);
+                Console.WriteLine("verifierReader - Error during reader cleanup: " + ex.Message);
             }
         }
 
@@ -202,7 +249,6 @@ namespace OctaneTagWritingTest.JobStrategies
                     continue;
                 }
 
-                var currentEpc = tag.Epc.ToHexString();
                 var expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
 
                 // If no expected EPC exists, generate one using the writer logic.
@@ -211,30 +257,46 @@ namespace OctaneTagWritingTest.JobStrategies
                     Console.WriteLine($"New target TID found: {tidHex} Chip {TagOpController.Instance.GetChipModel(tag)}");
                     expectedEpc = TagOpController.Instance.GetNextEpcForTag(epcHex,tidHex);
                     TagOpController.Instance.RecordExpectedEpc(tidHex, expectedEpc);
+                    Console.WriteLine($"New tag found. TID: {tidHex}. Assigning new EPC: {epcHex} -> {expectedEpc}");
                 }
 
-                // Trigger the write operation using the writer reader.
-                // TagOpController.Instance.TriggerWriteAndVerify(
-                //     tag,
-                //     expectedEpc,
-                //     writerReader,
-                //     cancellationToken,
-                //     swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
-                //     newAccessPassword,
-                //     true);
+                
+                if (string.IsNullOrEmpty(epcHex) || !expectedEpc.Equals(epcHex, StringComparison.OrdinalIgnoreCase))
+                {
+                    // Trigger the write operation using the writer reader.
+                    // TagOpController.Instance.TriggerWriteAndVerify(
+                    //     tag,
+                    //     expectedEpc,
+                    //     writerReader,
+                    //     cancellationToken,
+                    //     swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
+                    //     newAccessPassword,
+                    //     true);
 
-                 TagOpController.Instance.TriggerPartialWriteAndVerify(
-                    tag, 
-                    expectedEpc, 
-                    writerReader, 
-                    cancellationToken, 
-                    swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
-                    newAccessPassword,
-                    true, 
-                    14, 
-                    1,
-                    true, 
-                    3);
+                    TagOpController.Instance.TriggerPartialWriteAndVerify(
+                        tag,
+                        expectedEpc,
+                        writerReader,
+                        cancellationToken,
+                        swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
+                        newAccessPassword,
+                        true,
+                        14,
+                        1,
+                        true,
+                        3);
+                }
+                else
+                {
+                    if (expectedEpc != null && expectedEpc.Equals(epcHex, StringComparison.OrdinalIgnoreCase))
+                    {
+                        TagOpController.Instance.HandleVerifiedTag(tag, tidHex, expectedEpc, swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()), swVerifyTimers.GetOrAdd(tidHex, _ => new Stopwatch()), cycleCount, tag, TagOpController.Instance.GetChipModel(tag), logFile);
+                        Console.WriteLine($"TID {tidHex} verified successfully on writer reader. Current EPC: {epcHex}");
+                        continue;
+                    }                    
+                }
+
+
             }
         }
 
@@ -256,10 +318,10 @@ namespace OctaneTagWritingTest.JobStrategies
                 var expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
                 if (!string.IsNullOrEmpty(expectedEpc))
                 {
-                    var currentEpc = tag.Epc.ToHexString();
-                    if (!expectedEpc.Equals(currentEpc, StringComparison.OrdinalIgnoreCase))
+                    var epcHex = tag.Epc.ToHexString() ?? string.Empty;
+                    if (string.IsNullOrEmpty(epcHex) || !expectedEpc.Equals(epcHex, StringComparison.OrdinalIgnoreCase))
                     {
-                        Console.WriteLine($"Verification mismatch for TID {tidHex}: expected {expectedEpc}, read {currentEpc}. Retrying write operation using expected EPC.");
+                        Console.WriteLine($"Verification mismatch for TID {tidHex}: expected {expectedEpc}, read {epcHex}. Retrying write operation using expected EPC.");
                         // Retry writing using the expected EPC (without generating a new one) via the verifier reader.
                         TagOpController.Instance.TriggerWriteAndVerify(
                             tag,
@@ -272,7 +334,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     }
                     else
                     {
-                        Console.WriteLine($"TID {tidHex} verified successfully on verifier reader.");
+                        Console.WriteLine($"TID {tidHex} verified successfully on verifier reader. Current EPC: {epcHex} - Written tags {TagOpController.Instance.GetSuccessCount()}");
                     }
                 }
             }
