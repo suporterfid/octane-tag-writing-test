@@ -30,7 +30,7 @@ namespace OctaneTagWritingTest.JobStrategies
         private string writerAddress;
         private string verifierAddress;
 
-        public JobStrategy8DualReaderEnduranceStrategy(string hostnameWriter, string hostnameVerifier, string logFile, ReaderSettings readerSettings)
+        public JobStrategy8DualReaderEnduranceStrategy(string hostnameWriter, string hostnameVerifier, string logFile, Dictionary<string, ReaderSettings> readerSettings)
             : base(hostnameWriter, logFile, readerSettings)
         {
             writerAddress = hostnameWriter;
@@ -97,21 +97,22 @@ namespace OctaneTagWritingTest.JobStrategies
             writerReader.ApplyDefaultSettings();
 
             var writerSettings = writerReader.QueryDefaultSettings();
-            writerSettings.Report.IncludeFastId = settings.IncludeFastId;
-            writerSettings.Report.IncludePeakRssi = settings.IncludePeakRssi;
+            var writerReaderSettings = GetSettingsForRole("writer");
+            writerSettings.Report.IncludeFastId = writerReaderSettings.IncludeFastId;
+            writerSettings.Report.IncludePeakRssi = writerReaderSettings.IncludePeakRssi;
             writerSettings.Report.IncludePcBits = true;
-            writerSettings.Report.IncludeAntennaPortNumber = settings.IncludeAntennaPortNumber;
-            writerSettings.Report.Mode = (ReportMode)Enum.Parse(typeof(ReportMode), settings.ReportMode);
-            writerSettings.RfMode = (uint)settings.RfMode;
+            writerSettings.Report.IncludeAntennaPortNumber = writerReaderSettings.IncludeAntennaPortNumber;
+            writerSettings.Report.Mode = (ReportMode)Enum.Parse(typeof(ReportMode), writerReaderSettings.ReportMode);
+            writerSettings.RfMode = (uint)writerReaderSettings.RfMode;
 
             writerSettings.Antennas.DisableAll();
-            writerSettings.Antennas.GetAntenna((ushort)settings.AntennaPort).IsEnabled = true;
-            writerSettings.Antennas.GetAntenna((ushort)settings.AntennaPort).TxPowerInDbm = settings.TxPowerInDbm;
-            writerSettings.Antennas.GetAntenna((ushort)settings.AntennaPort).MaxRxSensitivity = settings.MaxRxSensitivity;
-            writerSettings.Antennas.GetAntenna((ushort)settings.AntennaPort).RxSensitivityInDbm = settings.RxSensitivityInDbm;
+            writerSettings.Antennas.GetAntenna((ushort)writerReaderSettings.AntennaPort).IsEnabled = true;
+            writerSettings.Antennas.GetAntenna((ushort)writerReaderSettings.AntennaPort).TxPowerInDbm = writerReaderSettings.TxPowerInDbm;
+            writerSettings.Antennas.GetAntenna((ushort)writerReaderSettings.AntennaPort).MaxRxSensitivity = writerReaderSettings.MaxRxSensitivity;
+            writerSettings.Antennas.GetAntenna((ushort)writerReaderSettings.AntennaPort).RxSensitivityInDbm = writerReaderSettings.RxSensitivityInDbm;
 
-            writerSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), settings.SearchMode);
-            writerSettings.Session = (ushort)settings.Session;
+            writerSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), writerReaderSettings.SearchMode);
+            writerSettings.Session = (ushort)writerReaderSettings.Session;
 
             EnableLowLatencyReporting(writerSettings, writerReader);
             writerReader.ApplySettings(writerSettings);
@@ -123,22 +124,23 @@ namespace OctaneTagWritingTest.JobStrategies
             verifierReader.ApplyDefaultSettings();
 
             var verifierSettings = verifierReader.QueryDefaultSettings();
-            verifierSettings.Report.IncludeFastId = settings.IncludeFastId;
-            verifierSettings.Report.IncludePeakRssi = settings.IncludePeakRssi;
+            var verifierReaderSettings = GetSettingsForRole("verifier");
+            verifierSettings.Report.IncludeFastId = verifierReaderSettings.IncludeFastId;
+            verifierSettings.Report.IncludePeakRssi = verifierReaderSettings.IncludePeakRssi;
             verifierSettings.Report.IncludePcBits = true;
-            verifierSettings.Report.IncludeAntennaPortNumber = settings.IncludeAntennaPortNumber;
-            verifierSettings.Report.Mode = (ReportMode)Enum.Parse(typeof(ReportMode), settings.ReportMode);
-            verifierSettings.RfMode = (uint)settings.RfMode;
+            verifierSettings.Report.IncludeAntennaPortNumber = verifierReaderSettings.IncludeAntennaPortNumber;
+            verifierSettings.Report.Mode = (ReportMode)Enum.Parse(typeof(ReportMode), verifierReaderSettings.ReportMode);
+            verifierSettings.RfMode = (uint)verifierReaderSettings.RfMode;
 
             verifierSettings.Antennas.DisableAll();
             // Use a different antenna port for the verifier (e.g., port 2).
             verifierSettings.Antennas.GetAntenna(2).IsEnabled = true;
-            verifierSettings.Antennas.GetAntenna(2).TxPowerInDbm = settings.TxPowerInDbm;
-            verifierSettings.Antennas.GetAntenna(2).MaxRxSensitivity = settings.MaxRxSensitivity;
-            verifierSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = settings.RxSensitivityInDbm;
+            verifierSettings.Antennas.GetAntenna(2).TxPowerInDbm = verifierReaderSettings.TxPowerInDbm;
+            verifierSettings.Antennas.GetAntenna(2).MaxRxSensitivity = verifierReaderSettings.MaxRxSensitivity;
+            verifierSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = verifierReaderSettings.RxSensitivityInDbm;
 
-            verifierSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), settings.SearchMode);
-            verifierSettings.Session = (ushort)settings.Session;
+            verifierSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), verifierReaderSettings.SearchMode);
+            verifierSettings.Session = (ushort)verifierReaderSettings.Session;
 
             EnableLowLatencyReporting(verifierSettings, verifierReader);
             verifierReader.ApplySettings(verifierSettings);
@@ -188,6 +190,7 @@ namespace OctaneTagWritingTest.JobStrategies
             foreach (var tag in report.Tags)
             {
                 var tidHex = tag.Tid?.ToHexString() ?? string.Empty;
+                var epcHex = tag.Epc?.ToHexString() ?? string.Empty;
                 if (string.IsNullOrEmpty(tidHex) || TagOpController.Instance.IsTidProcessed(tidHex))
                     continue;
 
@@ -206,19 +209,32 @@ namespace OctaneTagWritingTest.JobStrategies
                 if (string.IsNullOrEmpty(expectedEpc))
                 {
                     Console.WriteLine($"New target TID found: {tidHex} Chip {TagOpController.Instance.GetChipModel(tag)}");
-                    expectedEpc = TagOpController.Instance.GetNextEpcForTag();
+                    expectedEpc = TagOpController.Instance.GetNextEpcForTag(epcHex,tidHex);
                     TagOpController.Instance.RecordExpectedEpc(tidHex, expectedEpc);
                 }
 
                 // Trigger the write operation using the writer reader.
-                TagOpController.Instance.TriggerWriteAndVerify(
-                    tag,
-                    expectedEpc,
-                    writerReader,
-                    cancellationToken,
+                // TagOpController.Instance.TriggerWriteAndVerify(
+                //     tag,
+                //     expectedEpc,
+                //     writerReader,
+                //     cancellationToken,
+                //     swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
+                //     newAccessPassword,
+                //     true);
+
+                 TagOpController.Instance.TriggerPartialWriteAndVerify(
+                    tag, 
+                    expectedEpc, 
+                    writerReader, 
+                    cancellationToken, 
                     swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
                     newAccessPassword,
-                    true);
+                    true, 
+                    14, 
+                    1,
+                    true, 
+                    3);
             }
         }
 

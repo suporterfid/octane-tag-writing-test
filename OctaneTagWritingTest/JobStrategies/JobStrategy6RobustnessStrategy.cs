@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
@@ -14,7 +14,7 @@ namespace OctaneTagWritingTest.JobStrategies
         private readonly ConcurrentDictionary<string, Stopwatch> swWriteTimers = new ConcurrentDictionary<string, Stopwatch>();
         private readonly ConcurrentDictionary<string, Stopwatch> swVerifyTimers = new ConcurrentDictionary<string, Stopwatch>();
 
-        public JobStrategy6RobustnessStrategy(string hostname, string logFile, ReaderSettings readerSettings)
+        public JobStrategy6RobustnessStrategy(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings)
             : base(hostname, logFile, readerSettings)
         {
             TagOpController.Instance.CleanUp();
@@ -80,7 +80,7 @@ namespace OctaneTagWritingTest.JobStrategies
                 {
                     
                     Console.WriteLine($" Success count: {TagOpController.Instance.GetSuccessCount()}");
-                    expectedEpc = TagOpController.Instance.GetNextEpcForTag();
+                    expectedEpc = TagOpController.Instance.GetNextEpcForTag(tidHex);
                     Console.WriteLine($"Assigning new EPC: {currentEpc} -> {expectedEpc}");
                     TagOpController.Instance.RecordExpectedEpc(tidHex, expectedEpc);
 
@@ -141,3 +141,6 @@ namespace OctaneTagWritingTest.JobStrategies
         }
     }
 }
+
+
+

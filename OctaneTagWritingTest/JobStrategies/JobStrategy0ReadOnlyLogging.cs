@@ -1,4 +1,4 @@
-﻿using Impinj.OctaneSdk;
+using Impinj.OctaneSdk;
 using OctaneTagWritingTest.Helpers;
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ namespace OctaneTagWritingTest.JobStrategies
     {
         private readonly Dictionary<string, int> tagReadCounts = new();
 
-        public JobStrategy0ReadOnlyLogging(string hostname, string logFile, ReaderSettings readerSettings)
+        public JobStrategy0ReadOnlyLogging(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings)
             : base(hostname, logFile, readerSettings)
         {
             TagOpController.Instance.CleanUp();
@@ -84,3 +84,6 @@ namespace OctaneTagWritingTest.JobStrategies
         
     }
 }
+
+
+

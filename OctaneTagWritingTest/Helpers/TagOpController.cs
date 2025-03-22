@@ -121,7 +121,7 @@ namespace OctaneTagWritingTest.Helpers
             }
         }
 
-        public string GetNextEpcForTag()
+        public string GetNextEpcForTag(string epc, string tid)
         {
             const int maxRetries = 5;
             int retryCount = 0;
@@ -132,7 +132,15 @@ namespace OctaneTagWritingTest.Helpers
                 do
                 {
                     // Get a new EPC from the manager.
-                    nextEpc = EpcListManager.Instance.GetNextEpc();
+                    if(string.IsNullOrEmpty(epc))
+                    {
+                        nextEpc = EpcListManager.Instance.GetNextEpc(tid);
+                    }
+                    else
+                    {
+                        nextEpc = EpcListManager.Instance.CreateEpcWithCurrentDigits(epc, tid);
+                    }
+                    
 
                     // If the EPC does not already exist, break out of the loop.
                     if (!GetExistingEpc(nextEpc))
@@ -153,6 +161,8 @@ namespace OctaneTagWritingTest.Helpers
                 return nextEpc;
             }
         }
+
+        
 
 
         public int GetSuccessCount()
@@ -277,6 +287,95 @@ namespace OctaneTagWritingTest.Helpers
             }
 
         }
+        /// <summary>
+        /// Triggers a partial write operation that updates only the specified number of characters in the EPC while preserving the rest.
+        /// </summary>
+        /// <param name="tag">The tag to write to</param>
+        /// <param name="newEpcToWrite">The new EPC value to partially write</param>
+        /// <param name="reader">The RFID reader instance</param>
+        /// <param name="cancellationToken">Token to cancel the operation</param>
+        /// <param name="swWrite">Stopwatch for timing the write operation</param>
+        /// <param name="newAccessPassword">Access password for the tag</param>
+        /// <param name="encodeOrDefault">If true, uses the provided EPC; if false, uses a default pattern</param>
+        /// <param name="charactersToWrite">Number of characters to write (minimum 8, default 14)</param>
+        /// <param name="targetAntennaPort">Target antenna port (default 1)</param>
+        /// <param name="useBlockWrite">Whether to use block write operations (default true)</param>
+        /// <param name="sequenceMaxRetries">Maximum number of retries for the sequence (default 5)</param>
+        public void TriggerPartialWriteAndVerify(Tag tag, string newEpcToWrite, ImpinjReader reader, CancellationToken cancellationToken, Stopwatch swWrite, string newAccessPassword, bool encodeOrDefault, int charactersToWrite = 14, ushort targetAntennaPort = 1, bool useBlockWrite = true, ushort sequenceMaxRetries = 5)
+        {
+            if (cancellationToken.IsCancellationRequested) return;
+
+            // Validate minimum characters requirement (2 words = 8 characters)
+            if (charactersToWrite < 8)
+            {
+                throw new ArgumentException("Minimum characters to write must be 8 (2 words)", nameof(charactersToWrite));
+            }
+
+            string oldEpc = tag.Epc.ToHexString();
+            
+            // Take only the specified number of characters from the new EPC
+            string partialNewEpc = newEpcToWrite.Substring(0, Math.Min(charactersToWrite, newEpcToWrite.Length));
+            
+            // Keep the remaining characters from the old EPC
+            string remainingOldEpc = oldEpc.Length > charactersToWrite ? oldEpc.Substring(charactersToWrite) : "";
+            
+            // Set EPC data based on encoding choice
+            string epcData = encodeOrDefault 
+                ? partialNewEpc + remainingOldEpc 
+                : $"B071000000000000000000{processedTids.Count:D2}";
+
+            string currentTid = tag.Tid.ToHexString();
+            Console.WriteLine($"Attempting partial write operation for TID {currentTid}: {oldEpc} -> {epcData} (Writing first {charactersToWrite} characters) - Read RSSI {tag.PeakRssiInDbm}");
+            
+            TagOpSequence seq = new TagOpSequence();
+            seq.SequenceStopTrigger = SequenceTriggerType.None;
+            seq.TargetTag.MemoryBank = MemoryBank.Tid;
+            seq.TargetTag.BitPointer = 0;
+            seq.TargetTag.Data = currentTid;
+            
+            if (useBlockWrite)
+            {
+                seq.BlockWriteEnabled = true;
+                seq.BlockWriteWordCount = 2; // Calculate words based on characters
+                seq.BlockWriteRetryCount = 3;
+            }
+
+            if (sequenceMaxRetries > 0)
+            {
+                seq.SequenceStopTrigger = SequenceTriggerType.ExecutionCount;
+                seq.ExecutionCount = sequenceMaxRetries;
+            }
+            else
+            {
+                seq.SequenceStopTrigger = SequenceTriggerType.None;
+            }
+
+            TagWriteOp writeOp = new TagWriteOp();
+            writeOp.AccessPassword = TagData.FromHexString(newAccessPassword);
+            writeOp.MemoryBank = MemoryBank.Epc;
+            writeOp.WordPointer = WordPointers.Epc;
+            writeOp.Data = TagData.FromHexString(epcData);
+
+            seq.Ops.Add(writeOp);
+
+            swWrite.Restart();
+
+            try
+            {
+                addedSequences.Add(seq.Id.ToString());
+            }
+            catch (Exception)
+            {
+            }
+
+            CheckAndCleanAccessSequencesOnReader(reader);
+
+            reader.AddOpSequence(seq);
+            Console.WriteLine($"Added Partial Write OpSequence {seq.Id} to TID {currentTid} - Current EPC: {oldEpc} -> Expected EPC {epcData}");
+
+            RecordExpectedEpc(currentTid, epcData);
+        }
+
         public void TriggerWriteAndVerify(Tag tag, string newEpcToWrite, ImpinjReader reader, CancellationToken cancellationToken, Stopwatch swWrite, string newAccessPassword, bool encodeOrDefault, ushort targetAntennaPort = 1, bool useBlockWrite = true, ushort sequenceMaxRetries = 5)
         {
             if (cancellationToken.IsCancellationRequested) return;
@@ -458,7 +557,15 @@ namespace OctaneTagWritingTest.Helpers
             {
                 recoveryCount[tidHex] = attempts + 1;
                 Console.WriteLine($"Verification failed, retry {recoveryCount[tidHex]} for TID {tidHex}");
-                TriggerWriteAndVerify(readResult.Tag, expectedEpc, reader, cancellationToken, swWrite, newAccessPassword, true);
+                // Use the same method (partial or full write) that was originally used
+                if (expectedEpc.Length == readResult.Tag.Epc.ToHexString().Length)
+                {
+                    TriggerPartialWriteAndVerify(readResult.Tag, expectedEpc, reader, cancellationToken, swWrite, newAccessPassword, true);
+                }
+                else
+                {
+                    TriggerWriteAndVerify(readResult.Tag, expectedEpc, reader, cancellationToken, swWrite, newAccessPassword, true);
+                }
             }
             else
             {

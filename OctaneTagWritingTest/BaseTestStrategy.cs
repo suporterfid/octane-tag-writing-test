@@ -24,19 +24,34 @@ namespace OctaneTagWritingTest
         protected string logFile;
         protected Stopwatch sw = new Stopwatch();
         protected CancellationToken cancellationToken;
-        protected ReaderSettings settings;
+        protected Dictionary<string, ReaderSettings> settings;
 
         /// <summary>
         /// Initializes a new instance of the BaseTestStrategy class
         /// </summary>
         /// <param name="hostname">The hostname of the RFID reader</param>
         /// <param name="logFile">The path to the log file for test results</param>
-        public BaseTestStrategy(string hostname, string logFile, ReaderSettings readerSettings)
+        /// <param name="readerSettings">Dictionary of reader settings by role</param>
+        public BaseTestStrategy(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings)
         {
             this.hostname = hostname;
             this.logFile = logFile;
             reader = new ImpinjReader();
             this.settings = readerSettings;
+        }
+
+        /// <summary>
+        /// Gets the settings for a specific reader role
+        /// </summary>
+        /// <param name="role">The role of the reader (e.g., "writer", "verifier")</param>
+        /// <returns>The settings for the specified role</returns>
+        protected ReaderSettings GetSettingsForRole(string role)
+        {
+            if (!settings.ContainsKey(role))
+            {
+                throw new ArgumentException($"No settings found for role: {role}");
+            }
+            return settings[role];
         }
 
         /// <summary>
@@ -75,41 +90,42 @@ namespace OctaneTagWritingTest
         /// - Enables FastId and Individual reporting mode
         /// - Enables low latency reporting
         /// </remarks>
-        protected virtual Settings ConfigureReader()
+        protected virtual Settings ConfigureReader(string role = "writer")
         {
             EpcListManager.Instance.LoadEpcList("epc_list.txt");
 
-            reader.Connect(settings.Hostname);
+            var roleSettings = GetSettingsForRole(role);
+            reader.Connect(roleSettings.Hostname);
             reader.ApplyDefaultSettings();
 
             Settings readerSettings = reader.QueryDefaultSettings();
-            readerSettings.Report.IncludeFastId = settings.IncludeFastId;
-            readerSettings.Report.IncludePeakRssi = settings.IncludePeakRssi;
+            readerSettings.Report.IncludeFastId = roleSettings.IncludeFastId;
+            readerSettings.Report.IncludePeakRssi = roleSettings.IncludePeakRssi;
             readerSettings.Report.IncludePcBits = true;
-            readerSettings.Report.IncludeAntennaPortNumber = settings.IncludeAntennaPortNumber;
-            readerSettings.Report.Mode = (ReportMode)Enum.Parse(typeof(ReportMode), settings.ReportMode);
-            readerSettings.RfMode = (uint) settings.RfMode;
+            readerSettings.Report.IncludeAntennaPortNumber = roleSettings.IncludeAntennaPortNumber;
+            readerSettings.Report.Mode = (ReportMode)Enum.Parse(typeof(ReportMode), roleSettings.ReportMode);
+            readerSettings.RfMode = (uint) roleSettings.RfMode;
 
             readerSettings.Antennas.DisableAll();
-            readerSettings.Antennas.GetAntenna((ushort)settings.AntennaPort).IsEnabled = true;
-            readerSettings.Antennas.GetAntenna((ushort)settings.AntennaPort).TxPowerInDbm = settings.TxPowerInDbm;
-            readerSettings.Antennas.GetAntenna((ushort)settings.AntennaPort).MaxRxSensitivity = settings.MaxRxSensitivity;
-            readerSettings.Antennas.GetAntenna((ushort)settings.AntennaPort).RxSensitivityInDbm = settings.RxSensitivityInDbm;
+            readerSettings.Antennas.GetAntenna((ushort)roleSettings.AntennaPort).IsEnabled = true;
+            readerSettings.Antennas.GetAntenna((ushort)roleSettings.AntennaPort).TxPowerInDbm = roleSettings.TxPowerInDbm;
+            readerSettings.Antennas.GetAntenna((ushort)roleSettings.AntennaPort).MaxRxSensitivity = roleSettings.MaxRxSensitivity;
+            readerSettings.Antennas.GetAntenna((ushort)roleSettings.AntennaPort).RxSensitivityInDbm = roleSettings.RxSensitivityInDbm;
 
             readerSettings.Antennas.GetAntenna(2).IsEnabled = true;
-            readerSettings.Antennas.GetAntenna(2).TxPowerInDbm = 29;//settings.TxPowerInDbm;
-            readerSettings.Antennas.GetAntenna(2).MaxRxSensitivity = settings.MaxRxSensitivity;
-            readerSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = settings.RxSensitivityInDbm;
+            readerSettings.Antennas.GetAntenna(2).TxPowerInDbm = 29;//roleSettings.TxPowerInDbm;
+            readerSettings.Antennas.GetAntenna(2).MaxRxSensitivity = roleSettings.MaxRxSensitivity;
+            readerSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = roleSettings.RxSensitivityInDbm;
 
-            readerSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), settings.SearchMode);
-            readerSettings.Session = (ushort)settings.Session;
+            readerSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), roleSettings.SearchMode);
+            readerSettings.Session = (ushort)roleSettings.Session;
 
-            readerSettings.Filters.TagFilter1.MemoryBank = (MemoryBank)Enum.Parse(typeof(MemoryBank), settings.MemoryBank);
-            readerSettings.Filters.TagFilter1.BitPointer = (ushort)settings.BitPointer;
-            readerSettings.Filters.TagFilter1.TagMask = settings.TagMask;
-            readerSettings.Filters.TagFilter1.BitCount = settings.BitCount;
-            readerSettings.Filters.TagFilter1.FilterOp = (TagFilterOp)Enum.Parse(typeof(TagFilterOp), settings.FilterOp);
-            readerSettings.Filters.Mode = (TagFilterMode)Enum.Parse(typeof(TagFilterMode), settings.FilterMode);
+            readerSettings.Filters.TagFilter1.MemoryBank = (MemoryBank)Enum.Parse(typeof(MemoryBank), roleSettings.MemoryBank);
+            readerSettings.Filters.TagFilter1.BitPointer = (ushort)roleSettings.BitPointer;
+            readerSettings.Filters.TagFilter1.TagMask = roleSettings.TagMask;
+            readerSettings.Filters.TagFilter1.BitCount = roleSettings.BitCount;
+            readerSettings.Filters.TagFilter1.FilterOp = (TagFilterOp)Enum.Parse(typeof(TagFilterOp), roleSettings.FilterOp);
+            readerSettings.Filters.Mode = (TagFilterMode)Enum.Parse(typeof(TagFilterMode), roleSettings.FilterMode);
 
             EnableLowLatencyReporting(readerSettings);
             reader.ApplySettings(readerSettings);

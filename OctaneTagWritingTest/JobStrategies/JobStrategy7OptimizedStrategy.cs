@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
@@ -15,7 +15,7 @@ namespace OctaneTagWritingTest.JobStrategies
         private readonly ConcurrentDictionary<string, Stopwatch> swVerifyTimers = new ConcurrentDictionary<string, Stopwatch>();
         private const int maxRetries = 3;
 
-        public JobStrategy7OptimizedStrategy(string hostname, string logFile, ReaderSettings readerSettings)
+        public JobStrategy7OptimizedStrategy(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings)
             : base(hostname, logFile, readerSettings)
         {
             TagOpController.Instance.CleanUp();
@@ -67,7 +67,7 @@ namespace OctaneTagWritingTest.JobStrategies
                 if (!TagOpController.Instance.IsTidProcessed(tidHex))
                 {
                     string currentEpc = tag.Epc.ToHexString();
-                    string expectedEpc = TagOpController.Instance.GetNextEpcForTag();
+                    string expectedEpc = TagOpController.Instance.GetNextEpcForTag(tidHex);
 
                     Console.WriteLine($"New tag found. TID: {tidHex}. Assigning new EPC: {currentEpc} -> {expectedEpc}");
                     TagOpController.Instance.RecordExpectedEpc(tidHex, expectedEpc);
@@ -146,3 +146,6 @@ namespace OctaneTagWritingTest.JobStrategies
         }
     }
 }
+
+
+

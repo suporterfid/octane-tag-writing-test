@@ -35,6 +35,55 @@ public sealed class EpcListManager
     }
 
     /// <summary>
+    /// Creates a new EPC string using the configured header and item code for the first 14 digits
+    /// and taking the remaining 20 digits from the provided current EPC.
+    /// </summary>
+    /// <param name="currentEpc">The current EPC string to take the remaining digits from.</param>
+    /// <param name="tid">The TID string to associate with the new EPC.</param>
+    /// <returns>A new EPC string with the configured prefix and remaining digits from current EPC.</returns>
+    public string CreateEpcWithCurrentDigits(string currentEpc, string tid)
+    {
+        if (string.IsNullOrEmpty(currentEpc) || currentEpc.Length != 24)
+            throw new ArgumentException("Current EPC must be a 24-character string.", nameof(currentEpc));
+
+        if (string.IsNullOrEmpty(tid))
+            throw new ArgumentException("TID cannot be null or empty.", nameof(tid));
+
+        lock (lockObj)
+        {
+            // Take the first 14 digits from configured header and item code
+            string prefix = epcHeader + epcPlainItemCode;
+            if (prefix.Length != 14)
+                throw new InvalidOperationException("Combined header and item code must be 14 characters.");
+
+            // Take the remaining 20 digits from the current EPC
+            string remainingDigits = currentEpc.Substring(14);
+
+            // Combine to create the new EPC
+            string newEpc = prefix + remainingDigits;
+
+            // Store the new EPC in the dictionary associated with the TID
+            generatedEpcsByTid.AddOrUpdate(tid, newEpc, (key, oldValue) => newEpc);
+
+            Console.WriteLine($"Created new EPC {newEpc} for TID {tid} using current EPC {currentEpc}");
+            return newEpc;
+        }
+    }
+
+    /// <summary>
+    /// Gets the first 14 digits of a new EPC created using CreateEpcWithCurrentDigits.
+    /// This represents the configured header and item code portion of the EPC.
+    /// </summary>
+    /// <param name="currentEpc">The current EPC string to use for creating the new EPC.</param>
+    /// <param name="tid">The TID string to associate with the new EPC.</param>
+    /// <returns>The first 14 digits of the newly created EPC.</returns>
+    public string CreateAndStoreNewEpcBasedOnCurrentPrefix(string currentEpc, string tid)
+    {
+        string newEpc = CreateEpcWithCurrentDigits(currentEpc, tid);
+        return newEpc.Substring(0, 14);
+    }
+
+    /// <summary>
     /// Loads the EPC list from the specified file.
     /// </summary>
     /// <param name="filePath">The path to the EPC file.</param>
@@ -80,18 +129,18 @@ public sealed class EpcListManager
     /// </summary>
     /// <param name="tid">The tag TID used as a key for uniqueness (optional).</param>
     /// <returns>The next unique EPC string.</returns>
-    public string GetNextEpc(string tid = null)
+    public string GetNextEpc(string tid)
     {
         if (!string.IsNullOrEmpty(tid))
         {
             // If TID is provided, use the dictionary to guarantee uniqueness.
             // If an EPC for this TID hasn't been generated, GenerateUniqueEpc is called and the value is added.
-            return generatedEpcsByTid.GetOrAdd(tid, key => GenerateUniqueEpc());
+            return generatedEpcsByTid.GetOrAdd(tid, key => GenerateUniqueEpc(tid));
         }
         else
         {
             // If TID is null or empty, use the current logic.
-            return GenerateUniqueEpc();
+            return GenerateUniqueEpc(tid);
         }
     }
 
@@ -100,28 +149,23 @@ public sealed class EpcListManager
     /// Ensures thread safety during EPC generation.
     /// </summary>
     /// <returns>A unique EPC string.</returns>
-    private string GenerateUniqueEpc()
+    private string GenerateUniqueEpc(string tid)
     {
         lock (lockObj)
         {
             // Generate the EPC list using the current serial number.
-            List<string> createdEpcs = EpcListGeneratorHelper.Instance.GenerateCustomEpcList(
-                epcHeader, epcPlainItemCode, quantity, currentSerialNumber);
-
-            string currentEpc = createdEpcs.FirstOrDefault();
-            currentSerialNumber++;
+            string createdEpcToApply = EpcListGeneratorHelper.Instance.GenerateEpcFromTid(
+                tid, epcHeader, epcPlainItemCode);
 
             // If the generated EPC already exists, generate a new EPC with the next serial number.
-            if (TagOpController.Instance.GetExistingEpc(currentEpc))
+            if (TagOpController.Instance.GetExistingEpc(createdEpcToApply))
             {
-                createdEpcs = EpcListGeneratorHelper.Instance.GenerateCustomEpcList(
-                    epcHeader, epcPlainItemCode, quantity, currentSerialNumber);
-                currentEpc = createdEpcs.FirstOrDefault();
-                currentSerialNumber++;
+                createdEpcToApply = EpcListGeneratorHelper.Instance.GenerateEpcFromTid(
+                    tid, epcHeader, epcPlainItemCode);
             }
 
-            Console.WriteLine($"Returning next EPC created: {currentEpc}: SN = {currentSerialNumber}");
-            return currentEpc;
+            Console.WriteLine($"Returning next EPC created: {createdEpcToApply}: SN = {currentSerialNumber}");
+            return createdEpcToApply;
         }
     }
 
@@ -129,10 +173,10 @@ public sealed class EpcListManager
     /// Generates a new serial number based on the last EPC.
     /// </summary>
     /// <returns>A new serial number string.</returns>
-    private string GenerateNewSerialNumber()
+    private string GenerateNewSerialNumber(string epc)
     {
-        string prefix = lastEpc.Substring(0, lastEpc.Length - 6);
-        string lastDigits = lastEpc.Substring(lastEpc.Length - 6);
+        string prefix = epc.Substring(0, lastEpc.Length - 6);
+        string lastDigits = epc.Substring(lastEpc.Length - 6);
 
         int number = int.Parse(lastDigits, System.Globalization.NumberStyles.HexNumber);
         number++;

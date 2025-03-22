@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
@@ -14,7 +14,7 @@ namespace OctaneTagWritingTest.JobStrategies
         private readonly ConcurrentDictionary<string, Stopwatch> writeTimers = new();
         private readonly ConcurrentQueue<Tag> tagsQueue = new();
 
-        public JobStrategy3BatchSerializationPermalockStrategy(string hostname, string logFile, ReaderSettings readerSettings)
+        public JobStrategy3BatchSerializationPermalockStrategy(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings)
             : base(hostname, logFile, readerSettings)
         {
             TagOpController.Instance.CleanUp();
@@ -71,8 +71,9 @@ namespace OctaneTagWritingTest.JobStrategies
                 if (IsCancellationRequested()) return;
 
                 var tidHex = tag.Tid.ToHexString();
-                var currentEpc = tag.Epc.ToHexString();
-                var newEpc = TagOpController.Instance.GetNextEpcForTag();
+                string epcHex = tag.Epc?.ToHexString() ?? string.Empty;
+                //var currentEpc = tag.Epc.ToHexString();
+                var newEpc = TagOpController.Instance.GetNextEpcForTag(epcHex, tidHex);
 
                 TagOpController.Instance.RecordExpectedEpc(tidHex, newEpc);
 

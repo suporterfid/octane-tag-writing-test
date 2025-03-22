@@ -1,4 +1,4 @@
-﻿using Impinj.OctaneSdk;
+using Impinj.OctaneSdk;
 using OctaneTagWritingTest.Helpers;
 using System;
 using System.Diagnostics;
@@ -13,7 +13,7 @@ namespace OctaneTagWritingTest.JobStrategies
     /// </summary>
     public class JobStrategy1SpeedStrategy : BaseTestStrategy
     {
-        public JobStrategy1SpeedStrategy(string hostname, string logFile, ReaderSettings readerSettings) : base(hostname, logFile, readerSettings) 
+        public JobStrategy1SpeedStrategy(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings) : base(hostname, logFile, readerSettings) 
         {
             TagOpController.Instance.CleanUp();
         }
@@ -64,24 +64,26 @@ namespace OctaneTagWritingTest.JobStrategies
                     return;
 
                 string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
+                string epcHex = tag.Epc?.ToHexString() ?? string.Empty;
+                
                 if (TagOpController.Instance.IsTidProcessed(tidHex) || TagOpController.Instance.HasResult(tidHex))
                     continue;
 
-                string currentEpc = tag.Epc.ToHexString();
+                //string currentEpc = tag.Epc.ToHexString();
                 string expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
 
-                if (!string.IsNullOrEmpty(expectedEpc) && expectedEpc.Equals(currentEpc, StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrEmpty(expectedEpc) && expectedEpc.Equals(epcHex, StringComparison.OrdinalIgnoreCase))
                 {
-                    Console.WriteLine($"Verified Tag {tidHex} already has EPC: {currentEpc}");
-                    TagOpController.Instance.RecordResult(tidHex, currentEpc, true);
+                    Console.WriteLine($"Verified Tag {tidHex} already has EPC: {epcHex}");
+                    TagOpController.Instance.RecordResult(tidHex, epcHex, true);
                     continue;
                 }
 
                 if (string.IsNullOrEmpty(expectedEpc))
                 {
-                    expectedEpc = TagOpController.Instance.GetNextEpcForTag();
+                    expectedEpc = TagOpController.Instance.GetNextEpcForTag(epcHex, tidHex);
                     TagOpController.Instance.RecordExpectedEpc(tidHex, expectedEpc);
-                    Console.WriteLine($"Assigning new EPC to TID {tidHex}: {currentEpc} -> {expectedEpc}");
+                    Console.WriteLine($"Assigning new EPC to TID {tidHex}: {epcHex} -> {expectedEpc}");
                     TagOpController.Instance.TriggerWriteAndVerify(tag, expectedEpc, reader, cancellationToken, new Stopwatch(), newAccessPassword, true);
                 }
             }
@@ -114,3 +116,6 @@ namespace OctaneTagWritingTest.JobStrategies
         }
     }
 }
+
+
+

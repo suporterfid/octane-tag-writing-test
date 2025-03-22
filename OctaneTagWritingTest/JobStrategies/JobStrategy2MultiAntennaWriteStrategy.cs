@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
@@ -12,7 +12,7 @@ namespace OctaneTagWritingTest.JobStrategies
     {
         private readonly ConcurrentDictionary<string, Stopwatch> writeTimers = new ConcurrentDictionary<string, Stopwatch>();
 
-        public JobStrategy2MultiAntennaWriteStrategy(string hostname, string logFile, ReaderSettings readerSettings)
+        public JobStrategy2MultiAntennaWriteStrategy(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings)
             : base(hostname, logFile, readerSettings)
         {
             TagOpController.Instance.CleanUp();
@@ -66,36 +66,37 @@ namespace OctaneTagWritingTest.JobStrategies
         {
             EpcListManager.Instance.LoadEpcList("epc_list.txt");
 
-            reader.Connect(settings.Hostname);
+            var writerSettings = GetSettingsForRole("writer");
+            reader.Connect(writerSettings.Hostname);
             reader.ApplyDefaultSettings();
 
             Settings readerSettings = reader.QueryDefaultSettings();
-            readerSettings.Report.IncludeFastId = settings.IncludeFastId;
-            readerSettings.Report.IncludePeakRssi = settings.IncludePeakRssi;
-            readerSettings.Report.IncludeAntennaPortNumber = settings.IncludeAntennaPortNumber;
-            readerSettings.Report.Mode = (ReportMode)Enum.Parse(typeof(ReportMode), settings.ReportMode);
-            readerSettings.RfMode = (uint)settings.RfMode;
+            readerSettings.Report.IncludeFastId = writerSettings.IncludeFastId;
+            readerSettings.Report.IncludePeakRssi = writerSettings.IncludePeakRssi;
+            readerSettings.Report.IncludeAntennaPortNumber = writerSettings.IncludeAntennaPortNumber;
+            readerSettings.Report.Mode = (ReportMode)Enum.Parse(typeof(ReportMode), writerSettings.ReportMode);
+            readerSettings.RfMode = (uint)writerSettings.RfMode;
 
             readerSettings.Antennas.DisableAll();
             readerSettings.Antennas.GetAntenna(1).IsEnabled = true;
-            readerSettings.Antennas.GetAntenna(1).TxPowerInDbm = settings.TxPowerInDbm;
-            readerSettings.Antennas.GetAntenna(1).MaxRxSensitivity = settings.MaxRxSensitivity;
-            readerSettings.Antennas.GetAntenna(1).RxSensitivityInDbm = settings.RxSensitivityInDbm;
+            readerSettings.Antennas.GetAntenna(1).TxPowerInDbm = writerSettings.TxPowerInDbm;
+            readerSettings.Antennas.GetAntenna(1).MaxRxSensitivity = writerSettings.MaxRxSensitivity;
+            readerSettings.Antennas.GetAntenna(1).RxSensitivityInDbm = writerSettings.RxSensitivityInDbm;
 
             readerSettings.Antennas.GetAntenna(2).IsEnabled = true;
             readerSettings.Antennas.GetAntenna(2).TxPowerInDbm = 33.0;
             readerSettings.Antennas.GetAntenna(2).MaxRxSensitivity = true;
-            readerSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = settings.RxSensitivityInDbm;
+            readerSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = writerSettings.RxSensitivityInDbm;
 
-            readerSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), settings.SearchMode);
-            readerSettings.Session = (ushort)settings.Session;
+            readerSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), writerSettings.SearchMode);
+            readerSettings.Session = (ushort)writerSettings.Session;
 
-            readerSettings.Filters.TagFilter1.MemoryBank = (MemoryBank)Enum.Parse(typeof(MemoryBank), settings.MemoryBank);
-            readerSettings.Filters.TagFilter1.BitPointer = (ushort)settings.BitPointer;
-            readerSettings.Filters.TagFilter1.TagMask = settings.TagMask;
-            readerSettings.Filters.TagFilter1.BitCount = settings.BitCount;
-            readerSettings.Filters.TagFilter1.FilterOp = (TagFilterOp)Enum.Parse(typeof(TagFilterOp), settings.FilterOp);
-            readerSettings.Filters.Mode = (TagFilterMode)Enum.Parse(typeof(TagFilterMode), settings.FilterMode);
+            readerSettings.Filters.TagFilter1.MemoryBank = (MemoryBank)Enum.Parse(typeof(MemoryBank), writerSettings.MemoryBank);
+            readerSettings.Filters.TagFilter1.BitPointer = (ushort)writerSettings.BitPointer;
+            readerSettings.Filters.TagFilter1.TagMask = writerSettings.TagMask;
+            readerSettings.Filters.TagFilter1.BitCount = writerSettings.BitCount;
+            readerSettings.Filters.TagFilter1.FilterOp = (TagFilterOp)Enum.Parse(typeof(TagFilterOp), writerSettings.FilterOp);
+            readerSettings.Filters.Mode = (TagFilterMode)Enum.Parse(typeof(TagFilterMode), writerSettings.FilterMode);
 
             EnableLowLatencyReporting(readerSettings);
             reader.ApplySettings(readerSettings);
@@ -107,8 +108,6 @@ namespace OctaneTagWritingTest.JobStrategies
         {
             if (report == null || IsCancellationRequested()) return;
 
-
-
             foreach (Tag tag in report.Tags)
             {
                 if (IsCancellationRequested()) return;
@@ -117,6 +116,7 @@ namespace OctaneTagWritingTest.JobStrategies
                 if (tag.AntennaPortNumber == 2) continue;
 
                 string tidHex = tag.Tid?.ToHexString() ?? string.Empty;
+                string epcHex = tag.Epc?.ToHexString() ?? string.Empty;
 
                 if (TagOpController.Instance.IsTidProcessed(tidHex))
                 {
@@ -135,7 +135,7 @@ namespace OctaneTagWritingTest.JobStrategies
 
                 if (string.IsNullOrEmpty(expectedEpc))
                 {
-                    string newEpcToWrite = TagOpController.Instance.GetNextEpcForTag();
+                    string newEpcToWrite = TagOpController.Instance.GetNextEpcForTag(epcHex, tidHex);
                     TagOpController.Instance.RecordExpectedEpc(tidHex, newEpcToWrite);
                     Console.WriteLine($"New target TID: {tidHex}, writing new EPC: {newEpcToWrite}");
 

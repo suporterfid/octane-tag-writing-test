@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
@@ -15,7 +15,7 @@ namespace OctaneTagWritingTest.JobStrategies
         private readonly ConcurrentDictionary<string, Stopwatch> swWriteTimers = new();
         private readonly ConcurrentDictionary<string, Stopwatch> swVerifyTimers = new();
 
-        public JobStrategy5EnduranceStrategy(string hostname, string logFile, ReaderSettings readerSettings) : base(hostname, logFile, readerSettings)
+        public JobStrategy5EnduranceStrategy(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings) : base(hostname, logFile, readerSettings)
         {
             TagOpController.Instance.CleanUp();
         }
@@ -85,7 +85,7 @@ namespace OctaneTagWritingTest.JobStrategies
                 if (string.IsNullOrEmpty(expectedEpc))
                 {
                     Console.WriteLine($" Success count: {TagOpController.Instance.GetSuccessCount()}");
-                    expectedEpc = TagOpController.Instance.GetNextEpcForTag();
+                    expectedEpc = TagOpController.Instance.GetNextEpcForTag(tidHex);
                     TagOpController.Instance.RecordExpectedEpc(tidHex, expectedEpc);
                     Console.WriteLine($"New target TID found: {tidHex} Chip {TagOpController.Instance.GetChipModel(tag)}");
                 }
@@ -148,3 +148,5 @@ namespace OctaneTagWritingTest.JobStrategies
         }
     }
 }
+
+
