@@ -17,10 +17,10 @@ namespace OctaneTagWritingTest
             string hostnameWriter = "192.168.68.248";
             string hostnameVerifier = "192.168.68.94";
 
-            string testDescription = "Writing-Test-1-Round-1";
-            string epcHeader = "B371";
+            string testDescription = "Gravacao-Teste-2-Rodada-1-";
+            string epcHeader = "A101";
             //string epcPlainItemCode = "76788888888888";
-            string epcPlainItemCode = "4141123458";
+            string epcPlainItemCode = "2141123457";
             long quantity = 1;
             EpcListManager.Instance.InitEpcData(epcHeader, epcPlainItemCode, quantity);
 
@@ -37,9 +37,9 @@ namespace OctaneTagWritingTest
             writerSettings.ReportMode = "Individual";
             writerSettings.RfMode = 0;
             writerSettings.AntennaPort = 1;
-            writerSettings.TxPowerInDbm = 19;
-            writerSettings.MaxRxSensitivity = true;
-            writerSettings.RxSensitivityInDbm = -60;
+            writerSettings.TxPowerInDbm = 30;
+            writerSettings.MaxRxSensitivity = false;
+            writerSettings.RxSensitivityInDbm = -70;
             writerSettings.SearchMode = "SingleTarget";
             writerSettings.Session = 0;
             writerSettings.MemoryBank = "Epc";
@@ -61,7 +61,7 @@ namespace OctaneTagWritingTest
             verifierSettings.ReportMode = "Individual";
             verifierSettings.RfMode = 0;
             verifierSettings.AntennaPort = 1;
-            verifierSettings.TxPowerInDbm = 19;
+            verifierSettings.TxPowerInDbm = 27;
             verifierSettings.MaxRxSensitivity = true;
             verifierSettings.RxSensitivityInDbm = -90;
             verifierSettings.SearchMode = "SingleTarget";

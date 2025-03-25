@@ -12,13 +12,13 @@ namespace OctaneTagWritingTest.Helpers
     { // Dictionary: key = TID, value = expected EPC.
         private Dictionary<string, string> expectedEpcByTid = new Dictionary<string, string>();
         // Dictionaries for recording operation results.
-        private Dictionary<string, string> operationResultByTid = new Dictionary<string, string>();
-        private Dictionary<string, string> operationResultWithSuccessByTid = new Dictionary<string, string>();
+        private ConcurrentDictionary<string, string> operationResultByTid = new ConcurrentDictionary<string, string>();
+        private ConcurrentDictionary<string, string> operationResultWithSuccessByTid = new ConcurrentDictionary<string, string>();
 
         private readonly object lockObj = new object();
         private HashSet<string> processedTids = new HashSet<string>();
-        private HashSet<string> addedSequences = new HashSet<string>();
-
+        private ConcurrentDictionary<string, string> addedWriteSequences = new ConcurrentDictionary<string, string>();
+        private ConcurrentDictionary<string, string> addedReadSequences = new ConcurrentDictionary<string, string>();
         // Private constructor for singleton.
         private TagOpController() { }
 
@@ -30,13 +30,16 @@ namespace OctaneTagWritingTest.Helpers
         public string LocalTargetTid { get; private set; }
         public bool IsLocalTargetTidSet { get; private set; }
 
+        private readonly object fileLock = new object();
+
         public void CleanUp()
         {
             lock (lockObj)
             {
                 try
                 {
-                    addedSequences.Clear();
+                    addedWriteSequences.Clear();
+                    addedReadSequences.Clear();
                     processedTids.Clear();
                     expectedEpcByTid.Clear();
                     operationResultByTid.Clear();
@@ -101,11 +104,7 @@ namespace OctaneTagWritingTest.Helpers
 
                 if (wasSuccess)
                 {
-                    if(operationResultWithSuccessByTid.ContainsKey(tid))
-                    {
-                        operationResultWithSuccessByTid[tid] = result;
-                    }
-                    else
+                    if(!operationResultWithSuccessByTid.ContainsKey(tid))
                     {
                         operationResultWithSuccessByTid.TryAdd(tid, result);
                         Console.WriteLine($"RecordResult - Success count: TID: {tid} result: {result} - Success count: {operationResultWithSuccessByTid.Count()}");
@@ -115,9 +114,8 @@ namespace OctaneTagWritingTest.Helpers
                 }
 
                 if (!operationResultByTid.ContainsKey(tid))
-                    operationResultByTid.Add(tid, result);
-                else
-                    operationResultByTid[tid] = result;
+                    operationResultByTid.TryAdd(tid, result);
+
             }
         }
 
@@ -207,14 +205,14 @@ namespace OctaneTagWritingTest.Helpers
 
                 try
                 {
-                    addedSequences.Add(seq.Id.ToString());
+                    addedWriteSequences.TryAdd(seq.Id.ToString(), tag.Tid.ToHexString());
                 }
                 catch (Exception)
                 {
 
                 }
 
-                CheckAndCleanAccessSequencesOnReader(reader);
+                CheckAndCleanAccessSequencesOnReader(addedWriteSequences, reader);
 
                 reader.AddOpSequence(seq);
                 Console.WriteLine($"Scheduled lock operation for TID: {tag.Tid.ToHexString()}");
@@ -250,13 +248,13 @@ namespace OctaneTagWritingTest.Helpers
 
                 try
                 {
-                    addedSequences.Add(seq.Id.ToString());
+                    addedWriteSequences.TryAdd(seq.Id.ToString(), tag.Tid.ToHexString());
                 }
                 catch (Exception)
                 {
 
                 }
-                CheckAndCleanAccessSequencesOnReader(reader);
+                CheckAndCleanAccessSequencesOnReader(addedWriteSequences, reader);
 
                 reader.AddOpSequence(seq);
                 Console.WriteLine($"Scheduled lock operation for TID: {tag.Tid.ToHexString()}");
@@ -267,11 +265,11 @@ namespace OctaneTagWritingTest.Helpers
             }
         }
 
-        public void CheckAndCleanAccessSequencesOnReader(ImpinjReader reader)
+        public void CheckAndCleanAccessSequencesOnReader(ConcurrentDictionary<string, string> addedSequences, ImpinjReader reader)
         {
             try
             {
-                if(addedSequences.Count > 80)
+                if(addedSequences.Count > 50)
                 {
                     Console.WriteLine($"Cleaning-up Access Sequences {addedSequences.Count()}...");
                     reader.DeleteAllOpSequences();
@@ -325,7 +323,7 @@ namespace OctaneTagWritingTest.Helpers
                 : $"B071000000000000000000{processedTids.Count:D2}";
 
             string currentTid = tag.Tid.ToHexString();
-            Console.WriteLine($"Attempting partial write operation for TID {currentTid}: {oldEpc} -> {epcData} (Writing first {charactersToWrite} characters) - Read RSSI {tag.PeakRssiInDbm}");
+            Console.WriteLine($"TriggerPartialWriteAndVerify - Attempting partial write operation for TID {currentTid}: {oldEpc} -> {epcData} (Writing first {charactersToWrite} characters) - Read RSSI {tag.PeakRssiInDbm}");
             
             TagOpSequence seq = new TagOpSequence();
             seq.SequenceStopTrigger = SequenceTriggerType.None;
@@ -362,16 +360,35 @@ namespace OctaneTagWritingTest.Helpers
 
             try
             {
-                addedSequences.Add(seq.Id.ToString());
+                addedWriteSequences.TryAdd(seq.Id.ToString(), tag.Tid.ToHexString());
             }
             catch (Exception)
             {
             }
 
-            CheckAndCleanAccessSequencesOnReader(reader);
-
-            reader.AddOpSequence(seq);
-            Console.WriteLine($"Added Partial Write OpSequence {seq.Id} to TID {currentTid} - Current EPC: {oldEpc} -> Expected EPC {epcData}");
+            CheckAndCleanAccessSequencesOnReader(addedWriteSequences, reader);
+            try
+            {
+                reader.AddOpSequence(seq);
+            }
+            catch (Exception)
+            {
+                Console.WriteLine($"TriggerPartialWriteAndVerify - ERROR: error while trying to add sequence {seq.Id} to TID {currentTid}");
+                try
+                {
+                    Console.WriteLine($"TriggerPartialWriteAndVerify - Cleaning-up Access Sequences {addedWriteSequences.Count()}...");
+                    reader.DeleteAllOpSequences();
+                    addedWriteSequences.Clear();
+                    reader.AddOpSequence(seq);
+                    Console.WriteLine($" ********************* Reader Sequences cleaned-up *********************");
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine($"TriggerPartialWriteAndVerify - Error while trying to clean-up {addedWriteSequences.Count()} sequences");
+                }
+            }
+            
+            Console.WriteLine($"TriggerPartialWriteAndVerify - Added Partial Write OpSequence {seq.Id} to TID {currentTid} - Current EPC: {oldEpc} -> Expected EPC {epcData}");
 
             RecordExpectedEpc(currentTid, epcData);
         }
@@ -437,16 +454,36 @@ namespace OctaneTagWritingTest.Helpers
 
             try
             {
-                addedSequences.Add(seq.Id.ToString());
+                addedWriteSequences.TryAdd(seq.Id.ToString(), tag.Tid.ToHexString());
             }
             catch (Exception)
             {
 
             }
 
-            CheckAndCleanAccessSequencesOnReader(reader);
+            CheckAndCleanAccessSequencesOnReader(addedWriteSequences, reader);
+            try
+            {
+                reader.AddOpSequence(seq);
+            }
+            catch (Exception)
+            {
+                Console.WriteLine($"TriggerPartialWriteAndVerify - ERROR: error while trying to add sequence {seq.Id} to TID {currentTid}");
+                try
+                {
+                    Console.WriteLine($"TriggerPartialWriteAndVerify - Cleaning-up Access Sequences {addedWriteSequences.Count()}...");
+                    reader.DeleteAllOpSequences();
+                    addedWriteSequences.Clear();
+                    reader.AddOpSequence(seq);
+                    Console.WriteLine($" ********************* Reader Sequences cleaned-up *********************");
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine($"TriggerPartialWriteAndVerify - Error while trying to clean-up {addedWriteSequences.Count()} sequences");
+                }
+            }
 
-            reader.AddOpSequence(seq);
+
             Console.WriteLine($"Added Write OpSequence {seq.Id} to TID {currentTid} - Current EPC: {oldEpc} -> Expected EPC {epcData}");
             
             
@@ -481,17 +518,36 @@ namespace OctaneTagWritingTest.Helpers
 
             try
             {
-                addedSequences.Add(seq.Id.ToString());
+                addedReadSequences.TryAdd(seq.Id.ToString(), tag.Tid.ToHexString());
             }
             catch (Exception)
             {
 
             }
 
-            CheckAndCleanAccessSequencesOnReader(reader);
+            CheckAndCleanAccessSequencesOnReader(addedReadSequences, reader);
 
             swVerify.Restart();
-            reader.AddOpSequence(seq);
+            try
+            {
+                reader.AddOpSequence(seq);
+            }
+            catch (Exception)
+            {
+                Console.WriteLine($"TriggerVerificationRead - ERROR: error while trying to add sequence {seq.Id} to TID {currentTid}");
+                try
+                {
+                    Console.WriteLine($"TriggerVerificationRead - Cleaning-up Access Sequences {addedReadSequences.Count()}...");
+                    reader.DeleteAllOpSequences();
+                    addedReadSequences.Clear();
+                    reader.AddOpSequence(seq);
+                    Console.WriteLine($" ********************* Reader Sequences cleaned-up *********************");
+                }
+                catch (Exception)
+                {
+                    Console.WriteLine($"TriggerVerificationRead - Error while trying to clean-up {addedReadSequences.Count()} sequences");
+                }
+            }
         }
 
         // New helper method to process a verified tag.
@@ -539,7 +595,17 @@ namespace OctaneTagWritingTest.Helpers
         /// <param name="line">The line to append to the log file</param>
         public void LogToCsv(string logFile, string line)
         {
-            File.AppendAllText(logFile, line + Environment.NewLine);
+            try
+            {
+                lock (fileLock)
+                {
+                    File.AppendAllText(logFile, line + Environment.NewLine);
+                }
+            }
+            catch (Exception)
+            {
+                Console.WriteLine($"Warning: Unable to write data to log file {logFile}");
+            }
         }
 
         public void ProcessVerificationResult(TagReadOpResult readResult, string tidHex, ConcurrentDictionary<string, int> recoveryCount, Stopwatch swWrite, Stopwatch swVerify, string logFile, ImpinjReader reader, CancellationToken cancellationToken, string newAccessPassword, int maxRecoveryAttempts)

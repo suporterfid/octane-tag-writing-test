@@ -334,7 +334,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     }
                     else
                     {
-                        Console.WriteLine($"TID {tidHex} verified successfully on verifier reader. Current EPC: {epcHex} - Written tags {TagOpController.Instance.GetSuccessCount()}");
+                        Console.WriteLine($"TID {tidHex} verified successfully on verifier reader. Current EPC: {epcHex} - Written tags regitered {TagOpController.Instance.GetSuccessCount()} (TIDs processed)");
                     }
                 }
             }
@@ -388,6 +388,29 @@ namespace OctaneTagWritingTest.JobStrategies
                     Console.WriteLine($"Verification result for TID {tidHex} on reader {sender.Name}: {status}");
 
                     cycleCount.AddOrUpdate(tidHex, 1, (key, oldValue) => oldValue + 1);
+                    if(!success)
+                    {
+
+                    }
+                    try
+                    {
+                        TagOpController.Instance.TriggerPartialWriteAndVerify(
+                        readResult.Tag,
+                        expectedEpc,
+                        writerReader,
+                        cancellationToken,
+                        swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
+                        newAccessPassword,
+                        true,
+                        14,
+                        1,
+                        true,
+                        3);
+                    }
+                    catch (Exception)
+                    {
+
+                    }
                 }
             }
         }
