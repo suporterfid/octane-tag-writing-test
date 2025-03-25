@@ -139,6 +139,16 @@ namespace OctaneTagWritingTest.JobStrategies
                 Console.WriteLine($"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
                 Console.WriteLine($"!!!!!!!!!!!!!!!!!!!!!!!!!! Total Read [{totalReadCount}] Success count: [{successCount}] !!!!!!!!!!!!!!!!!!!!!!!!!!");
                 Console.WriteLine($"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                try
+                {
+                    Console.Title = $"Serializer: {totalReadCount} - {successCount}";
+
+                }
+                catch (Exception)
+                {
+
+                   
+                }
             }
             catch (Exception)
             {
@@ -196,10 +206,10 @@ namespace OctaneTagWritingTest.JobStrategies
             verifierSettings.Antennas.GetAntenna((ushort)verifierReaderSettings.AntennaPort).MaxRxSensitivity = verifierReaderSettings.MaxRxSensitivity;
             verifierSettings.Antennas.GetAntenna((ushort)verifierReaderSettings.AntennaPort).RxSensitivityInDbm = verifierReaderSettings.RxSensitivityInDbm;
             // Use a different antenna port for the verifier (e.g., port 2).
-            //verifierSettings.Antennas.GetAntenna(2).IsEnabled = true;
-            //verifierSettings.Antennas.GetAntenna(2).TxPowerInDbm = verifierReaderSettings.TxPowerInDbm;
-            //verifierSettings.Antennas.GetAntenna(2).MaxRxSensitivity = verifierReaderSettings.MaxRxSensitivity;
-            //verifierSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = verifierReaderSettings.RxSensitivityInDbm;
+            verifierSettings.Antennas.GetAntenna(2).IsEnabled = true;
+            verifierSettings.Antennas.GetAntenna(2).TxPowerInDbm = verifierReaderSettings.TxPowerInDbm;
+            verifierSettings.Antennas.GetAntenna(2).MaxRxSensitivity = verifierReaderSettings.MaxRxSensitivity;
+            verifierSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = verifierReaderSettings.RxSensitivityInDbm;
 
             verifierSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), verifierReaderSettings.SearchMode);
             verifierSettings.Session = (ushort)verifierReaderSettings.Session;
@@ -289,7 +299,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     TagOpController.Instance.TriggerWriteAndVerify(
                         tag,
                         expectedEpc,
-                        writerReader,
+                        sender,
                         cancellationToken,
                         swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
                         newAccessPassword,
@@ -316,7 +326,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     if (expectedEpc != null && expectedEpc.Equals(epcHex, StringComparison.OrdinalIgnoreCase))
                     {
                         TagOpController.Instance.HandleVerifiedTag(tag, tidHex, expectedEpc, swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()), swVerifyTimers.GetOrAdd(tidHex, _ => new Stopwatch()), cycleCount, tag, TagOpController.Instance.GetChipModel(tag), logFile);
-                        Console.WriteLine($"TID {tidHex} verified successfully on writer reader. Current EPC: {epcHex}");
+                        //Console.WriteLine($"TID {tidHex} verified successfully on writer reader. Current EPC: {epcHex}");
                         continue;
                     }                    
                 }
@@ -373,7 +383,7 @@ namespace OctaneTagWritingTest.JobStrategies
                         TagOpController.Instance.TriggerWriteAndVerify(
                             tag,
                             expectedEpc,
-                            verifierReader,
+                            sender,
                             cancellationToken,
                             swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
                             newAccessPassword,
@@ -408,9 +418,9 @@ namespace OctaneTagWritingTest.JobStrategies
                     var verifiedEpc = writeResult.Tag.Epc?.ToHexString() ?? "N/A";
                     bool success = !string.IsNullOrEmpty(expectedEpc) && expectedEpc.Equals(verifiedEpc, StringComparison.InvariantCultureIgnoreCase);
                     var writeStatus = success ? "Success" : "Failure";
-                    if(success)
+                    if (success)
                     {
-                        TagOpController.Instance.RecordResult(tidHex, writeStatus, success);    
+                        TagOpController.Instance.RecordResult(tidHex, writeStatus, success);
                     }
                     else if (writeResult.Result == WriteResultStatus.Success)
                     {
@@ -418,7 +428,7 @@ namespace OctaneTagWritingTest.JobStrategies
                         // After a successful write, trigger a verification read on the verifier reader.
                         TagOpController.Instance.TriggerVerificationRead(
                             result.Tag,
-                            verifierReader,
+                            sender,
                             cancellationToken,
                             swVerifyTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
                             newAccessPassword);
@@ -433,6 +443,10 @@ namespace OctaneTagWritingTest.JobStrategies
                     swVerifyTimers[tidHex].Stop();
 
                     var expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
+                    if (string.IsNullOrEmpty(expectedEpc))
+                    {
+                        expectedEpc = TagOpController.Instance.GetNextEpcForTag(readResult.Tag.Epc.ToHexString(), tidHex);
+                    }
                     var verifiedEpc = readResult.Tag.Epc?.ToHexString() ?? "N/A";
                     var success = verifiedEpc.Equals(expectedEpc, StringComparison.InvariantCultureIgnoreCase);
                     var status = success ? "Success" : "Failure";
@@ -448,15 +462,14 @@ namespace OctaneTagWritingTest.JobStrategies
                     {
                         try
                         {
-                            TagOpController.Instance.TriggerPartialWriteAndVerify(
+                            TagOpController.Instance.TriggerWriteAndVerify(
                             readResult.Tag,
                             expectedEpc,
-                            writerReader,
+                            sender,
                             cancellationToken,
                             swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
                             newAccessPassword,
                             true,
-                            14,
                             1,
                             true,
                             3);

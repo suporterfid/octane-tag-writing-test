@@ -415,7 +415,7 @@ namespace OctaneTagWritingTest.Helpers
             // Set EPC data based on encoding choice.
             string epcData = encodeOrDefault ? newEpcToWrite : $"B071000000000000000000{processedTids.Count:D2}";
             string currentTid = tag.Tid.ToHexString();
-            Console.WriteLine($"Attempting robust operation for TID {currentTid}: {oldEpc} -> {newEpcToWrite} - Read RSSI {tag.PeakRssiInDbm}");
+            //Console.WriteLine($"Attempting robust operation for TID {currentTid}: {oldEpc} -> {newEpcToWrite} - Read RSSI {tag.PeakRssiInDbm}");
             
             TagOpSequence seq = new TagOpSequence();
             //seq.AntennaId = targetAntennaPort;
@@ -482,10 +482,10 @@ namespace OctaneTagWritingTest.Helpers
             }
             catch (Exception)
             {
-                Console.WriteLine($"TriggerPartialWriteAndVerify - ERROR: error while trying to add sequence {seq.Id} to TID {currentTid}");
+                Console.WriteLine($"TriggerWriteAndVerify - ERROR: error while trying to add sequence {seq.Id} to TID {currentTid}");
                 try
                 {
-                    Console.WriteLine($"TriggerPartialWriteAndVerify - Cleaning-up Access Sequences {addedWriteSequences.Count()}...");
+                    Console.WriteLine($"TriggerWriteAndVerify - Cleaning-up Access Sequences {addedWriteSequences.Count()}...");
                     reader.DeleteAllOpSequences();
                     addedWriteSequences.Clear();
                     reader.AddOpSequence(seq);
@@ -493,12 +493,12 @@ namespace OctaneTagWritingTest.Helpers
                 }
                 catch (Exception)
                 {
-                    Console.WriteLine($"TriggerPartialWriteAndVerify - Error while trying to clean-up {addedWriteSequences.Count()} sequences");
+                    Console.WriteLine($"TriggerWriteAndVerify - Error while trying to clean-up {addedWriteSequences.Count()} sequences");
                 }
             }
 
 
-            Console.WriteLine($"Added Write OpSequence {seq.Id} to TID {currentTid} - Current EPC: {oldEpc} -> Expected EPC {epcData}");
+            //Console.WriteLine($"Added Write OpSequence {seq.Id} to TID {currentTid} - Current EPC: {oldEpc} -> Expected EPC {epcData}");
             
             
 

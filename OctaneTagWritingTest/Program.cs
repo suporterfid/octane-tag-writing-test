@@ -9,7 +9,7 @@ namespace OctaneTagWritingTest
         {
             // Configure the console window
             Console.Clear();
-            Console.Title = "Impinj Tag Serializer Test";
+            Console.Title = "Serializer";
             //Console.SetWindowSize(150, 50);
             //Console.BufferHeight = 1000;
 
@@ -35,10 +35,10 @@ namespace OctaneTagWritingTest
             string hostnameWriter = "192.168.68.248";
             string hostnameVerifier = "192.168.68.94";
 
-            string testDescription = "Fix-Gravacao-Teste-1-Tarde-Rodada-1-";
-            string epcHeader = "F102";
+            string testDescription = "Gravacao-Teste-1-Tarde-Rodada-3-";
+            string epcHeader = "B023";
             //string epcPlainItemCode = "76788888888888";
-            string epcPlainItemCode = "1141123455";
+            string epcPlainItemCode = "1122334455";
             long quantity = 1;
             EpcListManager.Instance.InitEpcData(epcHeader, epcPlainItemCode, quantity);
 
@@ -56,8 +56,8 @@ namespace OctaneTagWritingTest
             writerSettings.RfMode = 0;
             writerSettings.AntennaPort = 1;
             writerSettings.TxPowerInDbm = 30;
-            writerSettings.MaxRxSensitivity = false;
-            writerSettings.RxSensitivityInDbm = -70;
+            writerSettings.MaxRxSensitivity = true;
+            writerSettings.RxSensitivityInDbm = -90;
             writerSettings.SearchMode = "SingleTarget";
             writerSettings.Session = 0;
             writerSettings.MemoryBank = "Epc";
