@@ -1,4 +1,5 @@
 ﻿using OctaneTagWritingTest.Helpers;
+using System.Diagnostics;
 
 namespace OctaneTagWritingTest
 {
@@ -6,6 +7,23 @@ namespace OctaneTagWritingTest
     {
         static void Main(string[] args)
         {
+            // Configure the console window
+            Console.Clear();
+            Console.Title = "Impinj Tag Serializer Test";
+            //Console.SetWindowSize(150, 50);
+            //Console.BufferHeight = 1000;
+
+            // The .NET diagnostics trace listener is used as a mechanism for
+            // outputing to both the console and a file at the same time.
+            // Start by clearing all listeners.
+            Trace.Listeners.Clear();
+
+            // Now add the console as a listener
+            ConsoleTraceListener ctl = new ConsoleTraceListener(false);
+            ctl.TraceOutputOptions = TraceOptions.DateTime;
+
+            Trace.Listeners.Add(ctl);
+            Trace.AutoFlush = true;
             //if (args.Length < 1)
             //{
             //    Console.WriteLine("Error: Please provide the reader hostname as an argument.");
@@ -17,10 +35,10 @@ namespace OctaneTagWritingTest
             string hostnameWriter = "192.168.68.248";
             string hostnameVerifier = "192.168.68.94";
 
-            string testDescription = "Gravacao-Teste-2-Rodada-1-";
-            string epcHeader = "A101";
+            string testDescription = "Fix-Gravacao-Teste-1-Tarde-Rodada-1-";
+            string epcHeader = "F102";
             //string epcPlainItemCode = "76788888888888";
-            string epcPlainItemCode = "2141123457";
+            string epcPlainItemCode = "1141123455";
             long quantity = 1;
             EpcListManager.Instance.InitEpcData(epcHeader, epcPlainItemCode, quantity);
 

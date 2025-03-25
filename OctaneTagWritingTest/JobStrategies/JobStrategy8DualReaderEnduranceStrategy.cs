@@ -30,6 +30,8 @@ namespace OctaneTagWritingTest.JobStrategies
         private string writerAddress;
         private string verifierAddress;
 
+        private Timer successCountTimer;
+
         public JobStrategy8DualReaderEnduranceStrategy(string hostnameWriter, string hostnameVerifier, string logFile, Dictionary<string, ReaderSettings> readerSettings)
             : base(hostnameWriter, logFile, readerSettings)
         {
@@ -107,6 +109,10 @@ namespace OctaneTagWritingTest.JobStrategies
                 if (!File.Exists(logFile))
                     LogToCsv("Timestamp,TID,Previous_EPC,Expected_EPC,Verified_EPC,WriteTime_ms,VerifyTime_ms,Result,CycleCount,RSSI,AntennaPort");
 
+                // Initialize and start the timer to log success count every 5 seconds
+                successCountTimer = new Timer(LogSuccessCount, null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
+
+
                 while (!IsCancellationRequested())
                 {
                     Thread.Sleep(100);
@@ -122,6 +128,22 @@ namespace OctaneTagWritingTest.JobStrategies
             {
                 CleanupReaders();
             }
+        }
+
+        private void LogSuccessCount(object state)
+        {
+            try
+            {
+                int successCount = TagOpController.Instance.GetSuccessCount();
+                int totalReadCount = TagOpController.Instance.GetTotalReadCount();
+                Console.WriteLine($"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                Console.WriteLine($"!!!!!!!!!!!!!!!!!!!!!!!!!! Total Read [{totalReadCount}] Success count: [{successCount}] !!!!!!!!!!!!!!!!!!!!!!!!!!");
+                Console.WriteLine($"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            }
+            catch (Exception)
+            {
+            }
+
         }
 
         private void ConfigureWriterReader()
@@ -254,37 +276,40 @@ namespace OctaneTagWritingTest.JobStrategies
                 // If no expected EPC exists, generate one using the writer logic.
                 if (string.IsNullOrEmpty(expectedEpc))
                 {
-                    Console.WriteLine($"New target TID found: {tidHex} Chip {TagOpController.Instance.GetChipModel(tag)}");
+                    Console.WriteLine($">>>>>>>>>>New target TID found: {tidHex} Chip {TagOpController.Instance.GetChipModel(tag)}");
                     expectedEpc = TagOpController.Instance.GetNextEpcForTag(epcHex,tidHex);
                     TagOpController.Instance.RecordExpectedEpc(tidHex, expectedEpc);
-                    Console.WriteLine($"New tag found. TID: {tidHex}. Assigning new EPC: {epcHex} -> {expectedEpc}");
+                    Console.WriteLine($">>>>>>>>>>New tag found. TID: {tidHex}. Assigning new EPC: {epcHex} -> {expectedEpc}");
                 }
 
                 
-                if (string.IsNullOrEmpty(epcHex) || !expectedEpc.Equals(epcHex, StringComparison.OrdinalIgnoreCase))
+                if (!expectedEpc.Equals(epcHex, StringComparison.InvariantCultureIgnoreCase))
                 {
                     // Trigger the write operation using the writer reader.
-                    // TagOpController.Instance.TriggerWriteAndVerify(
-                    //     tag,
-                    //     expectedEpc,
-                    //     writerReader,
-                    //     cancellationToken,
-                    //     swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
-                    //     newAccessPassword,
-                    //     true);
-
-                    TagOpController.Instance.TriggerPartialWriteAndVerify(
+                    TagOpController.Instance.TriggerWriteAndVerify(
                         tag,
                         expectedEpc,
                         writerReader,
                         cancellationToken,
                         swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
                         newAccessPassword,
-                        true,
-                        14,
+                        true, 
                         1,
                         true,
                         3);
+
+                    //TagOpController.Instance.TriggerPartialWriteAndVerify(
+                    //    tag,
+                    //    expectedEpc,
+                    //    writerReader,
+                    //    cancellationToken,
+                    //    swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
+                    //    newAccessPassword,
+                    //    true,
+                    //    14,
+                    //    1,
+                    //    true,
+                    //    3);
                 }
                 else
                 {
@@ -315,11 +340,33 @@ namespace OctaneTagWritingTest.JobStrategies
                 if (string.IsNullOrEmpty(tidHex))
                     continue;
 
+                var epcHex = tag.Epc.ToHexString() ?? string.Empty;
                 var expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
-                if (!string.IsNullOrEmpty(expectedEpc))
+
+                // If no expected EPC exists, generate one using the writer logic.
+                if (string.IsNullOrEmpty(expectedEpc))
                 {
-                    var epcHex = tag.Epc.ToHexString() ?? string.Empty;
-                    if (string.IsNullOrEmpty(epcHex) || !expectedEpc.Equals(epcHex, StringComparison.OrdinalIgnoreCase))
+                    Console.WriteLine($"OnTagsReportedVerifier>>>>>>>>>>TID not found. Considering re-write for target TID found: {tidHex} Chip {TagOpController.Instance.GetChipModel(tag)}");
+                    expectedEpc = TagOpController.Instance.GetNextEpcForTag(epcHex, tidHex);
+                    TagOpController.Instance.RecordExpectedEpc(tidHex, expectedEpc);
+                    Console.WriteLine($"OnTagsReportedVerifier>>>>>>>>>> TID: {tidHex}. Assigning EPC: {epcHex} -> {expectedEpc}");
+                }
+
+                bool success = expectedEpc.Equals(epcHex, StringComparison.InvariantCultureIgnoreCase);
+                var writeStatus = success ? "Success" : "Failure";
+                Console.WriteLine(".........................................");
+                Console.WriteLine($"OnTagsReportedVerifier - TID {tidHex} - current EPC: {epcHex} Expected EPC: {expectedEpc} Operation Status [{writeStatus}]" );
+                Console.WriteLine(".........................................");
+
+                if (success)
+                {
+                    TagOpController.Instance.RecordResult(tidHex, writeStatus, success);
+                    Console.WriteLine($"OnTagsReportedVerifier - TID {tidHex} verified successfully on verifier reader. Current EPC: {epcHex} - Written tags regitered {TagOpController.Instance.GetSuccessCount()} (TIDs processed)");
+                }
+                else if (!string.IsNullOrEmpty(expectedEpc))
+                {
+                    
+                    if (!expectedEpc.Equals(epcHex, StringComparison.InvariantCultureIgnoreCase))
                     {
                         Console.WriteLine($"Verification mismatch for TID {tidHex}: expected {expectedEpc}, read {epcHex}. Retrying write operation using expected EPC.");
                         // Retry writing using the expected EPC (without generating a new one) via the verifier reader.
@@ -334,7 +381,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     }
                     else
                     {
-                        Console.WriteLine($"TID {tidHex} verified successfully on verifier reader. Current EPC: {epcHex} - Written tags regitered {TagOpController.Instance.GetSuccessCount()} (TIDs processed)");
+                        Console.WriteLine($"OnTagsReportedVerifier - TID {tidHex} verified successfully on verifier reader. Current EPC: {epcHex} - Written tags regitered {TagOpController.Instance.GetSuccessCount()} (TIDs processed)");
                     }
                 }
             }
@@ -357,9 +404,17 @@ namespace OctaneTagWritingTest.JobStrategies
                 {
                     swWriteTimers[tidHex].Stop();
 
-                    if (writeResult.Result == WriteResultStatus.Success)
+                    var expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
+                    var verifiedEpc = writeResult.Tag.Epc?.ToHexString() ?? "N/A";
+                    bool success = !string.IsNullOrEmpty(expectedEpc) && expectedEpc.Equals(verifiedEpc, StringComparison.InvariantCultureIgnoreCase);
+                    var writeStatus = success ? "Success" : "Failure";
+                    if(success)
                     {
-                        Console.WriteLine($"Write operation succeeded for TID {tidHex} on reader {sender.Name}.");
+                        TagOpController.Instance.RecordResult(tidHex, writeStatus, success);    
+                    }
+                    else if (writeResult.Result == WriteResultStatus.Success)
+                    {
+                        Console.WriteLine($"OnTagOpComplete - Write operation succeeded for TID {tidHex} on reader {sender.Name}.");
                         // After a successful write, trigger a verification read on the verifier reader.
                         TagOpController.Instance.TriggerVerificationRead(
                             result.Tag,
@@ -370,7 +425,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     }
                     else
                     {
-                        Console.WriteLine($"Write operation failed for TID {tidHex} on reader {sender.Name}.");
+                        Console.WriteLine($"OnTagOpComplete - Write operation failed for TID {tidHex} on reader {sender.Name}.");
                     }
                 }
                 else if (result is TagReadOpResult readResult)
@@ -379,38 +434,40 @@ namespace OctaneTagWritingTest.JobStrategies
 
                     var expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
                     var verifiedEpc = readResult.Tag.Epc?.ToHexString() ?? "N/A";
-                    var success = verifiedEpc.Equals(expectedEpc, StringComparison.OrdinalIgnoreCase);
+                    var success = verifiedEpc.Equals(expectedEpc, StringComparison.InvariantCultureIgnoreCase);
                     var status = success ? "Success" : "Failure";
 
                     LogToCsv($"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{tidHex},{result.Tag.Epc.ToHexString()},{expectedEpc},{verifiedEpc},{swWriteTimers[tidHex].ElapsedMilliseconds},{swVerifyTimers[tidHex].ElapsedMilliseconds},{status},{cycleCount.GetOrAdd(tidHex, 0)},RSSI,AntennaPort");
                     TagOpController.Instance.RecordResult(tidHex, status, success);
 
-                    Console.WriteLine($"Verification result for TID {tidHex} on reader {sender.Name}: {status}");
+                    Console.WriteLine($"OnTagOpComplete - Verification result for TID {tidHex} on reader {sender.Address}: {status}");
 
                     cycleCount.AddOrUpdate(tidHex, 1, (key, oldValue) => oldValue + 1);
-                    if(!success)
-                    {
 
-                    }
-                    try
+                    if (!success)
                     {
-                        TagOpController.Instance.TriggerPartialWriteAndVerify(
-                        readResult.Tag,
-                        expectedEpc,
-                        writerReader,
-                        cancellationToken,
-                        swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
-                        newAccessPassword,
-                        true,
-                        14,
-                        1,
-                        true,
-                        3);
-                    }
-                    catch (Exception)
-                    {
+                        try
+                        {
+                            TagOpController.Instance.TriggerPartialWriteAndVerify(
+                            readResult.Tag,
+                            expectedEpc,
+                            writerReader,
+                            cancellationToken,
+                            swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
+                            newAccessPassword,
+                            true,
+                            14,
+                            1,
+                            true,
+                            3);
+                        }
+                        catch (Exception)
+                        {
 
+                        }
                     }
+
+                    
                 }
             }
         }

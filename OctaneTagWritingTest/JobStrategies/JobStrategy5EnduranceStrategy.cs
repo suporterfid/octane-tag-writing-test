@@ -14,6 +14,7 @@ namespace OctaneTagWritingTest.JobStrategies
         private readonly ConcurrentDictionary<string, int> cycleCount = new();
         private readonly ConcurrentDictionary<string, Stopwatch> swWriteTimers = new();
         private readonly ConcurrentDictionary<string, Stopwatch> swVerifyTimers = new();
+        private Timer successCountTimer;
 
         public JobStrategy5EnduranceStrategy(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings) : base(hostname, logFile, readerSettings)
         {
@@ -38,6 +39,10 @@ namespace OctaneTagWritingTest.JobStrategies
                 if (!File.Exists(logFile))
                     LogToCsv("Timestamp,TID,Previous_EPC,Expected_EPC,Verified_EPC,WriteTime_ms,VerifyTime_ms,Result,CycleCount,RSSI,AntennaPort");
 
+                // Initialize and start the timer to log success count every 5 seconds
+                successCountTimer = new Timer(LogSuccessCount, null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
+
+
                 while (!IsCancellationRequested())
                 {
                     Thread.Sleep(100);
@@ -52,7 +57,29 @@ namespace OctaneTagWritingTest.JobStrategies
             finally
             {
                 CleanupReader();
+                successCountTimer?.Dispose();
             }
+        }
+
+        private void LogSuccessCount(object state)
+        {
+            try
+            {
+                int successCount = TagOpController.Instance.GetSuccessCount();
+                Console.WriteLine($"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                Console.WriteLine($"!!!!!!!!!!!!!!!!!!!!!!!!!! Success count: [{successCount}] !!!!!!!!!!!!!!!!!!!!!!!!!!");
+                Console.WriteLine($"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            }
+            catch (Exception)
+            {
+            }
+            
+        }
+
+        private void LogFailure(string tidHex, string reason, Tag tag)
+        {
+            LogToCsv($"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{tidHex},{tag.Epc.ToHexString()},N/A,N/A,{swWriteTimers[tidHex].ElapsedMilliseconds},0,{reason},{cycleCount[tidHex]},RSSI,AntennaPort");
+            TagOpController.Instance.RecordResult(tidHex, reason, false);
         }
 
         private void OnTagsReported(ImpinjReader sender, TagReport report)
@@ -136,11 +163,7 @@ namespace OctaneTagWritingTest.JobStrategies
             }
         }
 
-        private void LogFailure(string tidHex, string reason, Tag tag)
-        {
-            LogToCsv($"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{tidHex},{tag.Epc.ToHexString()},N/A,N/A,{swWriteTimers[tidHex].ElapsedMilliseconds},0,{reason},{cycleCount[tidHex]},RSSI,AntennaPort");
-            TagOpController.Instance.RecordResult(tidHex, reason, false);
-        }
+
 
         private void LogToCsv(string logLine)
         {

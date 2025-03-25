@@ -107,7 +107,8 @@ namespace OctaneTagWritingTest.Helpers
                     if(!operationResultWithSuccessByTid.ContainsKey(tid))
                     {
                         operationResultWithSuccessByTid.TryAdd(tid, result);
-                        Console.WriteLine($"RecordResult - Success count: TID: {tid} result: {result} - Success count: {operationResultWithSuccessByTid.Count()}");
+                        Console.WriteLine($"RecordResult - Success count: TID: {tid} result: {result}");
+                        Console.WriteLine($"Success count: [{operationResultWithSuccessByTid.Count()}]");
                     }
                     
                     
@@ -160,8 +161,11 @@ namespace OctaneTagWritingTest.Helpers
             }
         }
 
-        
 
+        public int GetTotalReadCount()
+        {
+            return expectedEpcByTid.Count();
+        }
 
         public int GetSuccessCount()
         {
@@ -373,18 +377,28 @@ namespace OctaneTagWritingTest.Helpers
             }
             catch (Exception)
             {
+                Console.WriteLine($" *************************************************************** ");
+                Console.WriteLine($" *************************************************************** ");
                 Console.WriteLine($"TriggerPartialWriteAndVerify - ERROR: error while trying to add sequence {seq.Id} to TID {currentTid}");
+                Console.WriteLine($" *************************************************************** ");
+                Console.WriteLine($" *************************************************************** ");
                 try
                 {
                     Console.WriteLine($"TriggerPartialWriteAndVerify - Cleaning-up Access Sequences {addedWriteSequences.Count()}...");
                     reader.DeleteAllOpSequences();
                     addedWriteSequences.Clear();
                     reader.AddOpSequence(seq);
+                    Console.WriteLine($" *************************************************************** ");
                     Console.WriteLine($" ********************* Reader Sequences cleaned-up *********************");
+                    Console.WriteLine($" *************************************************************** ");
                 }
                 catch (Exception)
                 {
+                    Console.WriteLine($" *************************************************************** ");
+                    Console.WriteLine($" *************************************************************** ");
                     Console.WriteLine($"TriggerPartialWriteAndVerify - Error while trying to clean-up {addedWriteSequences.Count()} sequences");
+                    Console.WriteLine($" *************************************************************** ");
+                    Console.WriteLine($" *************************************************************** ");
                 }
             }
             
@@ -534,7 +548,9 @@ namespace OctaneTagWritingTest.Helpers
             }
             catch (Exception)
             {
+                Console.WriteLine($" ###################################################### ");
                 Console.WriteLine($"TriggerVerificationRead - ERROR: error while trying to add sequence {seq.Id} to TID {currentTid}");
+                Console.WriteLine($" ###################################################### ");
                 try
                 {
                     Console.WriteLine($"TriggerVerificationRead - Cleaning-up Access Sequences {addedReadSequences.Count()}...");
@@ -545,7 +561,11 @@ namespace OctaneTagWritingTest.Helpers
                 }
                 catch (Exception)
                 {
-                    Console.WriteLine($"TriggerVerificationRead - Error while trying to clean-up {addedReadSequences.Count()} sequences");
+                    Console.WriteLine($" ###################################################### ");
+                    Console.WriteLine($" ###################################################### ");
+                    Console.WriteLine($" # TriggerVerificationRead - Error while trying to clean-up {addedReadSequences.Count()} sequences #");
+                    Console.WriteLine($" ###################################################### ");
+                    Console.WriteLine($" ###################################################### ");
                 }
             }
         }
@@ -604,7 +624,9 @@ namespace OctaneTagWritingTest.Helpers
             }
             catch (Exception)
             {
+                Console.WriteLine($" +++++++++++++++++++++++++++++++++++++++++++++++++++++ ");
                 Console.WriteLine($"Warning: Unable to write data to log file {logFile}");
+                Console.WriteLine($" +++++++++++++++++++++++++++++++++++++++++++++++++++++ ");
             }
         }
 

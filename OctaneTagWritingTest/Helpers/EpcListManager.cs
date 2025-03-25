@@ -56,11 +56,15 @@ public sealed class EpcListManager
             if (prefix.Length != 14)
                 throw new InvalidOperationException("Combined header and item code must be 14 characters.");
 
-            // Take the remaining 20 digits from the current EPC
+            // Take the remaining 10 digits from the current EPC
             string remainingDigits = currentEpc.Substring(14);
 
+            // Take the last 10 digits from the TID
+            string tidSuffix = tid.Substring(14);
+            tidSuffix = tidSuffix.PadLeft(10, '0');
+
             // Combine to create the new EPC
-            string newEpc = prefix + remainingDigits;
+            string newEpc = prefix + tidSuffix;
 
             // Store the new EPC in the dictionary associated with the TID
             generatedEpcsByTid.AddOrUpdate(tid, newEpc, (key, oldValue) => newEpc);
