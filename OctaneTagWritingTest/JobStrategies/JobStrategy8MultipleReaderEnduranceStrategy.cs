@@ -265,6 +265,7 @@ namespace OctaneTagWritingTest.JobStrategies
             verifierSettings.Report.IncludeFastId = verifierReaderSettings.IncludeFastId;
             verifierSettings.Report.IncludePeakRssi = verifierReaderSettings.IncludePeakRssi;
             verifierSettings.Report.IncludePcBits = true;
+            //verifierSettings.Report.IncludeEnhancedIntegra = true;
             verifierSettings.Report.IncludeAntennaPortNumber = verifierReaderSettings.IncludeAntennaPortNumber;
             verifierSettings.Report.Mode = (ReportMode)Enum.Parse(typeof(ReportMode), verifierReaderSettings.ReportMode);
             verifierSettings.RfMode = (uint)verifierReaderSettings.RfMode;

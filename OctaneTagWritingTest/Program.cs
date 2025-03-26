@@ -36,10 +36,10 @@ namespace OctaneTagWritingTest
             string hostnameWriter = "192.168.68.248";
             string hostnameVerifier = "192.168.68.93"; 
 
-            string testDescription = "Gravacao-Teste-1-Manha-Rodada-4-2603";
-            string epcHeader = "C032";
+            string testDescription = "Gravacao-Teste-1-Tarde-Rodada-7-2603";
+            string epcHeader = "F011";
             //string epcPlainItemCode = "76788888888888";
-            string epcPlainItemCode = "6655443322";
+            string epcPlainItemCode = "1122334455";
             long quantity = 1;
             EpcListManager.Instance.InitEpcData(epcHeader, epcPlainItemCode, quantity);
 
