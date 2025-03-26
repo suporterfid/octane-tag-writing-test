@@ -346,6 +346,19 @@ namespace OctaneTagWritingTest.JobStrategies
                     expectedEpc = TagOpController.Instance.GetNextEpcForTag(epcHex, tidHex);
                     TagOpController.Instance.RecordExpectedEpc(tidHex, expectedEpc);
                     Console.WriteLine($"Detector: Assigned new EPC for TID {tidHex}: {expectedEpc}");
+
+                    // Trigger the write operation using the writer reader.
+                    TagOpController.Instance.TriggerWriteAndVerify(
+                        tag,
+                        expectedEpc,
+                        writerReader,
+                        cancellationToken,
+                        swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
+                        newAccessPassword,
+                        true,
+                        1,
+                        true,
+                        0);
                 }
                 // (Optionally, you might also update any UI or log this detection.)
             }
