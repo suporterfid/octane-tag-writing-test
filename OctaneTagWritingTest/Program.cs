@@ -32,6 +32,7 @@ namespace OctaneTagWritingTest
             //string hostnameWriter = args[0];
             //string hostnameVerifier = args[1];
 
+            string hostnameDetector= "192.168.68.93";
             string hostnameWriter = "192.168.68.248";
             string hostnameVerifier = "192.168.68.94";
 
@@ -45,6 +46,29 @@ namespace OctaneTagWritingTest
             string settingsFilePath = "reader_settings.json";
 
             Console.WriteLine($"Settings file '{settingsFilePath}' will be created or replaced. Creating default settings...");
+            var detectorSettings = ReaderSettings.CreateNamed("detector");
+            detectorSettings.Hostname = "writer.local";
+            detectorSettings.Hostname = "192.168.68.248";
+            detectorSettings.LogFile = "test_log_writer.csv";
+            detectorSettings.IncludeFastId = true;
+            detectorSettings.IncludePeakRssi = true;
+            detectorSettings.IncludeAntennaPortNumber = true;
+            detectorSettings.ReportMode = "Individual";
+            detectorSettings.RfMode = 0;
+            detectorSettings.AntennaPort = 1;
+            detectorSettings.TxPowerInDbm = 30;
+            detectorSettings.MaxRxSensitivity = true;
+            detectorSettings.RxSensitivityInDbm = -90;
+            detectorSettings.SearchMode = "SingleTarget";
+            detectorSettings.Session = 0;
+            detectorSettings.MemoryBank = "Epc";
+            detectorSettings.BitPointer = 32;
+            detectorSettings.TagMask = "0017";
+            detectorSettings.BitCount = 16;
+            detectorSettings.FilterOp = "NotMatch";
+            detectorSettings.FilterMode = "OnlyFilter1";
+            ReaderSettingsManager.Instance.SaveSettings(detectorSettings);
+
             var writerSettings = ReaderSettings.CreateNamed("writer");
             writerSettings.Hostname = "writer.local";
             writerSettings.Hostname = "192.168.68.248";
@@ -95,11 +119,12 @@ namespace OctaneTagWritingTest
             // Create dictionary of reader settings
             var readerSettings = new Dictionary<string, ReaderSettings>
             {
+                { "detector", detectorSettings },
                 { "writer", writerSettings },
                 { "verifier", verifierSettings }
             };
 
-            JobManager manager = new JobManager(hostnameWriter, hostnameVerifier, testDescription, readerSettings);
+            JobManager manager = new JobManager(hostnameDetector, hostnameWriter, hostnameVerifier, testDescription, readerSettings);
 
 
             while (true)

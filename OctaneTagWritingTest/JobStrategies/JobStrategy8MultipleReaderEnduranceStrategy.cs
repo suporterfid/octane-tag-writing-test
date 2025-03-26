@@ -17,26 +17,31 @@ namespace OctaneTagWritingTest.JobStrategies
     /// comparing each tag’s EPC to its expected value; if a mismatch is found, it triggers a re-write
     /// using the expected EPC.
     /// </summary>
-    public class JobStrategy8DualReaderEnduranceStrategy : BaseTestStrategy
+    public class JobStrategy8MultipleReaderEnduranceStrategy : BaseTestStrategy
     {
         private const int MaxCycles = 10000;
         private readonly ConcurrentDictionary<string, int> cycleCount = new ConcurrentDictionary<string, int>();
         private readonly ConcurrentDictionary<string, Stopwatch> swWriteTimers = new ConcurrentDictionary<string, Stopwatch>();
         private readonly ConcurrentDictionary<string, Stopwatch> swVerifyTimers = new ConcurrentDictionary<string, Stopwatch>();
 
+        private ImpinjReader detectorReader;
         // Two separate readers: one for writing and one for verifying.
         private ImpinjReader writerReader;
         private ImpinjReader verifierReader;
+        private string detectorAddress;
         private string writerAddress;
         private string verifierAddress;
 
         private Timer successCountTimer;
 
-        public JobStrategy8DualReaderEnduranceStrategy(string hostnameWriter, string hostnameVerifier, string logFile, Dictionary<string, ReaderSettings> readerSettings)
+        public JobStrategy8MultipleReaderEnduranceStrategy(string hostnameDetector, string hostnameWriter, string hostnameVerifier, string logFile, Dictionary<string, ReaderSettings> readerSettings)
             : base(hostnameWriter, logFile, readerSettings)
         {
+            detectorAddress = hostnameDetector;
             writerAddress = hostnameWriter;
             verifierAddress = hostnameVerifier;
+
+            detectorReader = new ImpinjReader();
             // Create two separate reader instances.
             writerReader = new ImpinjReader();
             verifierReader = new ImpinjReader();
@@ -50,10 +55,21 @@ namespace OctaneTagWritingTest.JobStrategies
             try
             {
                 this.cancellationToken = cancellationToken;
-                Console.WriteLine("=== Dual Reader Endurance Test ===");
+                Console.WriteLine("=== Multiple Reader Endurance Test ===");
                 Console.WriteLine("Press 'q' to stop the test and return to menu.");
 
-                // Configure both readers.
+                // Configure readers.
+
+                try
+                {
+                    ConfigureDetectorReader();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("ConfigureDetectorReader - Error: " + ex.Message);
+                    throw;
+                }
+
                 try
                 {
                     ConfigureWriterReader();
@@ -74,6 +90,8 @@ namespace OctaneTagWritingTest.JobStrategies
                 }
 
 
+                // Register event handlers.
+                detectorReader.TagsReported += OnTagsReportedDetector;
                 // Register event handlers for the writer reader.
                 writerReader.TagsReported += OnTagsReportedWriter;
                 writerReader.TagOpComplete += OnTagOpComplete;
@@ -82,7 +100,17 @@ namespace OctaneTagWritingTest.JobStrategies
                 verifierReader.TagsReported += OnTagsReportedVerifier;
                 verifierReader.TagOpComplete += OnTagOpComplete;
 
-                // Start both readers.
+                // Start readers.
+                
+                try
+                {
+                    detectorReader.Start();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("detectorReader - Error in dual reader endurance test: " + ex.Message);
+                    throw ex;
+                }
                 try
                 {
                     writerReader.Start();
@@ -156,6 +184,35 @@ namespace OctaneTagWritingTest.JobStrategies
 
         }
 
+        private void ConfigureDetectorReader()
+        {
+            // Load the predefined EPC list if needed.
+            EpcListManager.Instance.LoadEpcList("epc_list.txt");
+
+            detectorReader.Connect(detectorAddress);
+            detectorReader.ApplyDefaultSettings();
+
+            var detectorSettings = detectorReader.QueryDefaultSettings();
+            var detectorReaderSettings = GetSettingsForRole("detector");
+            detectorSettings.Report.IncludeFastId = detectorReaderSettings.IncludeFastId;
+            detectorSettings.Report.IncludePeakRssi = detectorReaderSettings.IncludePeakRssi;
+            detectorSettings.Report.IncludePcBits = true;
+            detectorSettings.Report.IncludeAntennaPortNumber = detectorReaderSettings.IncludeAntennaPortNumber;
+            detectorSettings.Report.Mode = (ReportMode)Enum.Parse(typeof(ReportMode), detectorReaderSettings.ReportMode);
+            detectorSettings.RfMode = (uint)detectorReaderSettings.RfMode;
+
+            detectorSettings.Antennas.DisableAll();
+            detectorSettings.Antennas.GetAntenna((ushort)detectorReaderSettings.AntennaPort).IsEnabled = true;
+            detectorSettings.Antennas.GetAntenna((ushort)detectorReaderSettings.AntennaPort).TxPowerInDbm = detectorReaderSettings.TxPowerInDbm;
+            detectorSettings.Antennas.GetAntenna((ushort)detectorReaderSettings.AntennaPort).MaxRxSensitivity = detectorReaderSettings.MaxRxSensitivity;
+            detectorSettings.Antennas.GetAntenna((ushort)detectorReaderSettings.AntennaPort).RxSensitivityInDbm = detectorReaderSettings.RxSensitivityInDbm;
+
+            detectorSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), detectorReaderSettings.SearchMode);
+            detectorSettings.Session = (ushort)detectorReaderSettings.Session;
+
+            EnableLowLatencyReporting(detectorSettings, detectorReader);
+            detectorReader.ApplySettings(detectorSettings);
+        }
         private void ConfigureWriterReader()
         {
             // Load the predefined EPC list.
@@ -233,6 +290,18 @@ namespace OctaneTagWritingTest.JobStrategies
         {
             try
             {
+                if (detectorReader != null)
+                {
+                    detectorReader.Stop();
+                    detectorReader.Disconnect();
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("detectorReader - Error during cleanup: " + ex.Message);
+            }
+            try
+            {
                 if (writerReader != null)
                 {
                     writerReader.Stop();
@@ -254,6 +323,31 @@ namespace OctaneTagWritingTest.JobStrategies
             catch (Exception ex)
             {
                 Console.WriteLine("verifierReader - Error during reader cleanup: " + ex.Message);
+            }
+        }
+        private void OnTagsReportedDetector(ImpinjReader sender, TagReport report)
+        {
+            if (report == null || IsCancellationRequested())
+                return;
+
+            foreach (var tag in report.Tags)
+            {
+                var tidHex = tag.Tid?.ToHexString() ?? string.Empty;
+                var epcHex = tag.Epc?.ToHexString() ?? string.Empty;
+                if (string.IsNullOrEmpty(tidHex) || TagOpController.Instance.IsTidProcessed(tidHex))
+                    continue;
+
+                // Here, simply record and log the detection.
+                Console.WriteLine($"Detector: New tag detected. TID: {tidHex}, Current EPC: {epcHex}");
+                // Generate a new EPC (if one is not already recorded) using the detector logic.
+                var expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
+                if (string.IsNullOrEmpty(expectedEpc))
+                {
+                    expectedEpc = TagOpController.Instance.GetNextEpcForTag(epcHex, tidHex);
+                    TagOpController.Instance.RecordExpectedEpc(tidHex, expectedEpc);
+                    Console.WriteLine($"Detector: Assigned new EPC for TID {tidHex}: {expectedEpc}");
+                }
+                // (Optionally, you might also update any UI or log this detection.)
             }
         }
 
@@ -387,7 +481,10 @@ namespace OctaneTagWritingTest.JobStrategies
                             cancellationToken,
                             swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
                             newAccessPassword,
-                            true);
+                            true,
+                            1,
+                            false,
+                            3);
                     }
                     else
                     {
