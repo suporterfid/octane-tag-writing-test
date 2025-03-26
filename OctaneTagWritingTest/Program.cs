@@ -32,14 +32,14 @@ namespace OctaneTagWritingTest
             //string hostnameWriter = args[0];
             //string hostnameVerifier = args[1];
 
-            string hostnameDetector= "192.168.68.93";
+            string hostnameDetector= "192.168.68.94";
             string hostnameWriter = "192.168.68.248";
-            string hostnameVerifier = "192.168.68.94";
+            string hostnameVerifier = "192.168.68.93"; 
 
-            string testDescription = "Gravacao-Teste-1-Tarde-Rodada-3-";
-            string epcHeader = "B023";
+            string testDescription = "Gravacao-Teste-1-Manha-Rodada-4-2603";
+            string epcHeader = "C032";
             //string epcPlainItemCode = "76788888888888";
-            string epcPlainItemCode = "1122334455";
+            string epcPlainItemCode = "6655443322";
             long quantity = 1;
             EpcListManager.Instance.InitEpcData(epcHeader, epcPlainItemCode, quantity);
 
@@ -47,8 +47,8 @@ namespace OctaneTagWritingTest
 
             Console.WriteLine($"Settings file '{settingsFilePath}' will be created or replaced. Creating default settings...");
             var detectorSettings = ReaderSettings.CreateNamed("detector");
-            detectorSettings.Hostname = "writer.local";
-            detectorSettings.Hostname = "192.168.68.248";
+            detectorSettings.Name = "writer.local";
+            detectorSettings.Hostname = hostnameDetector;
             detectorSettings.LogFile = "test_log_writer.csv";
             detectorSettings.IncludeFastId = true;
             detectorSettings.IncludePeakRssi = true;
@@ -70,8 +70,8 @@ namespace OctaneTagWritingTest
             ReaderSettingsManager.Instance.SaveSettings(detectorSettings);
 
             var writerSettings = ReaderSettings.CreateNamed("writer");
-            writerSettings.Hostname = "writer.local";
-            writerSettings.Hostname = "192.168.68.248";
+            writerSettings.Name = "writer.local";
+            writerSettings.Hostname = hostnameWriter;
             writerSettings.LogFile = "test_log_writer.csv";
             writerSettings.IncludeFastId = true;
             writerSettings.IncludePeakRssi = true;
@@ -79,9 +79,9 @@ namespace OctaneTagWritingTest
             writerSettings.ReportMode = "Individual";
             writerSettings.RfMode = 0;
             writerSettings.AntennaPort = 1;
-            writerSettings.TxPowerInDbm = 30;
-            writerSettings.MaxRxSensitivity = true;
-            writerSettings.RxSensitivityInDbm = -90;
+            writerSettings.TxPowerInDbm = 33;
+            writerSettings.MaxRxSensitivity = false;
+            writerSettings.RxSensitivityInDbm = -50;
             writerSettings.SearchMode = "SingleTarget";
             writerSettings.Session = 0;
             writerSettings.MemoryBank = "Epc";
@@ -95,7 +95,7 @@ namespace OctaneTagWritingTest
             Console.WriteLine($"Settings file '{settingsFilePath}' for verifier will be created or replaced. Creating default settings...");
             var verifierSettings = ReaderSettings.CreateNamed("verifier");
             verifierSettings.Hostname = "verifier.local";
-            verifierSettings.Hostname = "192.168.68.94";
+            verifierSettings.Hostname = hostnameVerifier;
             verifierSettings.LogFile = "test_log_verifier.csv";
             verifierSettings.IncludeFastId = true;
             verifierSettings.IncludePeakRssi = true;
@@ -103,7 +103,7 @@ namespace OctaneTagWritingTest
             verifierSettings.ReportMode = "Individual";
             verifierSettings.RfMode = 0;
             verifierSettings.AntennaPort = 1;
-            verifierSettings.TxPowerInDbm = 27;
+            verifierSettings.TxPowerInDbm = 33;
             verifierSettings.MaxRxSensitivity = true;
             verifierSettings.RxSensitivityInDbm = -90;
             verifierSettings.SearchMode = "SingleTarget";
