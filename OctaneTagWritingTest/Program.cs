@@ -32,14 +32,17 @@ namespace OctaneTagWritingTest
             //string hostnameWriter = args[0];
             //string hostnameVerifier = args[1];
 
-            string hostnameDetector= "192.168.68.94";
-            string hostnameWriter = "192.168.68.248";
+            string hostnameDetector= "192.168.68.248";
+            string hostnameWriter = "192.168.68.94";
             string hostnameVerifier = "192.168.68.93"; 
 
-            string testDescription = "Gravacao-Teste-1-Tarde-Rodada-7-2603";
-            string epcHeader = "F011";
+            string testDescription = "Gravacao-CheckBox";
+            string epcHeader = "E7";
             //string epcPlainItemCode = "76788888888888";
-            string epcPlainItemCode = "1122334455";
+            string epcPlainItemCode = "1122334466";
+            
+            string sku = "012667712933";
+
             long quantity = 1;
             EpcListManager.Instance.InitEpcData(epcHeader, epcPlainItemCode, quantity);
 
@@ -56,9 +59,9 @@ namespace OctaneTagWritingTest
             detectorSettings.ReportMode = "Individual";
             detectorSettings.RfMode = 0;
             detectorSettings.AntennaPort = 1;
-            detectorSettings.TxPowerInDbm = 30;
+            detectorSettings.TxPowerInDbm = 18;
             detectorSettings.MaxRxSensitivity = true;
-            detectorSettings.RxSensitivityInDbm = -90;
+            detectorSettings.RxSensitivityInDbm = -60;
             detectorSettings.SearchMode = "SingleTarget";
             detectorSettings.Session = 0;
             detectorSettings.MemoryBank = "Epc";
@@ -69,6 +72,7 @@ namespace OctaneTagWritingTest
             detectorSettings.FilterMode = "OnlyFilter1";
             ReaderSettingsManager.Instance.SaveSettings(detectorSettings);
 
+            //Console.WriteLine($"Settings file '{settingsFilePath}' will be created or replaced. Creating default settings...");
             var writerSettings = ReaderSettings.CreateNamed("writer");
             writerSettings.Name = "writer.local";
             writerSettings.Hostname = hostnameWriter;
@@ -81,7 +85,7 @@ namespace OctaneTagWritingTest
             writerSettings.AntennaPort = 1;
             writerSettings.TxPowerInDbm = 33;
             writerSettings.MaxRxSensitivity = false;
-            writerSettings.RxSensitivityInDbm = -50;
+            writerSettings.RxSensitivityInDbm = -70;
             writerSettings.SearchMode = "SingleTarget";
             writerSettings.Session = 0;
             writerSettings.MemoryBank = "Epc";
@@ -92,7 +96,7 @@ namespace OctaneTagWritingTest
             writerSettings.FilterMode = "OnlyFilter1";
             ReaderSettingsManager.Instance.SaveSettings(writerSettings);
 
-            Console.WriteLine($"Settings file '{settingsFilePath}' for verifier will be created or replaced. Creating default settings...");
+            //Console.WriteLine($"Settings file '{settingsFilePath}' for verifier will be created or replaced. Creating default settings...");
             var verifierSettings = ReaderSettings.CreateNamed("verifier");
             verifierSettings.Hostname = "verifier.local";
             verifierSettings.Hostname = hostnameVerifier;
@@ -124,7 +128,7 @@ namespace OctaneTagWritingTest
                 { "verifier", verifierSettings }
             };
 
-            JobManager manager = new JobManager(hostnameDetector, hostnameWriter, hostnameVerifier, testDescription, readerSettings);
+            JobManager manager = new JobManager(hostnameDetector, hostnameWriter, hostnameVerifier, testDescription, readerSettings, sku);
 
 
             while (true)

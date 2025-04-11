@@ -447,6 +447,7 @@ namespace OctaneTagWritingTest.Helpers
             writeOp.WordPointer = WordPointers.Epc;
             writeOp.Data = TagData.FromHexString(epcData);
 
+            Console.WriteLine($"Adding a write operation sequence to write the new EPC {epcData} to tag TID {currentTid}");
             seq.Ops.Add(writeOp);
 
             // If the new EPC is a different length, update the PC bits.
