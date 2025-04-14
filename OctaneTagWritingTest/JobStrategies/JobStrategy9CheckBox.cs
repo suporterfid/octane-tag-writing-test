@@ -26,7 +26,7 @@ namespace OctaneTagWritingTest.JobStrategies
         // Duration for tag collection (in seconds)
         private const int ReadDurationSeconds = 10;
         // Overall timeout for write operations (in seconds)
-        private const int WriteTimeoutSeconds = 30;
+        private const int WriteTimeoutSeconds = 20;
         // Duration (in ms) for verification read phase.
         private const int VerificationDurationMs = 5000; 
         // The SKU must contain exactly 12 digits.

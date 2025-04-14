@@ -341,3 +341,9 @@ OctaneTagWritingTest/bin/Debug/net8.0/TestCase8_Log-DualReaderEnduranceStrategy-
 OctaneTagWritingTest/bin/Debug/net8.0/TestCase8_Log-DualReaderEnduranceStrategy-Gravacao-Teste-1-Tarde-Rodada-6-2603.csv
 OctaneTagWritingTest/bin/Debug/net8.0/TestCase8_Log-DualReaderEnduranceStrategy-Gravacao-Teste-1-Tarde-Rodada-7-2603.csv
 /OctaneTagWritingTest/.vs/OctaneTagWritingTest
+OctaneTagWritingTest/bin/Debug/net8.0/TestCase8_Log-DualReaderEnduranceStrategy-Gravacao-Teste-5-1k-itens-Tarde-Rodada-1-2603.csv
+OctaneTagWritingTest/bin/Debug/net8.0/TestCase9_Log-CheckBox-Gravacao-CheckBox.csv
+TagUtils/obj/project.assets.json
+TagUtils/obj/project.nuget.cache
+TagUtils/obj/TagUtils.csproj.nuget.dgspec.json
+TagUtils/obj/TagUtils.csproj.nuget.g.props
