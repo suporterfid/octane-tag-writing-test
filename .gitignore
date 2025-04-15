@@ -347,3 +347,8 @@ TagUtils/obj/project.assets.json
 TagUtils/obj/project.nuget.cache
 TagUtils/obj/TagUtils.csproj.nuget.dgspec.json
 TagUtils/obj/TagUtils.csproj.nuget.g.props
+OctaneTagWritingTest/bin/Debug/net8.0/config.json
+OctaneTagWritingTest/bin/Debug/net8.0/reader_settings/detector.json
+OctaneTagWritingTest/bin/Debug/net8.0/TestCase1_Log.csv
+OctaneTagWritingTest/bin/Debug/net8.0/TestCase9_Log-CheckBox-Default-Test.csv
+OctaneTagWritingTest/bin/Debug/net8.0/TestCase1_Log.csv

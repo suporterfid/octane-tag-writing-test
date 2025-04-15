@@ -24,6 +24,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="config.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="epc_list.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

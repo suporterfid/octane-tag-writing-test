@@ -10,127 +10,161 @@ namespace OctaneTagWritingTest
             // Configure the console window
             Console.Clear();
             Console.Title = "Serializer";
-            //Console.SetWindowSize(150, 50);
-            //Console.BufferHeight = 1000;
 
-            // The .NET diagnostics trace listener is used as a mechanism for
-            // outputing to both the console and a file at the same time.
-            // Start by clearing all listeners.
+            // The .NET diagnostics trace listener configuration
+            ConfigureTraceListeners();
+
+            // Check for help request
+            if (args.Contains("--help") || args.Contains("-h"))
+            {
+                CommandLineParser.ShowHelp();
+                return;
+            }
+
+            // Initialize configuration
+            ApplicationConfig config;
+            bool isRunningInDebugMode = false;
+
+#if DEBUG
+            isRunningInDebugMode = true;
+            // When debugging in Visual Studio, you might want to use specific settings
+            // or enter interactive mode automatically for convenience
+            if (args.Length == 0)
+            {
+                Console.WriteLine("Debug mode detected with no arguments - entering interactive mode");
+                config = InteractiveConfig.Configure();
+            }
+            else
+            {
+                config = CommandLineParser.ParseArgs(args);
+            }
+#endif
+            if(!isRunningInDebugMode)
+            {
+                // Check for interactive mode
+                if (args.Contains("--interactive") || args.Contains("-i"))
+                {
+                    config = InteractiveConfig.Configure();
+                }
+                else
+                {
+                    // Parse command line args
+                    config = CommandLineParser.ParseArgs(args);
+                }
+            }
+
+
+            // Initialize EPC Manager
+            EpcListManager.Instance.InitEpcData(config.EpcHeader, config.EpcPlainItemCode, config.Quantity);
+
+            // Create reader settings
+            var readerSettings = CreateReaderSettings(config);
+
+
+            // Create job manager
+            JobManager manager = new JobManager(
+                config.DetectorHostname,
+                config.WriterHostname,
+                config.VerifierHostname,
+                config.TestDescription,
+                readerSettings,
+                config.Sku);
+
+            // Main application loop
+            RunApplicationLoop(manager);
+        }
+
+        private static void ConfigureTraceListeners()
+        {
             Trace.Listeners.Clear();
-
-            // Now add the console as a listener
             ConsoleTraceListener ctl = new ConsoleTraceListener(false);
             ctl.TraceOutputOptions = TraceOptions.DateTime;
-
             Trace.Listeners.Add(ctl);
             Trace.AutoFlush = true;
-            //if (args.Length < 1)
-            //{
-            //    Console.WriteLine("Error: Please provide the reader hostname as an argument.");
-            //    return;
-            //}
-            //string hostnameWriter = args[0];
-            //string hostnameVerifier = args[1];
+        }
 
-            string hostnameDetector= "192.168.68.248";
-            string hostnameWriter = "192.168.68.94";
-            string hostnameVerifier = "192.168.68.93"; 
-
-            string testDescription = "Gravacao-CheckBox";
-            string epcHeader = "E7";
-            //string epcPlainItemCode = "76788888888888";
-            string epcPlainItemCode = "1122334466";
-            
-            string sku = "012667712933";
-
-            long quantity = 1;
-            EpcListManager.Instance.InitEpcData(epcHeader, epcPlainItemCode, quantity);
-
-            string settingsFilePath = "reader_settings.json";
-
-            Console.WriteLine($"Settings file '{settingsFilePath}' will be created or replaced. Creating default settings...");
+        private static Dictionary<string, ReaderSettings> CreateReaderSettings(ApplicationConfig config)
+        {
+            // Create detector settings
             var detectorSettings = ReaderSettings.CreateNamed("detector");
-            detectorSettings.Name = "writer.local";
-            detectorSettings.Hostname = hostnameDetector;
-            detectorSettings.LogFile = "test_log_writer.csv";
+            detectorSettings.Hostname = config.DetectorHostname;
+            detectorSettings.LogFile = $"detector_log_{config.TestDescription}.csv";
             detectorSettings.IncludeFastId = true;
             detectorSettings.IncludePeakRssi = true;
             detectorSettings.IncludeAntennaPortNumber = true;
             detectorSettings.ReportMode = "Individual";
-            detectorSettings.RfMode = 0;
+            detectorSettings.RfMode = config.DetectorRfMode;
             detectorSettings.AntennaPort = 1;
-            detectorSettings.TxPowerInDbm = 18;
-            detectorSettings.MaxRxSensitivity = true;
-            detectorSettings.RxSensitivityInDbm = -60;
-            detectorSettings.SearchMode = "SingleTarget";
-            detectorSettings.Session = 0;
-            detectorSettings.MemoryBank = "Epc";
-            detectorSettings.BitPointer = 32;
-            detectorSettings.TagMask = "0017";
-            detectorSettings.BitCount = 16;
-            detectorSettings.FilterOp = "NotMatch";
-            detectorSettings.FilterMode = "OnlyFilter1";
+            detectorSettings.TxPowerInDbm = config.DetectorTxPowerInDbm;
+            detectorSettings.MaxRxSensitivity = config.DetectorMaxRxSensitivity;
+            detectorSettings.RxSensitivityInDbm = config.DetectorRxSensitivityInDbm;
+            detectorSettings.SearchMode = config.DetectorSearchMode;
+            detectorSettings.Session = config.DetectorSession;
+            detectorSettings.MemoryBank = config.DetectorMemoryBank;
+            detectorSettings.BitPointer = config.DetectorBitPointer;
+            detectorSettings.TagMask = config.DetectorTagMask;
+            detectorSettings.BitCount = config.DetectorBitCount;
+            detectorSettings.FilterOp = config.DetectorFilterOp;
+            detectorSettings.FilterMode = config.DetectorFilterMode;
             ReaderSettingsManager.Instance.SaveSettings(detectorSettings);
 
-            //Console.WriteLine($"Settings file '{settingsFilePath}' will be created or replaced. Creating default settings...");
+            // Create writer settings
             var writerSettings = ReaderSettings.CreateNamed("writer");
-            writerSettings.Name = "writer.local";
-            writerSettings.Hostname = hostnameWriter;
-            writerSettings.LogFile = "test_log_writer.csv";
+            writerSettings.Hostname = config.WriterHostname;
+            writerSettings.LogFile = $"writer_log_{config.TestDescription}.csv";
             writerSettings.IncludeFastId = true;
             writerSettings.IncludePeakRssi = true;
             writerSettings.IncludeAntennaPortNumber = true;
             writerSettings.ReportMode = "Individual";
-            writerSettings.RfMode = 0;
+            writerSettings.RfMode = config.WriterRfMode;
             writerSettings.AntennaPort = 1;
-            writerSettings.TxPowerInDbm = 33;
-            writerSettings.MaxRxSensitivity = false;
-            writerSettings.RxSensitivityInDbm = -70;
-            writerSettings.SearchMode = "SingleTarget";
-            writerSettings.Session = 0;
-            writerSettings.MemoryBank = "Epc";
-            writerSettings.BitPointer = 32;
-            writerSettings.TagMask = "0017";
-            writerSettings.BitCount = 16;
-            writerSettings.FilterOp = "NotMatch";
-            writerSettings.FilterMode = "OnlyFilter1";
+            writerSettings.TxPowerInDbm = config.WriterTxPowerInDbm;
+            writerSettings.MaxRxSensitivity = config.WriterMaxRxSensitivity;
+            writerSettings.RxSensitivityInDbm = config.WriterRxSensitivityInDbm;
+            writerSettings.SearchMode = config.WriterSearchMode;
+            writerSettings.Session = config.WriterSession;
+            writerSettings.MemoryBank = config.WriterMemoryBank;
+            writerSettings.BitPointer = config.WriterBitPointer;
+            writerSettings.TagMask = config.WriterTagMask;
+            writerSettings.BitCount = config.WriterBitCount;
+            writerSettings.FilterOp = config.WriterFilterOp;
+            writerSettings.FilterMode = config.WriterFilterMode;
             ReaderSettingsManager.Instance.SaveSettings(writerSettings);
 
-            //Console.WriteLine($"Settings file '{settingsFilePath}' for verifier will be created or replaced. Creating default settings...");
+            // Create verifier settings
             var verifierSettings = ReaderSettings.CreateNamed("verifier");
-            verifierSettings.Hostname = "verifier.local";
-            verifierSettings.Hostname = hostnameVerifier;
-            verifierSettings.LogFile = "test_log_verifier.csv";
+            verifierSettings.Hostname = config.VerifierHostname;
+            verifierSettings.LogFile = $"verifier_log_{config.TestDescription}.csv";
             verifierSettings.IncludeFastId = true;
             verifierSettings.IncludePeakRssi = true;
             verifierSettings.IncludeAntennaPortNumber = true;
             verifierSettings.ReportMode = "Individual";
-            verifierSettings.RfMode = 0;
+            verifierSettings.RfMode = config.VerifierRfMode;
             verifierSettings.AntennaPort = 1;
-            verifierSettings.TxPowerInDbm = 33;
-            verifierSettings.MaxRxSensitivity = true;
-            verifierSettings.RxSensitivityInDbm = -90;
-            verifierSettings.SearchMode = "SingleTarget";
-            verifierSettings.Session = 0;
-            verifierSettings.MemoryBank = "Epc";
-            verifierSettings.BitPointer = 32;
-            verifierSettings.TagMask = "0017";
-            verifierSettings.BitCount = 16;
-            verifierSettings.FilterOp = "NotMatch";
-            verifierSettings.FilterMode = "OnlyFilter1";
+            verifierSettings.TxPowerInDbm = config.VerifierTxPowerInDbm;
+            verifierSettings.MaxRxSensitivity = config.VerifierMaxRxSensitivity;
+            verifierSettings.RxSensitivityInDbm = config.VerifierRxSensitivityInDbm;
+            verifierSettings.SearchMode = config.VerifierSearchMode;
+            verifierSettings.Session = config.VerifierSession;
+            verifierSettings.MemoryBank = config.VerifierMemoryBank;
+            verifierSettings.BitPointer = config.VerifierBitPointer;
+            verifierSettings.TagMask = config.VerifierTagMask;
+            verifierSettings.BitCount = config.VerifierBitCount;
+            verifierSettings.FilterOp = config.VerifierFilterOp;
+            verifierSettings.FilterMode = config.VerifierFilterMode;
             ReaderSettingsManager.Instance.SaveSettings(verifierSettings);
 
-            // Create dictionary of reader settings
-            var readerSettings = new Dictionary<string, ReaderSettings>
-            {
-                { "detector", detectorSettings },
-                { "writer", writerSettings },
-                { "verifier", verifierSettings }
-            };
+            // Return as dictionary
+            return new Dictionary<string, ReaderSettings>
+    {
+        { "detector", detectorSettings },
+        { "writer", writerSettings },
+        { "verifier", verifierSettings }
+    };
+        }
 
-            JobManager manager = new JobManager(hostnameDetector, hostnameWriter, hostnameVerifier, testDescription, readerSettings, sku);
-
-
+        private static void RunApplicationLoop(JobManager manager)
+        {
             while (true)
             {
                 manager.DisplayMenu();
