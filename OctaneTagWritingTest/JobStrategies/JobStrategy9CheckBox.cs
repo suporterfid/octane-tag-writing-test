@@ -47,13 +47,21 @@ namespace OctaneTagWritingTest.JobStrategies
         #endregion
 
         #region Constructor
-        public JobStrategy9CheckBox(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings, string sku)
+        // Add a new field to store the header
+        private readonly string epcHeader;
+
+        // Update the constructor to accept the header parameter
+        public JobStrategy9CheckBox(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings,
+                                  string header, string sku)
             : base(hostname, logFile, readerSettings)
         {
             if (string.IsNullOrEmpty(sku) || sku.Length != 12)
             {
                 throw new ArgumentException("SKU must contain exactly 12 digits.", nameof(sku));
             }
+
+            // Store the header, with a default if not provided
+            this.epcHeader = string.IsNullOrEmpty(header) ? "E7" : header;
             this.sku = sku;
             TagOpController.Instance.CleanUp();
         }
@@ -653,9 +661,9 @@ namespace OctaneTagWritingTest.JobStrategies
         #region Helper Methods
         private string GenerateNewEpc(string sku, string tid)
         {
-            // E7 + 12-digit SKU + last 10 characters of TID
+            // Use epcHeader instead of hardcoded "E7"
             string tidSuffix = tid.Length >= 10 ? tid.Substring(tid.Length - 10) : tid.PadLeft(10, '0');
-            return "E7" + sku + tidSuffix;
+            return epcHeader + sku + tidSuffix;
         }
 
         private void DisplayProcessSummary()
