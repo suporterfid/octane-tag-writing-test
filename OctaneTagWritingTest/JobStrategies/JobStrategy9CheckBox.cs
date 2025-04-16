@@ -44,6 +44,13 @@ namespace OctaneTagWritingTest.JobStrategies
         private Timer statusUpdateTimer;
         // Summary reports
         private StringBuilder processSummary = new();
+        // Retry count tracking
+        private readonly ConcurrentDictionary<string, int> retryCount = new();
+        // Maximum retry attempts
+        private const int maxRetries = 5;
+        // Stopwatch collections
+        private readonly ConcurrentDictionary<string, Stopwatch> swWriteTimers = new();
+        private readonly ConcurrentDictionary<string, Stopwatch> swVerifyTimers = new();
         #endregion
 
         #region Constructor
@@ -187,6 +194,9 @@ namespace OctaneTagWritingTest.JobStrategies
 
             // Enable low latency reporting
             EnableLowLatencyReporting(settingsToApply, writerReader);
+
+            // Apply settings
+            writerReader.ApplySettings(settingsToApply);
         }
 
         private void EnableLowLatencyReporting(Settings settings, ImpinjReader reader)
@@ -573,7 +583,17 @@ namespace OctaneTagWritingTest.JobStrategies
 
                 if (result is TagWriteOpResult writeResult)
                 {
-                    swWriteTimers[tidHex].Stop();
+                    if (tagInfoMap.TryGetValue(tidHex, out TagProcessingInfo info))
+                    {
+                        info.WriteTimer.Stop();
+                        info.IsWritten = (writeResult.Result == WriteResultStatus.Success);
+                    }
+
+                    // Update global write timer if needed
+                    if (swWriteTimers.TryGetValue(tidHex, out var swWrite))
+                    {
+                        swWrite.Stop();
+                    }
 
                     if (writeResult.Result == WriteResultStatus.Success)
                     {
@@ -589,8 +609,14 @@ namespace OctaneTagWritingTest.JobStrategies
                             // Ignore any errors during sequence deletion
                         }
 
-                        TagOpController.Instance.TriggerVerificationRead(writeResult.Tag, reader, cancellationToken,
-                            swVerifyTimers.GetOrAdd(tidHex, _ => new Stopwatch()), newAccessPassword);
+                        // Trigger verification reading
+                        TagOpController.Instance.TriggerVerificationRead(
+                            writeResult.Tag,
+                            writerReader,
+                            cancellationToken,
+                            swVerifyTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
+                            newAccessPassword
+                        );
                     }
                     else
                     {
@@ -611,7 +637,10 @@ namespace OctaneTagWritingTest.JobStrategies
                 }
                 else if (result is TagReadOpResult readResult)
                 {
-                    swVerifyTimers[tidHex].Stop();
+                    if (swVerifyTimers.TryGetValue(tidHex, out var swVerify))
+                    {
+                        swVerify.Stop();
+                    }
 
                     string verifiedEpc = readResult.Data?.ToHexString() ?? "N/A";
                     string expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
@@ -634,8 +663,15 @@ namespace OctaneTagWritingTest.JobStrategies
                             // Ignore any errors during sequence deletion
                         }
 
-                        TagOpController.Instance.TriggerWriteAndVerify(readResult.Tag, expectedEpc, reader, cancellationToken,
-                            swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()), newAccessPassword, true);
+                        TagOpController.Instance.TriggerWriteAndVerify(
+                            readResult.Tag,
+                            expectedEpc,
+                            writerReader,
+                            cancellationToken,
+                            swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
+                            newAccessPassword,
+                            true
+                        );
                     }
                     else
                     {
@@ -681,6 +717,18 @@ namespace OctaneTagWritingTest.JobStrategies
             TagOpController.Instance.LogToCsv(logFile, line);
         }
 
+        private void LogResult(string tidHex, string oldEpc, string expectedEpc, string verifiedEpc, string result, int retries, Tag tag)
+        {
+            string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            double rssi = tag.IsPeakRssiInDbmPresent ? tag.PeakRssiInDbm : 0;
+            ushort antenna = tag.IsAntennaPortNumberPresent ? tag.AntennaPortNumber : (ushort)0;
+
+            long writeTime = swWriteTimers.TryGetValue(tidHex, out var swWrite) ? swWrite.ElapsedMilliseconds : 0;
+            long verifyTime = swVerifyTimers.TryGetValue(tidHex, out var swVerify) ? swVerify.ElapsedMilliseconds : 0;
+
+            LogToCsv($"{timestamp},{tidHex},{oldEpc},{expectedEpc},{verifiedEpc},{writeTime},{verifyTime},{result},{rssi},{antenna}");
+        }
+
         private void CleanupWriterReader()
         {
             try
@@ -691,6 +739,9 @@ namespace OctaneTagWritingTest.JobStrategies
                     writerReader.TagsReported -= OnTagsReported;
                     writerReader.TagOpComplete -= OnTagOpComplete;
                     writerReader.GpiChanged -= OnGpiEvent;
+
+                    writerReader.Stop();
+                    writerReader.Disconnect();
                 }
 
                 tagInfoMap.Clear();
