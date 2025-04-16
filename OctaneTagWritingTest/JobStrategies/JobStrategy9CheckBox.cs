@@ -556,32 +556,94 @@ namespace OctaneTagWritingTest.JobStrategies
 
         private void OnTagOpComplete(ImpinjReader sender, TagOpReport report)
         {
-            if (report == null || cancellationToken.IsCancellationRequested)
+            if (report == null || IsCancellationRequested())
                 return;
 
             foreach (TagOpResult result in report)
             {
-                string tid = result.Tag?.Tid?.ToHexString() ?? "";
-
-                if (string.IsNullOrEmpty(tid) || !tagInfoMap.TryGetValue(tid, out TagProcessingInfo info))
-                    continue;
+                string tidHex = result.Tag.Tid?.ToHexString() ?? "N/A";
 
                 if (result is TagWriteOpResult writeResult)
                 {
-                    // Stop the write timer
-                    info.WriteTimer.Stop();
+                    swWriteTimers[tidHex].Stop();
 
                     if (writeResult.Result == WriteResultStatus.Success)
                     {
-                        info.IsWritten = true;
-                        Console.WriteLine($"Write operation succeeded for TID {tid}");
+                        Console.WriteLine($"Write operation succeeded for TID: {tidHex}, initiating verification.");
 
-                        // Start the verification timer for this tag
-                        info.VerifyTimer.Restart();
+                        // Clean up operation sequence after successful processing
+                        try
+                        {
+                            sender.DeleteOpSequence(result.SequenceId);
+                        }
+                        catch (Exception)
+                        {
+                            // Ignore any errors during sequence deletion
+                        }
+
+                        TagOpController.Instance.TriggerVerificationRead(writeResult.Tag, reader, cancellationToken,
+                            swVerifyTimers.GetOrAdd(tidHex, _ => new Stopwatch()), newAccessPassword);
                     }
                     else
                     {
-                        Console.WriteLine($"Write operation failed for TID {tid}: {writeResult.Result}");
+                        LogResult(tidHex, writeResult.Tag.Epc.ToHexString(), TagOpController.Instance.GetExpectedEpc(tidHex), "N/A",
+                                  "Write Failure", retryCount.GetOrAdd(tidHex, 0), writeResult.Tag);
+                        TagOpController.Instance.RecordResult(tidHex, "Write Error", false);
+
+                        // Clean up operation sequence even after failure
+                        try
+                        {
+                            sender.DeleteOpSequence(result.SequenceId);
+                        }
+                        catch (Exception)
+                        {
+                            // Ignore any errors during sequence deletion
+                        }
+                    }
+                }
+                else if (result is TagReadOpResult readResult)
+                {
+                    swVerifyTimers[tidHex].Stop();
+
+                    string verifiedEpc = readResult.Data?.ToHexString() ?? "N/A";
+                    string expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
+                    string resultStatus = verifiedEpc.Equals(expectedEpc, StringComparison.OrdinalIgnoreCase) ? "Success" : "Verification Failure";
+
+                    int retries = retryCount.GetOrAdd(tidHex, 0);
+
+                    if (resultStatus == "Verification Failure" && retries < maxRetries)
+                    {
+                        retryCount[tidHex] = retries + 1;
+                        Console.WriteLine($"Verification failed, retry {retryCount[tidHex]} for TID {tidHex}");
+
+                        // Clean up current operation sequence before initiating a new one
+                        try
+                        {
+                            sender.DeleteOpSequence(result.SequenceId);
+                        }
+                        catch (Exception)
+                        {
+                            // Ignore any errors during sequence deletion
+                        }
+
+                        TagOpController.Instance.TriggerWriteAndVerify(readResult.Tag, expectedEpc, reader, cancellationToken,
+                            swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()), newAccessPassword, true);
+                    }
+                    else
+                    {
+                        LogResult(tidHex, readResult.Tag.Epc.ToHexString(), expectedEpc, verifiedEpc,
+                                  resultStatus, retries, readResult.Tag);
+                        TagOpController.Instance.RecordResult(tidHex, resultStatus, resultStatus == "Success");
+
+                        // Clean up operation sequence after final processing
+                        try
+                        {
+                            sender.DeleteOpSequence(result.SequenceId);
+                        }
+                        catch (Exception)
+                        {
+                            // Ignore any errors during sequence deletion
+                        }
                     }
                 }
             }
