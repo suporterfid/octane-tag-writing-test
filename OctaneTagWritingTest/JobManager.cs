@@ -12,7 +12,7 @@ namespace OctaneTagWritingTest
         private Dictionary<string, IJobStrategy> strategies = new Dictionary<string, IJobStrategy>();
         private Dictionary<string, ReaderSettings> readerSettings;
 
-        public JobManager(string hostnameDetector, string hostnameWriter, string hostnameVerifier, string testDescription, Dictionary<string, ReaderSettings> settings, string sku = null)
+        public JobManager(string hostnameDetector, string hostnameWriter, string hostnameVerifier, string testDescription, Dictionary<string, ReaderSettings> settings, string header = null, string sku = null)
         {
             this.readerSettings = settings;
 
@@ -31,7 +31,7 @@ namespace OctaneTagWritingTest
             strategies.Add("6", new JobStrategy6RobustnessStrategy(hostnameWriter, $"TestCase6_Robustness_Log-{testDescription}.csv", readerSettings));
             strategies.Add("7", new JobStrategy7OptimizedStrategy(hostnameWriter, $"TestCase7_Log-OptimizedStrategy-{testDescription}.csv", readerSettings));
             strategies.Add("8", new JobStrategy8MultipleReaderEnduranceStrategy(hostnameDetector, hostnameWriter, hostnameVerifier, $"TestCase8_Log-DualReaderEnduranceStrategy-{testDescription}.csv", readerSettings));
-            strategies.Add("9", new JobStrategy9CheckBox(hostnameWriter, $"TestCase9_Log-CheckBox-{testDescription}.csv", readerSettings, sku));
+            strategies.Add("9", new JobStrategy9CheckBox(hostnameWriter, $"TestCase9_Log-CheckBox-{testDescription}.csv", readerSettings, header, sku));
         }
 
         public void DisplayMenu()
