@@ -529,8 +529,12 @@ namespace OctaneTagWritingTest.JobStrategies
             if (report == null || IsCancellationRequested())
                 return;
 
+            
             foreach (TagOpResult result in report)
             {
+               
+                
+
                 var tidHex = result.Tag.Tid?.ToHexString() ?? "N/A";
 
                 if (result is TagWriteOpResult writeResult)
@@ -547,6 +551,13 @@ namespace OctaneTagWritingTest.JobStrategies
                     }
                     else if (writeResult.Result == WriteResultStatus.Success)
                     {
+                        try
+                        {
+                            sender.DeleteOpSequence(result.SequenceId);
+                        }
+                        catch (Exception)
+                        {
+                        }
                         Console.WriteLine($"OnTagOpComplete - Write operation succeeded for TID {tidHex} on reader {sender.Name}.");
                         // After a successful write, trigger a verification read on the verifier reader.
                         TagOpController.Instance.TriggerVerificationRead(
@@ -573,7 +584,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     var verifiedEpc = readResult.Tag.Epc?.ToHexString() ?? "N/A";
                     var success = verifiedEpc.Equals(expectedEpc, StringComparison.InvariantCultureIgnoreCase);
                     var status = success ? "Success" : "Failure";
-
+                        
                     LogToCsv($"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{tidHex},{result.Tag.Epc.ToHexString()},{expectedEpc},{verifiedEpc},{swWriteTimers[tidHex].ElapsedMilliseconds},{swVerifyTimers[tidHex].ElapsedMilliseconds},{status},{cycleCount.GetOrAdd(tidHex, 0)},RSSI,AntennaPort");
                     TagOpController.Instance.RecordResult(tidHex, status, success);
 
@@ -600,6 +611,16 @@ namespace OctaneTagWritingTest.JobStrategies
                         catch (Exception)
                         {
 
+                        }
+                    }
+                    else
+                    {
+                        try
+                        {
+                            sender.DeleteOpSequence(result.SequenceId);
+                        }
+                        catch (Exception)
+                        {
                         }
                     }
 
