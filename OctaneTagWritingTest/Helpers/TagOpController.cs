@@ -471,9 +471,8 @@ namespace OctaneTagWritingTest.Helpers
             {
                 addedWriteSequences.TryAdd(seq.Id.ToString(), tag.Tid.ToHexString());
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"TriggerWriteAndVerify - [addedWriteSequences] ERROR: error while trying to add sequence {seq.Id} to TID {currentTid} - {ex.Message}");
 
             }
 

@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Impinj.OctaneSdk;
@@ -13,92 +12,81 @@ using Org.LLRP.LTK.LLRPV1.Impinj;
 
 namespace OctaneTagWritingTest.JobStrategies
 {
-    /// <summary>
-    /// Single-reader "CheckBox" strategy with enhanced verification and reporting
-    /// </summary>
+    /// <summary> /// Single-reader “CheckBox” strategy. 
+    /// /// This strategy uses a single reader configured with four antennas. 
+    /// /// It reads tags for a configurable period, then confirms the number of tags, 
+    /// /// generates a new EPC using a fixed header ("E7") concatenated with a 12-digit SKU (provided by the user) 
+    /// /// and the last 10 hexadecimal digits of the tag’s TID – forming a 24-digit EPC. 
+    /// /// The writing phase runs until all collected tags are written or until a write timeout is reached. 
+    /// /// At the end, it verifies each tag’s new EPC and reports the results. 
+    /// /// </summary> 
     public class JobStrategy9CheckBox : BaseTestStrategy
     {
-        #region Private Fields
         private ImpinjReader writerReader;
         // Duration for tag collection (in seconds)
         private const int ReadDurationSeconds = 10;
         // Overall timeout for write operations (in seconds)
         private const int WriteTimeoutSeconds = 20;
-        // Duration (in ms) for verification read phase
-        private const int VerificationDurationMs = 5000;
-        // The SKU must contain exactly 12 digits
+        // Duration (in ms) for verification read phase.
+        private const int VerificationDurationMs = 5000; 
+        // The SKU must contain exactly 12 digits.
         private readonly string sku;
-        // Thread-safe collection to track tag data (TID -> TagProcessingInfo)
-        private readonly ConcurrentDictionary<string, TagProcessingInfo> tagInfoMap = new();
-        // Separate dictionary for verification phase
-        private readonly ConcurrentDictionary<string, Tag> verificationTags = new();
-        // Flag to indicate if the GPI processing is already running
+        // Thread-safe dictionary to track for each tag its initial (original) EPC and current verified EPC.
+        private readonly ConcurrentDictionary<string, (string OriginalEpc, string VerifiedEpc)> tagData
+            = new ConcurrentDictionary<string, (string, string)>();
+        // Cumulative count of successfully verified tags
+        private int successCount = 0;
+        // Dictionary to capture full Tag objects for later processing.
+        private readonly ConcurrentDictionary<string, Tag> collectedTags = new ConcurrentDictionary<string, Tag>();
+        // Separate dictionary for capturing tags during the verification phase.
+        private readonly ConcurrentDictionary<string, Tag> verificationTags = new ConcurrentDictionary<string, Tag>();
+        // Flag to indicate if the GPI processing is already running.
         private int gpiProcessingFlag = 0;
-        // Tag collection active flag
+        // This flag is also used to stop collecting further tags once the read period has elapsed.
         private bool isCollectingTags = true;
-        // Verification phase active flag
+        // Flag to indicate that the verification phase is active.
         private bool isVerificationPhase = false;
-        // Cancellation token source for operation timeouts
-        private CancellationTokenSource operationCts;
-        // Timer for periodic status updates
-        private Timer statusUpdateTimer;
-        // Summary reports
-        private StringBuilder processSummary = new();
-        // Retry count tracking
-        private readonly ConcurrentDictionary<string, int> retryCount = new();
-        // Maximum retry attempts
-        private const int maxRetries = 5;
-        // Stopwatch collections
-        private readonly ConcurrentDictionary<string, Stopwatch> swWriteTimers = new();
-        private readonly ConcurrentDictionary<string, Stopwatch> swVerifyTimers = new();
-        #endregion
 
-        #region Constructor
-        // Add a new field to store the header
-        private readonly string epcHeader;
-
-        // Update the constructor to accept the header parameter
-        public JobStrategy9CheckBox(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings,
-                                  string header, string sku)
+        public JobStrategy9CheckBox(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings, string sku)
             : base(hostname, logFile, readerSettings)
         {
-            if (string.IsNullOrEmpty(sku) || sku.Length != 12)
+            if (sku.Length != 12)
             {
                 throw new ArgumentException("SKU must contain exactly 12 digits.", nameof(sku));
             }
-
-            // Store the header, with a default if not provided
-            this.epcHeader = string.IsNullOrEmpty(header) ? "E7" : header;
             this.sku = sku;
+            // Clean up any previous tag operation state.
             TagOpController.Instance.CleanUp();
         }
-        #endregion
 
-        #region Main Execution Methods
         public override void RunJob(CancellationToken cancellationToken = default)
         {
             try
             {
                 this.cancellationToken = cancellationToken;
-                operationCts = new CancellationTokenSource();
-
                 Console.WriteLine("=== Single Reader CheckBox Test ===");
-                Console.WriteLine("GPI events on Port 1 will trigger tag collection, write, and verification.");
-                Console.WriteLine("Press 'q' to cancel.");
+                Console.WriteLine("GPI events on Port 1 will trigger tag collection, write, and verification. Press 'q' to cancel.");
 
-                // Configure the reader
-                ConfigureWriterReader();
+                // Load any required EPC list.
+                EpcListManager.Instance.LoadEpcList("epc_list.txt");
 
-                // Initialize log file if needed
-                if (!File.Exists(logFile))
+                // Configure the reader and attach event handlers.
+                try
                 {
-                    LogToCsv("Timestamp,TID,Original_EPC,Expected_EPC,Verified_EPC,WriteTime_ms,VerifyTime_ms,Result,RSSI,AntennaPort");
+                    ConfigureWriterReader();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error during writer reader configuration in CheckBox strategy. {ex.Message}");
+                    throw;
                 }
 
-                // Start periodic status updates
-                statusUpdateTimer = new Timer(UpdateStatusDisplay, null, TimeSpan.Zero, TimeSpan.FromSeconds(2));
+                // Create CSV header if the log file does not exist.
+                if (!File.Exists(logFile))
+                    LogToCsv("Timestamp,TID,Expected_EPC,Verified_EPC");
 
-                // Keep the application running until the user cancels
+
+                // Keep the application running until the user cancels.
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     if (Console.KeyAvailable && Console.ReadKey(true).KeyChar == 'q')
@@ -110,47 +98,28 @@ namespace OctaneTagWritingTest.JobStrategies
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in JobStrategy9CheckBox: {ex.Message}");
+                Console.WriteLine("Error in JobStrategy9CheckBox: " + ex.Message);
             }
             finally
             {
-                statusUpdateTimer?.Dispose();
-                operationCts?.Dispose();
                 CleanupWriterReader();
             }
         }
 
-        private void UpdateStatusDisplay(object state)
-        {
-            int totalTags = tagInfoMap.Count;
-            int verifiedTags = tagInfoMap.Values.Count(info => info.IsVerified);
-            int successTags = tagInfoMap.Values.Count(info => info.VerificationSuccess);
-            int failedTags = tagInfoMap.Values.Count(info => info.IsVerified && !info.VerificationSuccess);
-
-            Console.WriteLine($"Status: {DateTime.Now.ToString("HH:mm:ss")} - Tags: {totalTags} | Verified: {verifiedTags} | Success: {successTags} | Failed: {failedTags}");
-
-            // Update console title
-            try
-            {
-                Console.Title = $"CheckBox: {totalTags}|{verifiedTags}|{successTags}|{failedTags}";
-            }
-            catch { /* Ignore title update errors */ }
-        }
-        #endregion
-
-        #region Reader Configuration Methods
+        /// <summary>
+        /// Configures the reader settings and attaches all necessary event handlers.
+        /// </summary>
         private void ConfigureWriterReader()
         {
             var writerSettings = GetSettingsForRole("writer");
-
-            if (writerReader == null)
+            if(writerReader == null)
                 writerReader = new ImpinjReader();
 
-            if (!writerReader.IsConnected)
+            if(!writerReader.IsConnected)
             {
                 writerReader.Connect(writerSettings.Hostname);
             }
-
+            
             writerReader.ApplyDefaultSettings();
 
             var settingsToApply = writerReader.QueryDefaultSettings();
@@ -163,7 +132,6 @@ namespace OctaneTagWritingTest.JobStrategies
             settingsToApply.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), writerSettings.SearchMode);
             settingsToApply.Session = (ushort)writerSettings.Session;
 
-            // Configure all four antennas
             settingsToApply.Antennas.DisableAll();
             for (ushort port = 1; port <= 4; port++)
             {
@@ -174,12 +142,12 @@ namespace OctaneTagWritingTest.JobStrategies
                 antenna.RxSensitivityInDbm = writerSettings.RxSensitivityInDbm;
             }
 
-            // Configure GPI for port 1
+            // Configure GPI for port 1.
             var gpi = settingsToApply.Gpis.GetGpi(1);
             gpi.IsEnabled = true;
             gpi.DebounceInMs = 50;
 
-            // Set GPI triggers for starting and stopping
+            // Set GPI triggers for starting and stopping the operation.
             settingsToApply.AutoStart.Mode = AutoStartMode.GpiTrigger;
             settingsToApply.AutoStart.GpiPortNumber = 1;
             settingsToApply.AutoStart.GpiLevel = true;
@@ -187,16 +155,13 @@ namespace OctaneTagWritingTest.JobStrategies
             settingsToApply.AutoStop.GpiPortNumber = 1;
             settingsToApply.AutoStop.GpiLevel = false;
 
-            // Attach event handlers
+            // Attach event handlers, including our specialized GPI event handler.
             writerReader.GpiChanged += OnGpiEvent;
             writerReader.TagsReported += OnTagsReported;
-            writerReader.TagOpComplete += OnTagOpComplete;
 
-            // Enable low latency reporting
+            // Enable low latency reporting.
             EnableLowLatencyReporting(settingsToApply, writerReader);
 
-            // Apply settings
-            writerReader.ApplySettings(settingsToApply);
         }
 
         private void EnableLowLatencyReporting(Settings settings, ImpinjReader reader)
@@ -209,9 +174,13 @@ namespace OctaneTagWritingTest.JobStrategies
             });
             reader.ApplySettings(setReaderConfigMessage, addRoSpecMessage);
         }
-        #endregion
 
-        #region GPI Event Handling
+        /// <summary>
+        /// Handles GPI events for the reader.
+        /// Only processes events for Port 1.
+        /// If the event State is true and not already processing, starts the tag collection flow.
+        /// When the state is false, resets the processing flag.
+        /// </summary>
         private async void OnGpiEvent(ImpinjReader sender, GpiEvent e)
         {
             if (e.PortNumber != 1)
@@ -219,44 +188,20 @@ namespace OctaneTagWritingTest.JobStrategies
 
             if (e.State)
             {
-                // Use Interlocked.CompareExchange to ensure only one processing instance runs
+                // Use Interlocked.CompareExchange to ensure only one processing instance runs.
                 if (Interlocked.CompareExchange(ref gpiProcessingFlag, 1, 0) == 0)
                 {
-                    Console.WriteLine("GPI Port 1 is TRUE - initiating tag processing workflow");
-                    processSummary.Clear();
-
-                    try
+                    Console.WriteLine("GPI Port 1 is TRUE - initiating tag collection and processing.");
+                    // Begin tag collection.
+                    bool collectionConfirmed = await WaitForReadTagsAsync();
+                    if (collectionConfirmed)
                     {
-                        // Create a new CTS for this operation cycle
-                        if (operationCts != null)
-                        {
-                            operationCts.Dispose();
-                        }
-                        operationCts = new CancellationTokenSource();
-
-                        // Begin tag collection
-                        bool collectionConfirmed = await WaitForReadTagsAsync();
-                        if (collectionConfirmed)
-                        {
-                            // Write operations
-                            await EncodeReadTagsAsync();
-
-                            // Verification phase
-                            await VerifyWrittenTagsAsync();
-
-                            // Display summary
-                            DisplayProcessSummary();
-                        }
+                        // Proceed to execute write/verify operations once collection is done.
+                        await EncodeReadTagsAsync();
+                        // After writing, start the verification phase.
+                        await VerifyWrittenTagsAsync();
                     }
-                    catch (OperationCanceledException)
-                    {
-                        Console.WriteLine("Operation was canceled.");
-                        DisplayProcessSummary();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Error during tag processing: {ex.Message}");
-                    }
+                    // Note: Do not reset the flag here. It will be reset when the GPI event goes to false.
                 }
                 else
                 {
@@ -265,497 +210,264 @@ namespace OctaneTagWritingTest.JobStrategies
             }
             else
             {
-                // When GPI state becomes false, reset the processing flag
-                Console.WriteLine("GPI Port 1 is FALSE - resetting processing flag");
+                // When GPI state becomes false, reset the processing flag.
+                Console.WriteLine("GPI Port 1 is FALSE - resetting processing flag.");
+                CleanupWriterReader();
                 Interlocked.Exchange(ref gpiProcessingFlag, 0);
+                
             }
         }
-        #endregion
 
-        #region Tag Collection Phase
+        /// <summary>
+        /// Waits for the tag collection period to complete.
+        /// At the end of the period, stops accepting new tags.
+        /// </summary>
         private async Task<bool> WaitForReadTagsAsync()
         {
-            // Reset for new collection
-            tagInfoMap.Clear();
-            verificationTags.Clear();
             isCollectingTags = true;
-
-            Console.WriteLine($"Collecting tags for {ReadDurationSeconds} seconds...");
+            Console.WriteLine("Collecting tags for {0} seconds...", ReadDurationSeconds);
             try
             {
-                // Set up linked token source to handle both cancellation methods
-                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-                    cancellationToken, operationCts.Token);
-
-                await Task.Delay(ReadDurationSeconds * 1000, linkedCts.Token);
+                await Task.Delay(ReadDurationSeconds * 1000, cancellationToken);
             }
             catch (TaskCanceledException)
             {
-                Console.WriteLine("Tag collection was canceled");
+                Console.WriteLine("Tag collection was canceled.");
                 return false;
             }
-
-            // End tag collection
+            // End tag collection so that no new tags are accepted.
             isCollectingTags = false;
 
-            int tagCount = tagInfoMap.Count;
-            if (tagCount == 0)
-            {
-                Console.WriteLine("No tags were collected. Operation canceled.");
-                return false;
-            }
-
-            Console.WriteLine($"Tag collection ended. Total tags collected: {tagCount}. Confirm? (y/n)");
+            Console.WriteLine("Tag collection ended. Total tags collected: {0}. Confirm? (y/n)", tagData.Count);
             string confirmation = Console.ReadLine();
             if (!confirmation.Equals("y", StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine("Operation canceled by user");
+                Console.WriteLine("Operation canceled by user.");
+                //writerReader.Disconnect();
                 return false;
             }
-
-            // Add collection summary to process report
-            processSummary.AppendLine("=== TAG COLLECTION SUMMARY ===");
-            processSummary.AppendLine($"Tags collected: {tagCount}");
-            foreach (var kvp in tagInfoMap)
-            {
-                processSummary.AppendLine($"TID: {kvp.Key}, Original EPC: {kvp.Value.OriginalEpc}");
-            }
-
             return true;
         }
-        #endregion
 
-        #region Tag Writing Phase
+        /// <summary>
+        /// Iterates over all collected tags (from the collection phase) and triggers write/verification operations
+        /// using the TagOpController.
+        /// </summary>
         private async Task EncodeReadTagsAsync()
         {
             Console.WriteLine("Starting write phase...");
-            processSummary.AppendLine("\n=== TAG WRITING PHASE ===");
-
             Stopwatch globalWriteTimer = Stopwatch.StartNew();
-            int processedCount = 0;
-            int tagCount = tagInfoMap.Count;
+            Stopwatch swWrite = new Stopwatch();
 
-            // Process each collected tag
-            foreach (var kvp in tagInfoMap)
+            foreach (var kvp in collectedTags)
             {
-                if (operationCts.Token.IsCancellationRequested)
-                {
-                    throw new OperationCanceledException("Write phase was canceled");
-                }
-
-                // Check for global timeout
                 if (globalWriteTimer.Elapsed.TotalSeconds > WriteTimeoutSeconds)
                 {
-                    Console.WriteLine("Global write timeout reached");
-                    processSummary.AppendLine($"Write phase timed out after {WriteTimeoutSeconds} seconds");
+                    Console.WriteLine("Global write timeout reached.");
                     break;
                 }
-
-                string tid = kvp.Key;
-                TagProcessingInfo info = kvp.Value;
-
-                if (!info.Tag.IsFastIdPresent)
-                {
-                    // Skip tags without FastID capability (they might be invalid for write operations)
-                    processSummary.AppendLine($"Skipped TID {tid} - FastID not present");
-                    continue;
-                }
-
-                // Generate new EPC based on SKU and TID
+                Tag tag = kvp.Value;
+                string tid = tag.Tid.ToHexString();
+                string originalEpc = tag.Epc.ToHexString();
                 string newEpc = GenerateNewEpc(sku, tid);
-                info.ExpectedEpc = newEpc;
-                info.WriteTimer.Restart();
-
-                // Record in TagOpController for tracking
                 TagOpController.Instance.RecordExpectedEpc(tid, newEpc);
 
-                // Trigger write operation
+                // Trigger the write operation using the writer reader.
                 TagOpController.Instance.TriggerWriteAndVerify(
-                    info.Tag,
+                    tag,
                     newEpc,
                     writerReader,
-                    operationCts.Token,
-                    info.WriteTimer,
+                    cancellationToken,
+                    swWrite,
                     newAccessPassword,
                     true,
-                    1,  // Use antenna 1 for writing
+                    1,
                     true,
-                    3   // 3 retry attempts
-                );
+                    3);
+                // Optionally, delay briefly between processing tags.
+                await Task.Delay(100, cancellationToken);
 
-                processedCount++;
-                Console.WriteLine($"Writing EPC {newEpc} to tag {tid} ({processedCount}/{tagCount})");
-
-                // Brief delay between tags to avoid overwhelming the reader
-                await Task.Delay(100, operationCts.Token);
+                // Record the tag data.
+                tagData.AddOrUpdate(tid, (originalEpc, newEpc), (key, old) => (originalEpc, newEpc));
             }
-
             globalWriteTimer.Stop();
-            processSummary.AppendLine($"Write phase completed in {globalWriteTimer.ElapsedMilliseconds}ms");
-            processSummary.AppendLine($"Tags processed: {processedCount}/{tagCount}");
+        }
 
-            // If all writes complete instantly, allow time for TagOpComplete events to be processed
-            await Task.Delay(Math.Min(1000, VerificationDurationMs / 5), operationCts.Token);
+        /// <summary>
+        /// Generates a new EPC based on a fixed header ("E7"), the 12-digit SKU, and the last 10 hex digits of the TID.
+        /// </summary>
+        private string GenerateNewEpc(string sku, string tid)
+        {
+            string tidSuffix = tid.Length >= 10 ? tid.Substring(tid.Length - 10) : tid.PadLeft(10, '0');
+            return "E7" + sku + tidSuffix;
+        }
 
-            // Check if all tags have been written successfully
-            int writtenCount = tagInfoMap.Values.Count(info => info.IsWritten);
-            if (writtenCount == tagCount)
+        /// <summary>
+        /// Event handler for tag reports.
+        /// In normal collection mode, accepts new tags if isCollectingTags is true and they haven't been processed.
+        /// In verification mode, stores all tag reports into the verificationTags dictionary.
+        /// </summary>
+        private void OnTagsReported(object sender, TagReport report)
+        {
+            if (cancellationToken.IsCancellationRequested)
+                return;
+
+            if (isVerificationPhase)
             {
-                Console.WriteLine($"All {tagCount} tags were written successfully");
+                foreach (var tag in report.Tags)
+                {
+                    string tid = tag.Tid?.ToHexString() ?? "";
+                    string epc = tag.Epc?.ToHexString() ?? "";
+                    if (!string.IsNullOrEmpty(tid))
+                    {
+                        verificationTags.TryAdd(tid, tag);
+                        Console.WriteLine("Verification read: TID: {0}, EPC: {1}", tid, epc);
+                    }
+                }
             }
             else
             {
-                Console.WriteLine($"{writtenCount}/{tagCount} tags were written");
+                if (!isCollectingTags)
+                    return;
+                foreach (var tag in report.Tags)
+                {
+                    string tid = tag.Tid?.ToHexString() ?? "";
+                    string epc = tag.Epc?.ToHexString() ?? "";
+                    if (string.IsNullOrEmpty(tid) || TagOpController.Instance.IsTidProcessed(tid))
+                        continue;
+                    collectedTags.TryAdd(tid, tag);
+                    tagData.AddOrUpdate(tid, (epc, string.Empty), (key, old) => (epc, old.VerifiedEpc));
+                    Console.WriteLine("Detected Tag: TID: {0}, EPC: {1}, Antenna: {2}", tid, epc, tag.AntennaPortNumber);
+                }
             }
         }
-        #endregion
 
-        #region Tag Verification Phase
+        /// <summary>
+        /// Starts a verification phase after writing: re-enables tag report collection,
+        /// waits for a fixed period, then compares reported EPC values with the expected EPCs.
+        /// </summary>
         private async Task VerifyWrittenTagsAsync()
         {
             Console.WriteLine("Starting verification phase...");
-            processSummary.AppendLine("\n=== TAG VERIFICATION PHASE ===");
-
-            // Prepare for verification
+            // Prepare for verification.
             verificationTags.Clear();
             isVerificationPhase = true;
-            int tagCount = tagInfoMap.Count;
-            int expectedToVerify = tagInfoMap.Values.Count(info => info.IsWritten);
-
+            // Wait for the verification period.
             try
             {
-                // Set up cancelable verification phase
-                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-                    cancellationToken, operationCts.Token);
-
-                // Create a dynamic verification timeout
-                Stopwatch verifyPhaseTimer = Stopwatch.StartNew();
-                bool earlyCompletion = false;
-
-                // Wait for verification with periodic checks for early completion
-                for (int elapsed = 0; elapsed < VerificationDurationMs; elapsed += 250)
-                {
-                    // Check if we should terminate early (all tags verified)
-                    int verifiedCount = tagInfoMap.Values.Count(info => info.IsVerified);
-
-                    if (verifiedCount >= expectedToVerify)
-                    {
-                        earlyCompletion = true;
-                        Console.WriteLine("Early verification completion - all tags verified");
-                        break;
-                    }
-
-                    // Wait a bit longer
-                    await Task.Delay(250, linkedCts.Token);
-                }
-
-                verifyPhaseTimer.Stop();
-
-                if (earlyCompletion)
-                {
-                    processSummary.AppendLine($"Verification completed early in {verifyPhaseTimer.ElapsedMilliseconds}ms");
-                }
-                else
-                {
-                    processSummary.AppendLine($"Verification completed in {verifyPhaseTimer.ElapsedMilliseconds}ms (full duration)");
-                }
+                await Task.Delay(VerificationDurationMs, cancellationToken);
             }
             catch (TaskCanceledException)
             {
-                Console.WriteLine("Verification phase was canceled");
-                processSummary.AppendLine("Verification phase was canceled");
-            }
-            finally
-            {
+                Console.WriteLine("Verification phase was canceled.");
                 isVerificationPhase = false;
+                return;
             }
+            isVerificationPhase = false;
 
-            // Process verification results
-            int successCount = 0;
-            int failCount = 0;
-
-            foreach (var kvp in tagInfoMap)
+            int verifiedCount = 0;
+            foreach (var kvp in verificationTags)
             {
                 string tid = kvp.Key;
-                TagProcessingInfo info = kvp.Value;
-
-                if (info.IsVerified)
+                string reportedEpc = kvp.Value.Epc?.ToHexString() ?? "";
+                if (tagData.TryGetValue(tid, out var expected))
                 {
-                    if (info.VerificationSuccess)
+                    if (string.Equals(reportedEpc, expected.VerifiedEpc, StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(reportedEpc, expected.VerifiedEpc, StringComparison.Ordinal))
                     {
-                        successCount++;
-                        processSummary.AppendLine($"SUCCESS: TID {tid} - EPC: {info.VerifiedEpc}");
+                        verifiedCount++;
+                        Console.WriteLine("Verification SUCCESS: TID {0} reported EPC {1}", tid, reportedEpc);
+                        var status = "Success";
+
+                        LogToCsv($"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{tid},{reportedEpc},{expected.VerifiedEpc}");
+                        TagOpController.Instance.RecordResult(tid, status, true);
                     }
                     else
                     {
-                        failCount++;
-                        processSummary.AppendLine($"FAILURE: TID {tid} - Expected: {info.ExpectedEpc}, Read: {info.VerifiedEpc}");
+                        Console.WriteLine("Verification FAILURE: TID {0} expected EPC {1} but got {2}", tid, expected.VerifiedEpc, reportedEpc);
+                        var status = "Failure";
+
+                        LogToCsv($"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{tid},{reportedEpc},{expected.VerifiedEpc}");
+                        TagOpController.Instance.RecordResult(tid, status, false);
                     }
-
-                    // Log to CSV
-                    string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                    string status = info.VerificationSuccess ? "Success" : "Failure";
-                    double rssi = info.Tag.IsPeakRssiInDbmPresent ? info.Tag.PeakRssiInDbm : 0;
-                    ushort antenna = info.Tag.IsAntennaPortNumberPresent ? info.Tag.AntennaPortNumber : (ushort)0;
-
-                    LogToCsv($"{timestamp},{tid},{info.OriginalEpc},{info.ExpectedEpc},{info.VerifiedEpc}," +
-                             $"{info.WriteTimer.ElapsedMilliseconds},{info.VerifyTimer.ElapsedMilliseconds}," +
-                             $"{status},{rssi},{antenna}");
-
-                    TagOpController.Instance.RecordResult(tid, status, info.VerificationSuccess);
-                }
-                else if (info.IsWritten)
-                {
-                    // Tag was written but not verified
-                    processSummary.AppendLine($"NOT VERIFIED: TID {tid} - EPC write attempted but verification failed");
                 }
                 else
                 {
-                    // Tag was not written
-                    processSummary.AppendLine($"NOT PROCESSED: TID {tid} - No write operation completed");
+                    Console.WriteLine("Verification: No expected EPC recorded for TID {0}", tid);
                 }
             }
-
-            processSummary.AppendLine($"\nVerification Summary: {successCount} successful, {failCount} failed, " +
-                                    $"{tagCount - (successCount + failCount)} not verified");
-
-            Console.WriteLine($"Verification complete: {successCount}/{tagCount} tags verified successfully");
+            Console.WriteLine("Verification complete: {0} / {1} tags verified successfully.", verifiedCount, tagData.Count);
         }
-        #endregion
 
-        #region Tag Event Handlers
-        private void OnTagsReported(ImpinjReader sender, TagReport report)
+        /// <summary>
+        /// Cleans up reader resources, stops any running timers, and detaches event handlers.
+        /// </summary>
+        private void CleanupWriterReader()
         {
-            if (report == null || cancellationToken.IsCancellationRequested)
-                return;
-
-            foreach (var tag in report.Tags)
+            try
             {
-                string tid = tag.Tid?.ToHexString() ?? "";
-                string epc = tag.Epc?.ToHexString() ?? "";
-
-                if (string.IsNullOrEmpty(tid))
-                    continue;
-
-                if (isVerificationPhase)
+                Console.WriteLine("CleanupWriterReader running... ");
+                if (sw != null && sw.IsRunning)
                 {
-                    // In verification phase, check reported EPCs against expected values
-                    if (tagInfoMap.TryGetValue(tid, out TagProcessingInfo info) && info.IsWritten)
-                    {
-                        // Tag is part of our collection and write was attempted
-                        info.VerifyTimer.Stop();
-                        info.VerifiedEpc = epc;
-                        info.IsVerified = true;
-                        info.VerificationSuccess = epc.Equals(info.ExpectedEpc, StringComparison.OrdinalIgnoreCase);
-
-                        Console.WriteLine($"Verification read: TID: {tid}, EPC: {epc}, Result: {(info.VerificationSuccess ? "SUCCESS" : "FAILURE")}");
-                    }
-
-                    // Also update the verification tags collection
-                    verificationTags.TryAdd(tid, tag);
+                    sw.Stop();
+                    sw.Reset();
                 }
-                else if (isCollectingTags)
-                {
-                    // In collection phase, store unique TIDs and their current EPCs
-                    if (!tagInfoMap.ContainsKey(tid))
-                    {
-                        var info = new TagProcessingInfo
-                        {
-                            Tag = tag,
-                            OriginalEpc = epc
-                        };
-
-                        tagInfoMap.TryAdd(tid, info);
-                        Console.WriteLine($"Collected tag: TID: {tid}, EPC: {epc}, Antenna: {tag.AntennaPortNumber}");
-                    }
-                }
+                //if (writerReader != null)
+                //{
+                //    //writerReader.GpiChanged -= OnGpiEvent;
+                //    // writerReader.TagsReported -= OnTagsReported;
+                //    //writerReader.Stop();
+                //    //writerReader.Disconnect();
+                //}
+                // Clear tag collections.
+                collectedTags.Clear();
+                verificationTags.Clear();
+                tagData.Clear();
+                TagOpController.Instance.CleanUp();
+                Console.WriteLine("CleanupWriterReader done. ");
             }
-        }
-
-        private void OnTagOpComplete(ImpinjReader sender, TagOpReport report)
-        {
-            if (report == null || IsCancellationRequested())
-                return;
-
-            foreach (TagOpResult result in report)
+            catch (Exception ex)
             {
-                string tidHex = result.Tag.Tid?.ToHexString() ?? "N/A";
-
-                if (result is TagWriteOpResult writeResult)
-                {
-                    if (tagInfoMap.TryGetValue(tidHex, out TagProcessingInfo info))
-                    {
-                        info.WriteTimer.Stop();
-                        info.IsWritten = (writeResult.Result == WriteResultStatus.Success);
-                    }
-
-                    // Update global write timer if needed
-                    if (swWriteTimers.TryGetValue(tidHex, out var swWrite))
-                    {
-                        swWrite.Stop();
-                    }
-
-                    if (writeResult.Result == WriteResultStatus.Success)
-                    {
-                        Console.WriteLine($"Write operation succeeded for TID: {tidHex}, initiating verification.");
-
-                        // Clean up operation sequence after successful processing
-                        try
-                        {
-                            sender.DeleteOpSequence(result.SequenceId);
-                        }
-                        catch (Exception)
-                        {
-                            // Ignore any errors during sequence deletion
-                        }
-
-                        // Trigger verification reading
-                        TagOpController.Instance.TriggerVerificationRead(
-                            writeResult.Tag,
-                            writerReader,
-                            cancellationToken,
-                            swVerifyTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
-                            newAccessPassword
-                        );
-                    }
-                    else
-                    {
-                        LogResult(tidHex, writeResult.Tag.Epc.ToHexString(), TagOpController.Instance.GetExpectedEpc(tidHex), "N/A",
-                                  "Write Failure", retryCount.GetOrAdd(tidHex, 0), writeResult.Tag);
-                        TagOpController.Instance.RecordResult(tidHex, "Write Error", false);
-
-                        // Clean up operation sequence even after failure
-                        try
-                        {
-                            sender.DeleteOpSequence(result.SequenceId);
-                        }
-                        catch (Exception)
-                        {
-                            // Ignore any errors during sequence deletion
-                        }
-                    }
-                }
-                else if (result is TagReadOpResult readResult)
-                {
-                    if (swVerifyTimers.TryGetValue(tidHex, out var swVerify))
-                    {
-                        swVerify.Stop();
-                    }
-
-                    string verifiedEpc = readResult.Data?.ToHexString() ?? "N/A";
-                    string expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
-                    string resultStatus = verifiedEpc.Equals(expectedEpc, StringComparison.OrdinalIgnoreCase) ? "Success" : "Verification Failure";
-
-                    int retries = retryCount.GetOrAdd(tidHex, 0);
-
-                    if (resultStatus == "Verification Failure" && retries < maxRetries)
-                    {
-                        retryCount[tidHex] = retries + 1;
-                        Console.WriteLine($"Verification failed, retry {retryCount[tidHex]} for TID {tidHex}");
-
-                        // Clean up current operation sequence before initiating a new one
-                        try
-                        {
-                            sender.DeleteOpSequence(result.SequenceId);
-                        }
-                        catch (Exception)
-                        {
-                            // Ignore any errors during sequence deletion
-                        }
-
-                        TagOpController.Instance.TriggerWriteAndVerify(
-                            readResult.Tag,
-                            expectedEpc,
-                            writerReader,
-                            cancellationToken,
-                            swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
-                            newAccessPassword,
-                            true
-                        );
-                    }
-                    else
-                    {
-                        LogResult(tidHex, readResult.Tag.Epc.ToHexString(), expectedEpc, verifiedEpc,
-                                  resultStatus, retries, readResult.Tag);
-                        TagOpController.Instance.RecordResult(tidHex, resultStatus, resultStatus == "Success");
-
-                        // Clean up operation sequence after final processing
-                        try
-                        {
-                            sender.DeleteOpSequence(result.SequenceId);
-                        }
-                        catch (Exception)
-                        {
-                            // Ignore any errors during sequence deletion
-                        }
-                    }
-                }
-            }
-        }
-        #endregion
-
-        #region Helper Methods
-        private string GenerateNewEpc(string sku, string tid)
-        {
-            // Use epcHeader instead of hardcoded "E7"
-            string tidSuffix = tid.Length >= 10 ? tid.Substring(tid.Length - 10) : tid.PadLeft(10, '0');
-            return epcHeader + sku + tidSuffix;
-        }
-
-        private void DisplayProcessSummary()
-        {
-            if (processSummary.Length > 0)
-            {
-                Console.WriteLine("\n\n========== PROCESS SUMMARY ==========");
-                Console.WriteLine(processSummary.ToString());
-                Console.WriteLine("======================================\n");
+                Console.WriteLine("Error during CleanupWriterReader: " + ex.Message);
             }
         }
 
+        /// <summary>
+        /// Appends a line to the CSV log file.
+        /// </summary>
+        /// <param name="line">The CSV line to append.</param>
         private void LogToCsv(string line)
         {
             TagOpController.Instance.LogToCsv(logFile, line);
         }
 
-        private void LogResult(string tidHex, string oldEpc, string expectedEpc, string verifiedEpc, string result, int retries, Tag tag)
-        {
-            string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-            double rssi = tag.IsPeakRssiInDbmPresent ? tag.PeakRssiInDbm : 0;
-            ushort antenna = tag.IsAntennaPortNumberPresent ? tag.AntennaPortNumber : (ushort)0;
-
-            long writeTime = swWriteTimers.TryGetValue(tidHex, out var swWrite) ? swWrite.ElapsedMilliseconds : 0;
-            long verifyTime = swVerifyTimers.TryGetValue(tidHex, out var swVerify) ? swVerify.ElapsedMilliseconds : 0;
-
-            LogToCsv($"{timestamp},{tidHex},{oldEpc},{expectedEpc},{verifiedEpc},{writeTime},{verifyTime},{result},{rssi},{antenna}");
-        }
-
-        private void CleanupWriterReader()
+        private void LogSuccessCount(object state)
         {
             try
             {
-                Console.WriteLine("Cleanup resources...");
-                if (writerReader != null && writerReader.IsConnected)
+                int successCount = TagOpController.Instance.GetSuccessCount();
+                int totalReadCount = TagOpController.Instance.GetTotalReadCount();
+                Console.WriteLine($"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                Console.WriteLine($"!!!!!!!!!!!!!!!!!!!!!!!!!! Total Read [{totalReadCount}] Success count: [{successCount}] !!!!!!!!!!!!!!!!!!!!!!!!!!");
+                Console.WriteLine($"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                try
                 {
-                    writerReader.TagsReported -= OnTagsReported;
-                    writerReader.TagOpComplete -= OnTagOpComplete;
-                    writerReader.GpiChanged -= OnGpiEvent;
+                    Console.Title = $"Serializer: {totalReadCount} - {successCount}";
 
-                    writerReader.Stop();
-                    writerReader.Disconnect();
                 }
+                catch (Exception)
+                {
 
-                tagInfoMap.Clear();
-                verificationTags.Clear();
-                TagOpController.Instance.CleanUp();
-                Console.WriteLine("Cleanup completed");
+
+                }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"Error during cleanup: {ex.Message}");
             }
+
         }
-        #endregion
     }
 
-    
 }
+
+

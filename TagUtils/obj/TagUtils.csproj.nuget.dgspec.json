@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\workspace\\impinj\\octane-tag-writing-test\\TagUtils\\TagUtils.csproj": {}
+    "C:\\Users\\alexa\\Dropbox\\workspace\\impinj\\octane-tag-writing-demo-20250415\\TagUtils\\TagUtils.csproj": {}
   },
   "projects": {
-    "C:\\workspace\\impinj\\octane-tag-writing-test\\TagUtils\\TagUtils.csproj": {
+    "C:\\Users\\alexa\\Dropbox\\workspace\\impinj\\octane-tag-writing-demo-20250415\\TagUtils\\TagUtils.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\workspace\\impinj\\octane-tag-writing-test\\TagUtils\\TagUtils.csproj",
+        "projectUniqueName": "C:\\Users\\alexa\\Dropbox\\workspace\\impinj\\octane-tag-writing-demo-20250415\\TagUtils\\TagUtils.csproj",
         "projectName": "TagUtils",
-        "projectPath": "C:\\workspace\\impinj\\octane-tag-writing-test\\TagUtils\\TagUtils.csproj",
+        "projectPath": "C:\\Users\\alexa\\Dropbox\\workspace\\impinj\\octane-tag-writing-demo-20250415\\TagUtils\\TagUtils.csproj",
         "packagesPath": "C:\\Users\\alexa\\.nuget\\packages\\",
-        "outputPath": "C:\\workspace\\impinj\\octane-tag-writing-test\\TagUtils\\obj\\",
+        "outputPath": "C:\\Users\\alexa\\Dropbox\\workspace\\impinj\\octane-tag-writing-demo-20250415\\TagUtils\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

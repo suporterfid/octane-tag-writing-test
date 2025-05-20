@@ -68,8 +68,7 @@ namespace OctaneTagWritingTest
                 config.VerifierHostname,
                 config.TestDescription,
                 readerSettings,
-                config.EpcHeader,
-                   config.Sku);
+                config.Sku);
 
             // Main application loop
             RunApplicationLoop(manager);

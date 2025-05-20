@@ -1,5 +1,4 @@
-﻿using Org.LLRP.LTK.LLRPV1;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,24 +9,22 @@ namespace OctaneTagWritingTest
     public class ApplicationConfig
     {
         // Reader network settings
-        public string DetectorHostname { get; set; } = "192.168.68.248";
-        public string WriterHostname { get; set; } = "192.168.1.100";
-        public string VerifierHostname { get; set; } = "192.168.68.93";
+        public string DetectorHostname { get; set; } = "192.168.68.80";
+        public string WriterHostname { get; set; } = "192.168.68.81";
+        public string VerifierHostname { get; set; } = "192.168.68.82";
 
         // Test parameters
-        public string TestDescription { get; set; } = "TestE5";
-        public string EpcHeader { get; set; } = "E7";
-        public string EpcPlainItemCode { get; set; } = "1122334466";
-        //public string Sku { get; set; } = "012667712932
-        public string Sku { get; set; } = "012345678921";
-
+        public string TestDescription { get; set; } = "Test4-E1-400";
+        public string EpcHeader { get; set; } = "E1";
+        public string EpcPlainItemCode { get; set; } = "334499001122";
+        public string Sku { get; set; } = "334499001122";
         public long Quantity { get; set; } = 1;
 
         // Settings file path
         public string SettingsFilePath { get; set; } = "reader_settings.json";
 
         // Detector reader settings
-        public int DetectorTxPowerInDbm { get; set; } = 18;
+        public int DetectorTxPowerInDbm { get; set; } = 16;
         public string DetectorSearchMode { get; set; } = "SingleTarget";
         public int DetectorSession { get; set; } = 0;
         public int DetectorRfMode { get; set; } = 0;
@@ -42,12 +39,11 @@ namespace OctaneTagWritingTest
 
         // Writer reader settings
         public int WriterTxPowerInDbm { get; set; } = 33;
-        public string WriterSearchMode { get; set; } = "DualTarget";
+        public string WriterSearchMode { get; set; } = "SingleTarget";
         public int WriterSession { get; set; } = 0;
         public int WriterRfMode { get; set; } = 0;
-        
         public bool WriterMaxRxSensitivity { get; set; } = true;
-        public int WriterRxSensitivityInDbm { get; set; } = -70;
+        public int WriterRxSensitivityInDbm { get; set; } = -90;
         public string WriterMemoryBank { get; set; } = "Epc";
         public int WriterBitPointer { get; set; } = 32;
         public string WriterTagMask { get; set; } = "0017";

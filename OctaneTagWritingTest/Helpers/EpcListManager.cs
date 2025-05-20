@@ -53,8 +53,14 @@ public sealed class EpcListManager
         {
             // Take the first 14 digits from configured header and item code
             string prefix = epcHeader + epcPlainItemCode;
-            if (prefix.Length != 14)
-                throw new InvalidOperationException("Combined header and item code must be 14 characters.");
+            prefix = prefix.Trim();
+            
+            if (prefix.Length < 14)
+                prefix = prefix.PadRight(14, '0');
+
+            if (prefix.Length > 14)
+                prefix = prefix.Substring(0, 14);
+               // throw new InvalidOperationException("Combined header and item code must be 14 characters.");
 
             // Take the remaining 10 digits from the current EPC
             string remainingDigits = currentEpc.Substring(14);
