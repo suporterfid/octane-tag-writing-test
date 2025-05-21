@@ -14,10 +14,10 @@ namespace OctaneTagWritingTest
         public string VerifierHostname { get; set; } = "192.168.68.82";
 
         // Test parameters
-        public string TestDescription { get; set; } = "Test4-E1-400";
-        public string EpcHeader { get; set; } = "E1";
-        public string EpcPlainItemCode { get; set; } = "334499001122";
-        public string Sku { get; set; } = "334499001122";
+        public string TestDescription { get; set; } = "Test5-F1-Baton";
+        public string EpcHeader { get; set; } = "F1";
+        public string EpcPlainItemCode { get; set; } = "634499001122";
+        public string Sku { get; set; } = "634499001122";
         public long Quantity { get; set; } = 1;
 
         // Settings file path

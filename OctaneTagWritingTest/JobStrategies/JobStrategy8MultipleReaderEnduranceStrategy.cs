@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using Impinj.OctaneSdk;
 using OctaneTagWritingTest.Helpers;
@@ -33,6 +34,13 @@ namespace OctaneTagWritingTest.JobStrategies
         private string verifierAddress;
 
         private Timer successCountTimer;
+
+        // Flag to indicate if the GPI processing is already running.
+        private int gpiProcessingFlag = 0;
+        private bool useGpiForVerification = true;
+        private bool gpiTriggerStateToProccessVerification = false;
+        // Separate dictionary for capturing tags during the verification phase.
+        private readonly ConcurrentDictionary<string, Tag> verificationTags = new ConcurrentDictionary<string, Tag>();
 
         public JobStrategy8MultipleReaderEnduranceStrategy(string hostnameDetector, string hostnameWriter, string hostnameVerifier, string logFile, Dictionary<string, ReaderSettings> readerSettings)
             : base(hostnameWriter, logFile, readerSettings)
@@ -97,7 +105,7 @@ namespace OctaneTagWritingTest.JobStrategies
                 writerReader.TagOpComplete += OnTagOpComplete;
 
                 // Register event handlers for the verifier reader.
-                verifierReader.TagsReported += OnTagsReportedVerifier;
+                // verifierReader.TagsReported += OnTagsReportedVerifier;
                 verifierReader.TagOpComplete += OnTagOpComplete;
 
                 // Start readers.
@@ -323,8 +331,50 @@ namespace OctaneTagWritingTest.JobStrategies
             verifierSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), verifierReaderSettings.SearchMode);
             verifierSettings.Session = (ushort)verifierReaderSettings.Session;
 
+            // Configure GPO ports
+            int numOfGPOs = verifierSettings.Gpos.Length;
+
+            verifierSettings.Gpos.GetGpo(1).Mode = GpoMode.Pulsed;
+            verifierSettings.Gpos.GetGpo(1).GpoPulseDurationMsec = 1000;
+
+            verifierSettings.Gpos.GetGpo(2).Mode = GpoMode.Pulsed;
+            verifierSettings.Gpos.GetGpo(2).GpoPulseDurationMsec = 1000;
+
+            verifierSettings.Gpos.GetGpo(3).Mode = GpoMode.Pulsed;
+            verifierSettings.Gpos.GetGpo(3).GpoPulseDurationMsec = 1000;
+
+            // Only set GPO4 if the reader has 4 GPOs
+            if (numOfGPOs == 4)
+            {
+                verifierSettings.Gpos.GetGpo(4).Mode = GpoMode.Pulsed;
+                verifierSettings.Gpos.GetGpo(4).GpoPulseDurationMsec = 1000;
+            }
+            // Configure GPI for port 1.
+            var gpi = verifierSettings.Gpis.GetGpi(1);
+            gpi.IsEnabled = true;
+            gpi.DebounceInMs = 100;
+
+            // Set GPI triggers for starting and stopping the operation.
+            verifierSettings.AutoStart.Mode = AutoStartMode.GpiTrigger;
+            verifierSettings.AutoStart.GpiPortNumber = 1;
+            verifierSettings.AutoStart.GpiLevel = gpiTriggerStateToProccessVerification;
+            verifierSettings.AutoStop.Mode = AutoStopMode.GpiTrigger;
+            verifierSettings.AutoStop.GpiPortNumber = 1;
+            verifierSettings.AutoStop.GpiLevel = !gpiTriggerStateToProccessVerification;
+
+            // Attach event handlers, including our specialized GPI event handler.
+            verifierReader.GpiChanged += OnGpiEvent;
+            verifierReader.TagsReported += OnTagsReportedVerifier;
+
+
+
             EnableLowLatencyReporting(verifierSettings, verifierReader);
             verifierReader.ApplySettings(verifierSettings);
+        }
+
+        private void VerifierReader_TagsReported(ImpinjReader reader, TagReport report)
+        {
+            throw new NotImplementedException();
         }
 
         private void EnableLowLatencyReporting(Settings settings, ImpinjReader reader)
@@ -376,6 +426,55 @@ namespace OctaneTagWritingTest.JobStrategies
             {
                 Console.WriteLine("verifierReader - Error during reader cleanup: " + ex.Message);
             }
+        }
+
+        /// <summary>
+        /// Handles GPI events for the reader.
+        /// Only processes events for Port 1.
+        /// If the event State is true and not already processing, starts the tag collection flow.
+        /// When the state is false, resets the processing flag.
+        /// </summary>
+        private async void OnGpiEvent(ImpinjReader sender, GpiEvent e)
+        {
+            if (e.PortNumber != 1)
+                return;
+            try
+            {
+                if(useGpiForVerification)
+                {
+                    if (e.State == gpiTriggerStateToProccessVerification)
+                    {
+                        // Use Interlocked.CompareExchange to ensure only one processing instance runs.
+                        if (Interlocked.CompareExchange(ref gpiProcessingFlag, 1, 0) == 0)
+                        {
+                            //sender.TagsReported += OnTagsReportedVerifier;
+                            Console.WriteLine($"GPI Port 1 is {e.State} - setting processing flag.");
+                        }
+                        else
+                        {
+                            Console.WriteLine("GPI Port 1 event received while processing already in progress. Ignoring duplicate trigger.");
+                        }
+                    }
+                    else
+                    {
+                        // When GPI state becomes false, reset the processing flag.
+                        Console.WriteLine($"GPI Port 1 is {e.State} - resetting processing flag.");
+                        //sender.TagsReported -= OnTagsReportedVerifier;
+                        if(verificationTags.Count == 0)
+                        {
+                            sender.SetGpo(1, true);
+                        }
+                        verificationTags.Clear();
+                        Interlocked.Exchange(ref gpiProcessingFlag, 0);
+                    }
+                }
+                
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"{ex.Message}");
+            }
+            
         }
         private void OnTagsReportedDetector(ImpinjReader sender, TagReport report)
         {
@@ -538,6 +637,7 @@ namespace OctaneTagWritingTest.JobStrategies
                 if (success)
                 {
                     TagOpController.Instance.RecordResult(tidHex, writeStatus, success);
+                    verificationTags.TryAdd(tidHex, tag);
                     Console.WriteLine($"OnTagsReportedVerifier - TID {tidHex} verified successfully on verifier reader. Current EPC: {epcHex} - Written tags regitered {TagOpController.Instance.GetSuccessCount()} (TIDs processed)");
                 }
                 else if (!string.IsNullOrEmpty(expectedEpc))
@@ -561,6 +661,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     }
                     else
                     {
+                        verificationTags.TryAdd(tidHex, tag);
                         Console.WriteLine($"OnTagsReportedVerifier - TID {tidHex} verified successfully on verifier reader. Current EPC: {epcHex} - Written tags regitered {TagOpController.Instance.GetSuccessCount()} (TIDs processed)");
                     }
                 }

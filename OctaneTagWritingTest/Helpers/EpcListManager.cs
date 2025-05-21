@@ -69,6 +69,12 @@ public sealed class EpcListManager
             string tidSuffix = tid.Substring(14);
             tidSuffix = tidSuffix.PadLeft(10, '0');
 
+            using (var parser = new MonzaTidParser(tid))
+            {
+                tidSuffix = parser.Get38BitSerialHex();
+                Console.WriteLine($"Serial extraído: {tidSuffix}");
+            }
+
             // Combine to create the new EPC
             string newEpc = prefix + tidSuffix;
 
