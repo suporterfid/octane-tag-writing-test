@@ -359,3 +359,4 @@ OctaneTagWritingTest/bin/Debug/net8.0/TestCase8_Log-DualReaderEnduranceStrategy-
 OctaneTagWritingTest/bin/Debug/net8.0/TestCase8_Log-DualReaderEnduranceStrategy-Test4-E1-400.csv
 OctaneTagWritingTest/bin/Debug/net8.0/TestCase9_Log-CheckBox-Test.csv
 OctaneTagWritingTest/bin/Debug/net8.0/TestCase8_Log-DualReaderEnduranceStrategy-Test5-F1-Baton.csv
+*.csv

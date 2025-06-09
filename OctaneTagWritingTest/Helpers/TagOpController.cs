@@ -9,18 +9,55 @@ using System.Threading;
 namespace OctaneTagWritingTest.Helpers
 {
     public sealed class TagOpController
-    { // Dictionary: key = TID, value = expected EPC.
-        private Dictionary<string, string> expectedEpcByTid = new Dictionary<string, string>();
-        // Dictionaries for recording operation results.
-        private ConcurrentDictionary<string, string> operationResultByTid = new ConcurrentDictionary<string, string>();
-        private ConcurrentDictionary<string, string> operationResultWithSuccessByTid = new ConcurrentDictionary<string, string>();
+    {
+        // Dictionary: key = TID, value = expected EPC.
+        private readonly Dictionary<string, string> expectedEpcByTid = new Dictionary<string, string>();
+        // Dictionaries for recording operation results
+        private readonly ConcurrentDictionary<string, string> operationResultByTid = new ConcurrentDictionary<string, string>();
+        private readonly ConcurrentDictionary<string, string> operationResultWithSuccessByTid = new ConcurrentDictionary<string, string>();
 
         private readonly object lockObj = new object();
-        private HashSet<string> processedTids = new HashSet<string>();
-        private ConcurrentDictionary<string, string> addedWriteSequences = new ConcurrentDictionary<string, string>();
-        private ConcurrentDictionary<string, string> addedReadSequences = new ConcurrentDictionary<string, string>();
-        // Private constructor for singleton.
-        private TagOpController() { }
+        private readonly HashSet<string> processedTids = new HashSet<string>();
+        private readonly ConcurrentDictionary<string, string> addedWriteSequences = new ConcurrentDictionary<string, string>();
+        private readonly ConcurrentDictionary<string, string> addedReadSequences = new ConcurrentDictionary<string, string>();
+        
+        // Fields for serial number generation
+        private readonly ConcurrentDictionary<string, string> serialByTid;
+        private readonly SerialGenerator serialGenerator;
+        
+        // Private constructor for singleton
+        private TagOpController() 
+        {
+            serialByTid = new ConcurrentDictionary<string, string>();
+            serialGenerator = new SerialGenerator();
+        }
+
+        /// <summary>
+        /// Gets an existing serial for a TID or generates a new one if it doesn't exist
+        /// </summary>
+        /// <param name="tid">The TID to get or generate a serial for</param>
+        /// <returns>A unique serial number</returns>
+        public string GetOrGenerateSerial(string tid)
+        {
+            return serialByTid.GetOrAdd(tid, _ => 
+            {
+                try
+                {
+                    return serialGenerator.GenerateUniqueSerial();
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Console.WriteLine($"Failed to generate unique serial: {ex.Message}");
+                    // Fallback to using a timestamp-based serial if random generation fails
+                    string fallbackSerial = DateTime.Now.Ticks.ToString().Substring(0, 10);
+                    while (serialGenerator.IsSerialUsed(fallbackSerial))
+                    {
+                        fallbackSerial = DateTime.Now.Ticks.ToString().Substring(0, 10);
+                    }
+                    return fallbackSerial;
+                }
+            });
+        }
 
         // Lazy singleton instance.
         private static readonly Lazy<TagOpController> _instance = new Lazy<TagOpController>(() => new TagOpController());
@@ -44,13 +81,12 @@ namespace OctaneTagWritingTest.Helpers
                     expectedEpcByTid.Clear();
                     operationResultByTid.Clear();
                     operationResultWithSuccessByTid.Clear();
+                    serialByTid.Clear();
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-
-
+                    Console.WriteLine($"Error during cleanup: {ex.Message}");
                 }
-
             }
         }
 
@@ -131,15 +167,7 @@ namespace OctaneTagWritingTest.Helpers
                 do
                 {
                     // Get a new EPC from the manager.
-                    if(string.IsNullOrEmpty(epc))
-                    {
-                        nextEpc = EpcListManager.Instance.GetNextEpc(tid);
-                    }
-                    else
-                    {
-                        nextEpc = EpcListManager.Instance.CreateEpcWithCurrentDigits(epc, tid);
-                    }
-                    
+                    nextEpc = EpcListManager.Instance.CreateEpcWithCurrentDigits(epc, tid);
 
                     // If the EPC does not already exist, break out of the loop.
                     if (!GetExistingEpc(nextEpc))
@@ -151,14 +179,55 @@ namespace OctaneTagWritingTest.Helpers
                 }
                 while (retryCount < maxRetries);
 
-                // If after the maximum retries the EPC still exists, throw an exception.
+                // If after the maximum retries the EPC still exists, fall back to using SerialGenerator
                 if (GetExistingEpc(nextEpc))
                 {
-                    Console.WriteLine("WARNING DUP_EPC: Unable to generate a unique EPC after maximum retries.");
+                    Console.WriteLine("WARNING: EpcListManager failed to generate unique EPC, falling back to SerialGenerator");
+                    string serial = GetOrGenerateSerial(tid);
+                    // Format the serial as an EPC (maintaining the same format as the original EPC)
+                    nextEpc = FormatSerialAsEpc(serial, epc);
+                    
+                    // Verify the generated EPC is unique
+                    if (GetExistingEpc(nextEpc))
+                    {
+                        throw new InvalidOperationException("Failed to generate unique EPC even with SerialGenerator fallback");
+                    }
                 }
 
                 return nextEpc;
             }
+        }
+
+        /// <summary>
+        /// Formats a serial number as an EPC while preserving or defaulting to standard prefix
+        /// </summary>
+        /// <param name="serial">The serial number to format</param>
+        /// <param name="originalEpc">The original EPC to extract prefix from</param>
+        /// <returns>A properly formatted EPC string</returns>
+        private string FormatSerialAsEpc(string serial, string originalEpc)
+        {
+            // Default prefix if original EPC is invalid or too short
+            const string DEFAULT_PREFIX = "E280";  // Standard EPC prefix for SGTIN-96
+            
+            // Validate and extract prefix from original EPC
+            string prefix;
+            if (string.IsNullOrEmpty(originalEpc) || originalEpc.Length < 4)
+            {
+                prefix = DEFAULT_PREFIX;
+                Console.WriteLine($"Warning: Invalid original EPC format, using default prefix {DEFAULT_PREFIX}");
+            }
+            else
+            {
+                // Verify the prefix is valid hexadecimal
+                prefix = originalEpc.Substring(0, 4);
+                if (!prefix.All(c => "0123456789ABCDEFabcdef".Contains(c)))
+                {
+                    prefix = DEFAULT_PREFIX;
+                    Console.WriteLine($"Warning: Invalid EPC prefix format (non-hexadecimal), using default prefix {DEFAULT_PREFIX}");
+                }
+            }
+
+            return $"{prefix}{serial}";
         }
 
 
@@ -412,13 +481,10 @@ namespace OctaneTagWritingTest.Helpers
             if (cancellationToken.IsCancellationRequested) return;
 
             string oldEpc = tag.Epc.ToHexString();
-            // Set EPC data based on encoding choice.
             string epcData = encodeOrDefault ? newEpcToWrite : $"B071000000000000000000{processedTids.Count:D2}";
             string currentTid = tag.Tid.ToHexString();
-            //Console.WriteLine($"Attempting robust operation for TID {currentTid}: {oldEpc} -> {newEpcToWrite} - Read RSSI {tag.PeakRssiInDbm}");
             
             TagOpSequence seq = new TagOpSequence();
-            //seq.AntennaId = targetAntennaPort;
             seq.SequenceStopTrigger = SequenceTriggerType.None;
             seq.TargetTag.MemoryBank = MemoryBank.Tid;
             seq.TargetTag.BitPointer = 0;
@@ -671,3 +737,4 @@ namespace OctaneTagWritingTest.Helpers
         }
     }
 }
+

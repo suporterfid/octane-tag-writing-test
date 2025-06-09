@@ -69,9 +69,9 @@ public sealed class EpcListManager
             string tidSuffix = tid.Substring(14);
             tidSuffix = tidSuffix.PadLeft(10, '0');
 
-            using (var parser = new MonzaTidParser(tid))
+            using (var parser = new TagTidParser(tid))
             {
-                tidSuffix = parser.Get38BitSerialHex();
+                tidSuffix = parser.Get40BitSerialHex();
                 Console.WriteLine($"Serial extraído: {tidSuffix}");
             }
 
@@ -145,19 +145,9 @@ public sealed class EpcListManager
     /// </summary>
     /// <param name="tid">The tag TID used as a key for uniqueness (optional).</param>
     /// <returns>The next unique EPC string.</returns>
-    public string GetNextEpc(string tid)
+    public string GetNextEpc(string epc, string tid)
     {
-        if (!string.IsNullOrEmpty(tid))
-        {
-            // If TID is provided, use the dictionary to guarantee uniqueness.
-            // If an EPC for this TID hasn't been generated, GenerateUniqueEpc is called and the value is added.
-            return generatedEpcsByTid.GetOrAdd(tid, key => GenerateUniqueEpc(tid));
-        }
-        else
-        {
-            // If TID is null or empty, use the current logic.
-            return GenerateUniqueEpc(tid);
-        }
+        return CreateEpcWithCurrentDigits(epc, tid);
     }
 
     /// <summary>
@@ -165,25 +155,25 @@ public sealed class EpcListManager
     /// Ensures thread safety during EPC generation.
     /// </summary>
     /// <returns>A unique EPC string.</returns>
-    private string GenerateUniqueEpc(string tid)
-    {
-        lock (lockObj)
-        {
-            // Generate the EPC list using the current serial number.
-            string createdEpcToApply = EpcListGeneratorHelper.Instance.GenerateEpcFromTid(
-                tid, epcHeader, epcPlainItemCode);
+    //private string GenerateUniqueEpc(string tid)
+    //{
+    //    lock (lockObj)
+    //    {
+    //        // Generate the EPC list using the current serial number.
+    //        string createdEpcToApply = EpcListGeneratorHelper.Instance.GenerateEpcFromTid(
+    //            tid, epcHeader, epcPlainItemCode);
 
-            // If the generated EPC already exists, generate a new EPC with the next serial number.
-            if (TagOpController.Instance.GetExistingEpc(createdEpcToApply))
-            {
-                createdEpcToApply = EpcListGeneratorHelper.Instance.GenerateEpcFromTid(
-                    tid, epcHeader, epcPlainItemCode);
-            }
+    //        // If the generated EPC already exists, generate a new EPC with the next serial number.
+    //        if (TagOpController.Instance.GetExistingEpc(createdEpcToApply))
+    //        {
+    //            createdEpcToApply = EpcListGeneratorHelper.Instance.GenerateEpcFromTid(
+    //                tid, epcHeader, epcPlainItemCode);
+    //        }
 
-            Console.WriteLine($"Returning next EPC created: {createdEpcToApply}: SN = {currentSerialNumber}");
-            return createdEpcToApply;
-        }
-    }
+    //        Console.WriteLine($"Returning next EPC created: {createdEpcToApply}");
+    //        return createdEpcToApply;
+    //    }
+    //}
 
     /// <summary>
     /// Generates a new serial number based on the last EPC.

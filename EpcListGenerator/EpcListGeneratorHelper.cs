@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using Impinj.TagUtils;
+using OctaneTagWritingTest.Helpers;
 
 namespace EpcListGenerator
 {
@@ -177,10 +178,10 @@ namespace EpcListGenerator
 
             string serialHex = tidHexString.Substring(14);
 
-            using (var parser = new MonzaTidParser(tidHexString))
+            using (var parser = new TagTidParser(tidHexString))
             {
-                serialHex = parser.Get38BitSerialHex();
-                Console.WriteLine($"Serial extraído: {serialHex}");
+                serialHex = parser.Get40BitSerialHex();
+                Console.WriteLine($"Serial extraído: [[[[[[[[[[[[[[[[[[[{serialHex}]]]]]]]]]]]]]]]]]]]");
             }
 
 			// Construct the final EPC.

@@ -128,15 +128,15 @@ namespace OctaneTagWritingTest.JobStrategies
                     Console.WriteLine("writerReader - Error in dual reader endurance test: " + ex.Message);
                     throw ex;
                 }
-                try
-                {
-                    verifierReader.Start();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("verifierReader - Error in dual reader endurance test: " + ex.Message);
-                    throw ex;
-                }
+                //try
+                //{
+                //    verifierReader.Start();
+                //}
+                //catch (Exception ex)
+                //{
+                //    Console.WriteLine("verifierReader - Error in dual reader endurance test: " + ex.Message);
+                //    throw ex;
+                //}
                 
                 
                 
@@ -216,10 +216,10 @@ namespace OctaneTagWritingTest.JobStrategies
             detectorSettings.Antennas.GetAntenna((ushort)detectorReaderSettings.AntennaPort).RxSensitivityInDbm = detectorReaderSettings.RxSensitivityInDbm;
 
             // Use a different antenna port for the reader (e.g., port 2).
-            detectorSettings.Antennas.GetAntenna(2).IsEnabled = true;
-            detectorSettings.Antennas.GetAntenna(2).TxPowerInDbm = detectorReaderSettings.TxPowerInDbm;
-            detectorSettings.Antennas.GetAntenna(2).MaxRxSensitivity = detectorReaderSettings.MaxRxSensitivity;
-            detectorSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = detectorReaderSettings.RxSensitivityInDbm;
+            //detectorSettings.Antennas.GetAntenna(2).IsEnabled = true;
+            //detectorSettings.Antennas.GetAntenna(2).TxPowerInDbm = detectorReaderSettings.TxPowerInDbm;
+            //detectorSettings.Antennas.GetAntenna(2).MaxRxSensitivity = detectorReaderSettings.MaxRxSensitivity;
+            //detectorSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = detectorReaderSettings.RxSensitivityInDbm;
 
             detectorSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), detectorReaderSettings.SearchMode);
             detectorSettings.Session = (ushort)detectorReaderSettings.Session;
@@ -258,23 +258,23 @@ namespace OctaneTagWritingTest.JobStrategies
             writerSettings.Antennas.GetAntenna(1).RxSensitivityInDbm = writerReaderSettings.RxSensitivityInDbm;
 
             // Use a different antenna port for the reader (e.g., port 2).
-            writerSettings.Antennas.GetAntenna(2).IsEnabled = true;
-            writerSettings.Antennas.GetAntenna(2).MaxTxPower = false;
-            writerSettings.Antennas.GetAntenna(2).TxPowerInDbm = writerReaderSettings.TxPowerInDbm;
-            writerSettings.Antennas.GetAntenna(2).MaxRxSensitivity = writerReaderSettings.MaxRxSensitivity;
-            writerSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = writerReaderSettings.RxSensitivityInDbm;
+           // writerSettings.Antennas.GetAntenna(2).IsEnabled = true;
+           // writerSettings.Antennas.GetAntenna(2).MaxTxPower = false;
+           // writerSettings.Antennas.GetAntenna(2).TxPowerInDbm = writerReaderSettings.TxPowerInDbm;
+           // writerSettings.Antennas.GetAntenna(2).MaxRxSensitivity = writerReaderSettings.MaxRxSensitivity;
+           // writerSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = writerReaderSettings.RxSensitivityInDbm;
 
-            writerSettings.Antennas.GetAntenna(3).IsEnabled = true;
-            writerSettings.Antennas.GetAntenna(3).MaxTxPower = false;
-            writerSettings.Antennas.GetAntenna(3).TxPowerInDbm = writerReaderSettings.TxPowerInDbm;
-            writerSettings.Antennas.GetAntenna(3).MaxRxSensitivity = writerReaderSettings.MaxRxSensitivity;
-            writerSettings.Antennas.GetAntenna(3).RxSensitivityInDbm = writerReaderSettings.RxSensitivityInDbm;
+           // writerSettings.Antennas.GetAntenna(3).IsEnabled = true;
+           // writerSettings.Antennas.GetAntenna(3).MaxTxPower = false;
+           // writerSettings.Antennas.GetAntenna(3).TxPowerInDbm = writerReaderSettings.TxPowerInDbm;
+           // writerSettings.Antennas.GetAntenna(3).MaxRxSensitivity = writerReaderSettings.MaxRxSensitivity;
+           // writerSettings.Antennas.GetAntenna(3).RxSensitivityInDbm = writerReaderSettings.RxSensitivityInDbm;
 
-            writerSettings.Antennas.GetAntenna(4).IsEnabled = true;
-            writerSettings.Antennas.GetAntenna(4).MaxTxPower = false;
-           writerSettings.Antennas.GetAntenna(4).TxPowerInDbm = writerReaderSettings.TxPowerInDbm;
-            writerSettings.Antennas.GetAntenna(4).MaxRxSensitivity = writerReaderSettings.MaxRxSensitivity;
-            writerSettings.Antennas.GetAntenna(4).RxSensitivityInDbm = writerReaderSettings.RxSensitivityInDbm;
+           // writerSettings.Antennas.GetAntenna(4).IsEnabled = true;
+           // writerSettings.Antennas.GetAntenna(4).MaxTxPower = false;
+           //writerSettings.Antennas.GetAntenna(4).TxPowerInDbm = writerReaderSettings.TxPowerInDbm;
+           // writerSettings.Antennas.GetAntenna(4).MaxRxSensitivity = writerReaderSettings.MaxRxSensitivity;
+           // writerSettings.Antennas.GetAntenna(4).RxSensitivityInDbm = writerReaderSettings.RxSensitivityInDbm;
 
             writerSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), writerReaderSettings.SearchMode);
             writerSettings.Session = (ushort)writerReaderSettings.Session;
@@ -299,10 +299,10 @@ namespace OctaneTagWritingTest.JobStrategies
             verifierSettings.RfMode = (uint)verifierReaderSettings.RfMode;
 
             verifierSettings.Antennas.DisableAll();
-            verifierSettings.Antennas.GetAntenna((ushort)verifierReaderSettings.AntennaPort).IsEnabled = true;
-            verifierSettings.Antennas.GetAntenna((ushort)verifierReaderSettings.AntennaPort).TxPowerInDbm = verifierReaderSettings.TxPowerInDbm;
-            verifierSettings.Antennas.GetAntenna((ushort)verifierReaderSettings.AntennaPort).MaxRxSensitivity = verifierReaderSettings.MaxRxSensitivity;
-            verifierSettings.Antennas.GetAntenna((ushort)verifierReaderSettings.AntennaPort).RxSensitivityInDbm = verifierReaderSettings.RxSensitivityInDbm;
+            //verifierSettings.Antennas.GetAntenna((ushort)verifierReaderSettings.AntennaPort).IsEnabled = true;
+            //verifierSettings.Antennas.GetAntenna((ushort)verifierReaderSettings.AntennaPort).TxPowerInDbm = verifierReaderSettings.TxPowerInDbm;
+            //verifierSettings.Antennas.GetAntenna((ushort)verifierReaderSettings.AntennaPort).MaxRxSensitivity = verifierReaderSettings.MaxRxSensitivity;
+            //verifierSettings.Antennas.GetAntenna((ushort)verifierReaderSettings.AntennaPort).RxSensitivityInDbm = verifierReaderSettings.RxSensitivityInDbm;
 
             verifierSettings.Antennas.GetAntenna(1).IsEnabled = true;
             verifierSettings.Antennas.GetAntenna(1).MaxTxPower = false;
@@ -322,11 +322,11 @@ namespace OctaneTagWritingTest.JobStrategies
             verifierSettings.Antennas.GetAntenna(3).MaxRxSensitivity = verifierReaderSettings.MaxRxSensitivity;
             verifierSettings.Antennas.GetAntenna(3).RxSensitivityInDbm = verifierReaderSettings.RxSensitivityInDbm;
 
-            verifierSettings.Antennas.GetAntenna(4).IsEnabled = true;
-            verifierSettings.Antennas.GetAntenna(4).MaxTxPower = false;
-            verifierSettings.Antennas.GetAntenna(4).TxPowerInDbm = verifierReaderSettings.TxPowerInDbm;
-            verifierSettings.Antennas.GetAntenna(4).MaxRxSensitivity = verifierReaderSettings.MaxRxSensitivity;
-            verifierSettings.Antennas.GetAntenna(4).RxSensitivityInDbm = verifierReaderSettings.RxSensitivityInDbm;
+            //verifierSettings.Antennas.GetAntenna(4).IsEnabled = true;
+            //verifierSettings.Antennas.GetAntenna(4).MaxTxPower = false;
+            //verifierSettings.Antennas.GetAntenna(4).TxPowerInDbm = verifierReaderSettings.TxPowerInDbm;
+            //verifierSettings.Antennas.GetAntenna(4).MaxRxSensitivity = verifierReaderSettings.MaxRxSensitivity;
+            //verifierSettings.Antennas.GetAntenna(4).RxSensitivityInDbm = verifierReaderSettings.RxSensitivityInDbm;
 
             verifierSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), verifierReaderSettings.SearchMode);
             verifierSettings.Session = (ushort)verifierReaderSettings.Session;
@@ -352,15 +352,15 @@ namespace OctaneTagWritingTest.JobStrategies
             // Configure GPI for port 1.
             var gpi = verifierSettings.Gpis.GetGpi(1);
             gpi.IsEnabled = true;
-            gpi.DebounceInMs = 100;
+            gpi.DebounceInMs = 200;
 
             // Set GPI triggers for starting and stopping the operation.
             verifierSettings.AutoStart.Mode = AutoStartMode.GpiTrigger;
             verifierSettings.AutoStart.GpiPortNumber = 1;
-            verifierSettings.AutoStart.GpiLevel = gpiTriggerStateToProccessVerification;
+            verifierSettings.AutoStart.GpiLevel = false;
             verifierSettings.AutoStop.Mode = AutoStopMode.GpiTrigger;
             verifierSettings.AutoStop.GpiPortNumber = 1;
-            verifierSettings.AutoStop.GpiLevel = !gpiTriggerStateToProccessVerification;
+            verifierSettings.AutoStop.GpiLevel = true;
 
             // Attach event handlers, including our specialized GPI event handler.
             verifierReader.GpiChanged += OnGpiEvent;
@@ -611,12 +611,20 @@ namespace OctaneTagWritingTest.JobStrategies
             {
                 var tidHex = tag.Tid?.ToHexString() ?? string.Empty;
                 if (string.IsNullOrEmpty(tidHex))
+                {
+                    Console.WriteLine($"OnTagsReportedVerifier>>>>>>>>>>TID is EMPTY.");
                     continue;
+                }
+                    
 
 
                 var epcHex = tag.Epc.ToHexString() ?? string.Empty;
-                if (epcHex.Length < 24)
+                if (epcHex.Length != 24)
+                {
+                    Console.WriteLine($"OnTagsReportedVerifier>>>>>>>>>>Unexpected EPC length {epcHex.Length}");
                     continue;
+                }
+
                 var expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
 
                 // If no expected EPC exists, generate one using the writer logic.

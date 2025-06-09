@@ -14,10 +14,10 @@ namespace OctaneTagWritingTest
         public string VerifierHostname { get; set; } = "192.168.68.82";
 
         // Test parameters
-        public string TestDescription { get; set; } = "Test5-F1-Baton";
-        public string EpcHeader { get; set; } = "F1";
-        public string EpcPlainItemCode { get; set; } = "634499001122";
-        public string Sku { get; set; } = "634499001122";
+        public string TestDescription { get; set; } = "Teste11-Aplicador-Integrado";
+        public string EpcHeader { get; set; } = "B6";
+        public string EpcPlainItemCode { get; set; } = "33449900112222";
+        public string Sku { get; set; } = "334499001122";
         public long Quantity { get; set; } = 1;
 
         // Settings file path
@@ -52,7 +52,7 @@ namespace OctaneTagWritingTest
         public string WriterFilterMode { get; set; } = "OnlyFilter1";
 
         // Verifier reader settings
-        public int VerifierTxPowerInDbm { get; set; } = 33;
+        public int VerifierTxPowerInDbm { get; set; } = 30;
         public string VerifierSearchMode { get; set; } = "SingleTarget";
         public int VerifierSession { get; set; } = 0;
         public int VerifierRfMode { get; set; } = 0;
