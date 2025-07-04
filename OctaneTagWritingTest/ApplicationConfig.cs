@@ -17,6 +17,9 @@ public class ApplicationConfig
     // Settings file path
     public string SettingsFilePath { get; set; } = "reader_settings.json";
 
+    public bool GpiTriggerStateToProcessVerification { get; set; } = false;
+    public bool UseGpiForVerification { get; set; } = true;
+
     // NOVA SEÇÃO: Configuração de Antenas
     public AntennaConfig DetectorAntennas { get; set; } = new AntennaConfig();
     public AntennaConfig WriterAntennas { get; set; } = new AntennaConfig();

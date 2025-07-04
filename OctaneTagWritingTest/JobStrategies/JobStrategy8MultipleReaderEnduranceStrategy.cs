@@ -60,6 +60,11 @@ namespace OctaneTagWritingTest.JobStrategies
             // Armazenar a configuração da aplicação
             applicationConfig = appConfig ?? throw new ArgumentNullException(nameof(appConfig));
 
+            // CONFIGURAR as variáveis GPI a partir do ApplicationConfig
+            useGpiForVerification = appConfig.UseGpiForVerification;
+            gpiTriggerStateToProccessVerification = appConfig.GpiTriggerStateToProcessVerification;
+
+
             detectorReader = new ImpinjReader();
             writerReader = new ImpinjReader();
             verifierReader = new ImpinjReader();

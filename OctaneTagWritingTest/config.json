@@ -2,11 +2,15 @@
   "DetectorHostname": "192.168.1.100",
   "WriterHostname": "192.168.1.101",
   "VerifierHostname": "192.168.1.102",
-  "TestDescription": "Teste com múltiplas antenas",
+  "TestDescription": "Teste com múltiplas antenas e GPI",
   "EpcHeader": "B071",
   "EpcPlainItemCode": "123456789012",
   "Sku": "123456789012",
   "Quantity": 1000,
+
+  "_comment_gpi": "Configurações GPI para JobStrategy8MultipleReaderEnduranceStrategy",
+  "UseGpiForVerification": true,
+  "GpiTriggerStateToProcessVerification": false,
 
   "DetectorAntennas": {
     "Antennas": [

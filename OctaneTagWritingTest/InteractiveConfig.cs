@@ -32,11 +32,20 @@ public static class InteractiveConfig
         if (int.TryParse(vPowerStr, out int vPower))
             config.VerifierTxPowerInDbm = vPower;
 
-        // NOVA SEÇÃO: Configuração avançada de antenas
+        // NOVA SEÇÃO: Configuração GPI
+        Console.WriteLine("\n=== GPI Configuration (for JobStrategy8) ===");
+
+        string useGpiStr = PromptForBoolValue("Use GPI for verification", config.UseGpiForVerification);
+        config.UseGpiForVerification = bool.Parse(useGpiStr);
+
+        string gpiTriggerStr = PromptForBoolValue("GPI trigger state to process verification", config.GpiTriggerStateToProcessVerification);
+        config.GpiTriggerStateToProcessVerification = bool.Parse(gpiTriggerStr);
+
+        // Configuração avançada de antenas
         Console.WriteLine("\n=== Advanced Antenna Configuration ===");
         Console.Write("Configure individual antennas? (y/n) [n]: ");
         string configAntennas = Console.ReadLine();
-        
+
         if (configAntennas?.ToLower() == "y")
         {
             Console.WriteLine("\nConfiguring Detector Antennas:");
@@ -69,6 +78,23 @@ public static class InteractiveConfig
         }
 
         return config;
+    }
+
+    // NOVO MÉTODO: Prompt específico para valores booleanos
+    private static string PromptForBoolValue(string prompt, bool defaultValue)
+    {
+        Console.Write($"{prompt} (true/false) [{defaultValue}]: ");
+        string input = Console.ReadLine();
+
+        if (string.IsNullOrWhiteSpace(input))
+            return defaultValue.ToString();
+
+        if (bool.TryParse(input, out bool result))
+            return result.ToString();
+
+        // Se não conseguir fazer parse, retorna o valor padrão
+        Console.WriteLine($"Invalid input. Using default value: {defaultValue}");
+        return defaultValue.ToString();
     }
 
     private static AntennaConfig ConfigureAntennaSet(string readerType, AntennaConfig currentConfig)
