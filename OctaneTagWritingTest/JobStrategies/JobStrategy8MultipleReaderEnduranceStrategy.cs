@@ -123,11 +123,12 @@ namespace OctaneTagWritingTest.JobStrategies
                 writerReader.TagOpComplete += OnTagOpComplete;
 
                 // Register event handlers for the verifier reader.
-                // verifierReader.TagsReported += OnTagsReportedVerifier;
+                verifierReader.TagsReported += OnTagsReportedVerifier;
                 verifierReader.TagOpComplete += OnTagOpComplete;
+                verifierReader.GpiChanged += OnGpiEvent;
 
                 // Start readers.
-                
+
                 try
                 {
                     detectorReader.Start();
@@ -284,13 +285,13 @@ namespace OctaneTagWritingTest.JobStrategies
             verifierSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), verifierReaderSettings.SearchMode);
             verifierSettings.Session = (ushort)verifierReaderSettings.Session;
 
+            verifierSettings.Gpis.EnableAll();
+            verifierSettings.Gpis.GetGpi(1).DebounceInMs = 100;
+            verifierSettings.Gpis.GetGpi(2).DebounceInMs = 100;
+
+
             EnableLowLatencyReporting(verifierSettings, verifierReader);
             verifierReader.ApplySettings(verifierSettings);
-        }
-
-        private void VerifierReader_TagsReported(ImpinjReader reader, TagReport report)
-        {
-            throw new NotImplementedException();
         }
 
         private void EnableLowLatencyReporting(Settings settings, ImpinjReader reader)
@@ -304,46 +305,7 @@ namespace OctaneTagWritingTest.JobStrategies
             reader.ApplySettings(setReaderConfigMessage, addRoSpecMessage);
         }
 
-        private void CleanupReaders()
-        {
-            try
-            {
-                if (detectorReader != null)
-                {
-                    detectorReader.Stop();
-                    detectorReader.Disconnect();
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("detectorReader - Error during cleanup: " + ex.Message);
-            }
-            try
-            {
-                if (writerReader != null)
-                {
-                    writerReader.Stop();
-                    writerReader.Disconnect();
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("writerReader - Error during reader cleanup: " + ex.Message);
-            }
-            try
-            {
-                if (verifierReader != null)
-                {
-                    verifierReader.Stop();
-                    verifierReader.Disconnect();
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("verifierReader - Error during reader cleanup: " + ex.Message);
-            }
-        }
-
+       
         /// <summary>
         /// Handles GPI events for the reader.
         /// Only processes events for Port 1.
@@ -688,6 +650,99 @@ namespace OctaneTagWritingTest.JobStrategies
         private void LogToCsv(string line)
         {
             TagOpController.Instance.LogToCsv(logFile, line);
+        }
+
+        /// <summary>
+        /// Displays progress information including total read count and success count.
+        /// This method is called by the timer every 10 seconds.
+        /// </summary>
+        /// <param name="state">Timer state (not used)</param>
+        private void DisplayProgress(object state)
+        {
+            try
+            {
+                int successCount = TagOpController.Instance.GetSuccessCount();
+                int totalReadCount = TagOpController.Instance.GetTotalReadCount();
+
+                Console.WriteLine($"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                Console.WriteLine($"!!!!!!!!!!!!!!!!!!!!!!!!!! Total Read [{totalReadCount}] Success count: [{successCount}] !!!!!!!!!!!!!!!!!!!!!!!!!!");
+                Console.WriteLine($"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+
+                try
+                {
+                    // Update console title with current statistics
+                    Console.Title = $"Serializer: {totalReadCount} - {successCount}";
+                }
+                catch (Exception)
+                {
+                    // Ignore exceptions when setting console title (can fail in some environments)
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't crash the application
+                Console.WriteLine($"Error in DisplayProgress: {ex.Message}");
+            }
+        }
+
+        // Também é necessário adicionar o método CleanupReaders se não existir:
+
+        /// <summary>
+        /// Cleans up all reader resources (detector, writer, and verifier)
+        /// </summary>
+        private void CleanupReaders()
+        {
+            try
+            {
+                // Stop and dispose the timer
+                successCountTimer?.Dispose();
+
+                // Cleanup detector reader
+                if (detectorReader != null)
+                {
+                    try
+                    {
+                        detectorReader.Stop();
+                        detectorReader.Disconnect();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error cleaning up detector reader: {ex.Message}");
+                    }
+                }
+
+                // Cleanup writer reader
+                if (writerReader != null)
+                {
+                    try
+                    {
+                        writerReader.Stop();
+                        writerReader.Disconnect();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error cleaning up writer reader: {ex.Message}");
+                    }
+                }
+
+                // Cleanup verifier reader
+                if (verifierReader != null)
+                {
+                    try
+                    {
+                        verifierReader.Stop();
+                        verifierReader.Disconnect();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error cleaning up verifier reader: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during readers cleanup: {ex.Message}");
+            }
         }
     }
 }
