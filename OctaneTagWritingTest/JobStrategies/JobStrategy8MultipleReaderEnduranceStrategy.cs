@@ -42,7 +42,7 @@ namespace OctaneTagWritingTest.JobStrategies
         private bool useGpiForVerification = true;
         private bool gpiTriggerStateToProccessVerification = false;
         // Separate dictionary for capturing tags during the verification phase.
-        private readonly ConcurrentDictionary<string, Tag> verificationTags = new ConcurrentDictionary<string, Tag>();
+        private static ConcurrentDictionary<string, Tag> verificationTags = new ConcurrentDictionary<string, Tag>();
 
         public JobStrategy8MultipleReaderEnduranceStrategy(
         string hostnameDetector,
@@ -294,6 +294,19 @@ namespace OctaneTagWritingTest.JobStrategies
             verifierSettings.Gpis.GetGpi(1).DebounceInMs = 100;
             verifierSettings.Gpis.GetGpi(2).DebounceInMs = 100;
 
+            verifierSettings.Gpos.GetGpo(1).Mode = GpoMode.Pulsed;
+            verifierSettings.Gpos.GetGpo(1).GpoPulseDurationMsec = 500;
+
+            verifierSettings.Gpos.GetGpo(2).Mode = GpoMode.Pulsed;
+            verifierSettings.Gpos.GetGpo(2).GpoPulseDurationMsec = 500;
+
+            verifierSettings.AutoStart.Mode = AutoStartMode.GpiTrigger;
+            verifierSettings.AutoStart.GpiPortNumber = 1;
+            verifierSettings.AutoStart.GpiLevel = gpiTriggerStateToProccessVerification;
+
+            verifierSettings.AutoStop.Mode = AutoStopMode.GpiTrigger;
+            verifierSettings.AutoStop.GpiPortNumber = 1;
+            verifierSettings.AutoStop.GpiLevel = !gpiTriggerStateToProccessVerification;
 
             EnableLowLatencyReporting(verifierSettings, verifierReader);
             verifierReader.ApplySettings(verifierSettings);
@@ -471,6 +484,7 @@ namespace OctaneTagWritingTest.JobStrategies
                 {
                     if (expectedEpc != null && expectedEpc.Equals(epcHex, StringComparison.OrdinalIgnoreCase))
                     {
+                        verificationTags.TryAdd(tidHex, tag);
                         TagOpController.Instance.HandleVerifiedTag(tag, tidHex, expectedEpc, swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()), swVerifyTimers.GetOrAdd(tidHex, _ => new Stopwatch()), cycleCount, tag, TagOpController.Instance.GetChipModel(tag), logFile);
                         //Console.WriteLine($"TID {tidHex} verified successfully on writer reader. Current EPC: {epcHex}");
                         continue;
@@ -583,12 +597,14 @@ namespace OctaneTagWritingTest.JobStrategies
                     var writeStatus = success ? "Success" : "Failure";
                     if (success)
                     {
+                        verificationTags.TryAdd(tidHex, writeResult.Tag);
                         TagOpController.Instance.RecordResult(tidHex, writeStatus, success);
                     }
                     else if (writeResult.Result == WriteResultStatus.Success)
                     {
                         Console.WriteLine($"OnTagOpComplete - Write operation succeeded for TID {tidHex} on reader {sender.Name}.");
                         // After a successful write, trigger a verification read on the verifier reader.
+                        
                         TagOpController.Instance.TriggerVerificationRead(
                             result.Tag,
                             sender,
@@ -614,6 +630,10 @@ namespace OctaneTagWritingTest.JobStrategies
                     var success = verifiedEpc.Equals(expectedEpc, StringComparison.InvariantCultureIgnoreCase);
                     var status = success ? "Success" : "Failure";
 
+                    if(success)
+                    {
+                        verificationTags.TryAdd(tidHex, readResult.Tag);
+                    }
                     LogToCsv($"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{tidHex},{result.Tag.Epc.ToHexString()},{expectedEpc},{verifiedEpc},{swWriteTimers[tidHex].ElapsedMilliseconds},{swVerifyTimers[tidHex].ElapsedMilliseconds},{status},{cycleCount.GetOrAdd(tidHex, 0)},RSSI,AntennaPort");
                     TagOpController.Instance.RecordResult(tidHex, status, success);
 

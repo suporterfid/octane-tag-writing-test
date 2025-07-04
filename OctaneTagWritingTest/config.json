@@ -1,12 +1,16 @@
 {
-  "DetectorHostname": "192.168.1.100",
-  "WriterHostname": "192.168.1.101",
-  "VerifierHostname": "192.168.1.102",
-  "TestDescription": "Teste com múltiplas antenas e GPI",
-  "EpcHeader": "B071",
-  "EpcPlainItemCode": "123456789012",
-  "Sku": "123456789012",
-  "Quantity": 1000,
+  "DetectorHostname": "192.168.1.101",
+  "WriterHostname": "192.168.1.102",
+  "VerifierHostname": "192.168.1.103",
+  "TestDescription": "TesteSGTIN",
+  "Sgtin96Enabled": true,
+  "Sgtin96SourceGtin": "80614141123458", // para gravacao usando GTIN do produto
+
+  "EpcHeader": "B1",
+  "EpcPlainItemCode": "33449900112222",
+  "Sku": "334499001122", // Para rotina do Checkbox
+
+  "Quantity": 1,
 
   "_comment_gpi": "Configurações GPI para JobStrategy8MultipleReaderEnduranceStrategy",
   "UseGpiForVerification": true,
@@ -17,17 +21,25 @@
       {
         "Port": 1,
         "IsEnabled": true,
-        "TxPowerInDbm": 30,
+        "TxPowerInDbm": 12,
         "MaxRxSensitivity": true,
         "RxSensitivityInDbm": -90
       },
       {
         "Port": 2,
         "IsEnabled": true,
-        "TxPowerInDbm": 28,
-        "MaxRxSensitivity": false,
-        "RxSensitivityInDbm": -85
+        "TxPowerInDbm": 12,
+        "MaxRxSensitivity": true,
+        "RxSensitivityInDbm": -90
+      },
+      {
+        "Port": 3,
+        "IsEnabled": true,
+        "TxPowerInDbm": 12,
+        "MaxRxSensitivity": true,
+        "RxSensitivityInDbm": -90
       }
+
     ]
   },
 
@@ -36,7 +48,21 @@
       {
         "Port": 1,
         "IsEnabled": true,
-        "TxPowerInDbm": 33,
+        "TxPowerInDbm": 12,
+        "MaxRxSensitivity": true,
+        "RxSensitivityInDbm": -90
+      },
+      {
+        "Port": 2,
+        "IsEnabled": true,
+        "TxPowerInDbm": 12,
+        "MaxRxSensitivity": true,
+        "RxSensitivityInDbm": -90
+      },
+      {
+        "Port": 3,
+        "IsEnabled": true,
+        "TxPowerInDbm": 12,
         "MaxRxSensitivity": true,
         "RxSensitivityInDbm": -90
       }
@@ -48,14 +74,21 @@
       {
         "Port": 1,
         "IsEnabled": true,
-        "TxPowerInDbm": 30,
+        "TxPowerInDbm": 12,
+        "MaxRxSensitivity": true,
+        "RxSensitivityInDbm": -90
+      },
+      {
+        "Port": 2,
+        "IsEnabled": true,
+        "TxPowerInDbm": 12,
         "MaxRxSensitivity": true,
         "RxSensitivityInDbm": -90
       },
       {
         "Port": 3,
         "IsEnabled": true,
-        "TxPowerInDbm": 30,
+        "TxPowerInDbm": 12,
         "MaxRxSensitivity": true,
         "RxSensitivityInDbm": -90
       }
@@ -75,7 +108,7 @@
   "DetectorFilterOp": "NotMatch",
   "DetectorFilterMode": "OnlyFilter1",
 
-  "WriterTxPowerInDbm": 33,
+  "WriterTxPowerInDbm": 12,
   "WriterSearchMode": "SingleTarget",
   "WriterSession": 0,
   "WriterRfMode": 0,
@@ -88,7 +121,7 @@
   "WriterFilterOp": "NotMatch",
   "WriterFilterMode": "OnlyFilter1",
 
-  "VerifierTxPowerInDbm": 30,
+  "VerifierTxPowerInDbm": 12,
   "VerifierSearchMode": "SingleTarget",
   "VerifierSession": 0,
   "VerifierRfMode": 0,

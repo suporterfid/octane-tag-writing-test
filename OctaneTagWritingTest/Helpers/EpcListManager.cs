@@ -1,4 +1,5 @@
 ﻿using EpcListGenerator;
+using Impinj.TagUtils;
 using OctaneTagWritingTest.Helpers;
 using System;
 using System.Collections.Concurrent;
@@ -25,6 +26,7 @@ public sealed class EpcListManager
     private string epcHeader = "B200";
     private string epcPlainItemCode = "99999999999999";
     private long quantity = 1;
+    private string gtin = "80614141123458";
 
     // Thread-safe dictionary to ensure unique EPC generation using tag TID as key.
     private ConcurrentDictionary<string, string> generatedEpcsByTid = new ConcurrentDictionary<string, string>();
@@ -52,7 +54,20 @@ public sealed class EpcListManager
         lock (lockObj)
         {
             // Take the first 14 digits from configured header and item code
-            string prefix = epcHeader + epcPlainItemCode;
+            string prefix = "";
+            string epcPrefix = "";
+            if (!string.IsNullOrEmpty(gtin))
+            {
+                prefix = gtin;
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(epcHeader))
+                    prefix += epcHeader;
+                if (!string.IsNullOrEmpty(epcPlainItemCode))
+                    prefix += epcPlainItemCode;
+            }
+
             prefix = prefix.Trim();
             
             if (prefix.Length < 14)
@@ -60,7 +75,33 @@ public sealed class EpcListManager
 
             if (prefix.Length > 14)
                 prefix = prefix.Substring(0, 14);
-               // throw new InvalidOperationException("Combined header and item code must be 14 characters.");
+            // throw new InvalidOperationException("Combined header and item code must be 14 characters.");
+
+            if(!string.IsNullOrEmpty(gtin))
+            {
+                try
+                {
+                    var sgtin = Sgtin96.FromGTIN(prefix, 6);
+
+                    epcPrefix = sgtin.ToEpc().Substring(0, 14);
+
+                    //string epmtyEpcUri = sgtin.GetSGTINZeroValueSerialNumber();
+
+
+                    //var emptySgtin = Sgtin96.FromSgtin96Uri(epmtyEpcUri);
+                    //// get the first 14 digits of the empty EPC
+                    //epcPrefix = emptySgtin.ToEpc().Substring(0, 14);
+                    
+                }
+                catch (Exception)
+                {
+
+                }
+            }
+            else
+            {
+                epcPrefix = prefix;
+            }
 
             // Take the remaining 10 digits from the current EPC
             string remainingDigits = currentEpc.Substring(14);
@@ -76,7 +117,7 @@ public sealed class EpcListManager
             }
 
             // Combine to create the new EPC
-            string newEpc = prefix + tidSuffix;
+            string newEpc = epcPrefix + tidSuffix;
 
             // Store the new EPC in the dictionary associated with the TID
             generatedEpcsByTid.AddOrUpdate(tid, newEpc, (key, oldValue) => newEpc);
@@ -135,6 +176,15 @@ public sealed class EpcListManager
     {
         epcHeader = header;
         epcPlainItemCode = code;
+        quantity = epcQuantity;
+        gtin = "";
+    }
+
+    public void InitEpcData(string itemGtin, long epcQuantity = 1)
+    {
+        gtin = itemGtin;
+        epcHeader = "";
+        epcPlainItemCode = "";
         quantity = epcQuantity;
     }
 

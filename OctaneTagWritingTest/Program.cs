@@ -53,11 +53,20 @@ namespace OctaneTagWritingTest
                 }
             }
 
-            // Initialize EPC Manager
-            EpcListManager.Instance.InitEpcData(config.EpcHeader, config.EpcPlainItemCode, config.Quantity);
+            if(config.Sgtin96Enabled)
+            {
+                // Initialize EPC Manager
+                EpcListManager.Instance.InitEpcData(config.Sgtin96SourceGtin, config.Quantity);
+            }
+            else
+            {
+                // Initialize EPC Manager
+                EpcListManager.Instance.InitEpcData(config.EpcHeader, config.EpcPlainItemCode, config.Quantity);
+            }
 
-            // Create reader settings
-            var readerSettings = CreateReaderSettings(config);
+
+                // Create reader settings
+                var readerSettings = CreateReaderSettings(config);
 
             // CRIAR JobManager PASSANDO A ApplicationConfig
             JobManager manager = new JobManager(

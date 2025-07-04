@@ -7,6 +7,10 @@ public class ApplicationConfig
     public string WriterHostname { get; set; } = "192.168.68.81";
     public string VerifierHostname { get; set; } = "192.168.68.82";
 
+    public bool Sgtin96Enabled { get; set; } = true;
+
+    public string Sgtin96SourceGtin { get; set; } = "";
+
     // Test parameters
     public string TestDescription { get; set; } = "Teste11-Aplicador-Integrado";
     public string EpcHeader { get; set; } = "B6";
