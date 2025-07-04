@@ -39,7 +39,7 @@ namespace OctaneTagWritingTest
                 config = CommandLineParser.ParseArgs(args);
             }
 #endif
-            if(!isRunningInDebugMode)
+            if (!isRunningInDebugMode)
             {
                 // Check for interactive mode
                 if (args.Contains("--interactive") || args.Contains("-i"))
@@ -53,21 +53,20 @@ namespace OctaneTagWritingTest
                 }
             }
 
-
             // Initialize EPC Manager
             EpcListManager.Instance.InitEpcData(config.EpcHeader, config.EpcPlainItemCode, config.Quantity);
 
             // Create reader settings
             var readerSettings = CreateReaderSettings(config);
 
-
-            // Create job manager
+            // CRIAR JobManager PASSANDO A ApplicationConfig
             JobManager manager = new JobManager(
                 config.DetectorHostname,
                 config.WriterHostname,
                 config.VerifierHostname,
                 config.TestDescription,
                 readerSettings,
+                config,              // NOVO PARÂMETRO: Passar a ApplicationConfig
                 config.Sku);
 
             // Main application loop

@@ -1,15 +1,64 @@
 {
-  "DetectorHostname": "192.168.68.248",
-  "WriterHostname": "192.168.68.94",
-  "VerifierHostname": "192.168.68.93",
-  "TestDescription": "Default-Test",
-  "EpcHeader": "E7",
-  "EpcPlainItemCode": "1122334466",
-  "Sku": "012667712944",
-  "Quantity": 1,
-  "SettingsFilePath": "reader_settings.json",
+  "DetectorHostname": "192.168.1.100",
+  "WriterHostname": "192.168.1.101",
+  "VerifierHostname": "192.168.1.102",
+  "TestDescription": "Teste com múltiplas antenas",
+  "EpcHeader": "B071",
+  "EpcPlainItemCode": "123456789012",
+  "Sku": "123456789012",
+  "Quantity": 1000,
 
-  "DetectorTxPowerInDbm": 18,
+  "DetectorAntennas": {
+    "Antennas": [
+      {
+        "Port": 1,
+        "IsEnabled": true,
+        "TxPowerInDbm": 30,
+        "MaxRxSensitivity": true,
+        "RxSensitivityInDbm": -90
+      },
+      {
+        "Port": 2,
+        "IsEnabled": true,
+        "TxPowerInDbm": 28,
+        "MaxRxSensitivity": false,
+        "RxSensitivityInDbm": -85
+      }
+    ]
+  },
+
+  "WriterAntennas": {
+    "Antennas": [
+      {
+        "Port": 1,
+        "IsEnabled": true,
+        "TxPowerInDbm": 33,
+        "MaxRxSensitivity": true,
+        "RxSensitivityInDbm": -90
+      }
+    ]
+  },
+
+  "VerifierAntennas": {
+    "Antennas": [
+      {
+        "Port": 1,
+        "IsEnabled": true,
+        "TxPowerInDbm": 30,
+        "MaxRxSensitivity": true,
+        "RxSensitivityInDbm": -90
+      },
+      {
+        "Port": 3,
+        "IsEnabled": true,
+        "TxPowerInDbm": 30,
+        "MaxRxSensitivity": true,
+        "RxSensitivityInDbm": -90
+      }
+    ]
+  },
+
+  "DetectorTxPowerInDbm": 16,
   "DetectorSearchMode": "SingleTarget",
   "DetectorSession": 0,
   "DetectorRfMode": 0,
@@ -26,8 +75,8 @@
   "WriterSearchMode": "SingleTarget",
   "WriterSession": 0,
   "WriterRfMode": 0,
-  "WriterMaxRxSensitivity": false,
-  "WriterRxSensitivityInDbm": -70,
+  "WriterMaxRxSensitivity": true,
+  "WriterRxSensitivityInDbm": -90,
   "WriterMemoryBank": "Epc",
   "WriterBitPointer": 32,
   "WriterTagMask": "0017",
@@ -35,7 +84,7 @@
   "WriterFilterOp": "NotMatch",
   "WriterFilterMode": "OnlyFilter1",
 
-  "VerifierTxPowerInDbm": 33,
+  "VerifierTxPowerInDbm": 30,
   "VerifierSearchMode": "SingleTarget",
   "VerifierSession": 0,
   "VerifierRfMode": 0,

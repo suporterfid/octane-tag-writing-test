@@ -20,6 +20,8 @@ namespace OctaneTagWritingTest.JobStrategies
     /// </summary>
     public class JobStrategy8MultipleReaderEnduranceStrategy : BaseTestStrategy
     {
+        private readonly ApplicationConfig applicationConfig;
+
         private const int MaxCycles = 10000;
         private readonly ConcurrentDictionary<string, int> cycleCount = new ConcurrentDictionary<string, int>();
         private readonly ConcurrentDictionary<string, Stopwatch> swWriteTimers = new ConcurrentDictionary<string, Stopwatch>();
@@ -42,20 +44,36 @@ namespace OctaneTagWritingTest.JobStrategies
         // Separate dictionary for capturing tags during the verification phase.
         private readonly ConcurrentDictionary<string, Tag> verificationTags = new ConcurrentDictionary<string, Tag>();
 
-        public JobStrategy8MultipleReaderEnduranceStrategy(string hostnameDetector, string hostnameWriter, string hostnameVerifier, string logFile, Dictionary<string, ReaderSettings> readerSettings)
-            : base(hostnameWriter, logFile, readerSettings)
+        public JobStrategy8MultipleReaderEnduranceStrategy(
+        string hostnameDetector,
+        string hostnameWriter,
+        string hostnameVerifier,
+        string logFile,
+        Dictionary<string, ReaderSettings> readerSettings,
+        ApplicationConfig appConfig)  // NOVO PARÂMETRO
+        : base(hostnameWriter, logFile, readerSettings)
         {
             detectorAddress = hostnameDetector;
             writerAddress = hostnameWriter;
             verifierAddress = hostnameVerifier;
 
+            // Armazenar a configuração da aplicação
+            applicationConfig = appConfig ?? throw new ArgumentNullException(nameof(appConfig));
+
             detectorReader = new ImpinjReader();
-            // Create two separate reader instances.
             writerReader = new ImpinjReader();
             verifierReader = new ImpinjReader();
 
             // Clean up any previous tag operation state.
             TagOpController.Instance.CleanUp();
+
+            // Create a timer that will display the progress every 10 seconds.
+            successCountTimer = new Timer(DisplayProgress, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
+        }
+
+        private ApplicationConfig GetApplicationConfig()
+        {
+            return applicationConfig;
         }
 
         public override void RunJob(CancellationToken cancellationToken = default)
@@ -209,17 +227,8 @@ namespace OctaneTagWritingTest.JobStrategies
             detectorSettings.Report.Mode = (ReportMode)Enum.Parse(typeof(ReportMode), detectorReaderSettings.ReportMode);
             detectorSettings.RfMode = (uint)detectorReaderSettings.RfMode;
 
-            detectorSettings.Antennas.DisableAll();
-            detectorSettings.Antennas.GetAntenna((ushort)detectorReaderSettings.AntennaPort).IsEnabled = true;
-            detectorSettings.Antennas.GetAntenna((ushort)detectorReaderSettings.AntennaPort).TxPowerInDbm = detectorReaderSettings.TxPowerInDbm;
-            detectorSettings.Antennas.GetAntenna((ushort)detectorReaderSettings.AntennaPort).MaxRxSensitivity = detectorReaderSettings.MaxRxSensitivity;
-            detectorSettings.Antennas.GetAntenna((ushort)detectorReaderSettings.AntennaPort).RxSensitivityInDbm = detectorReaderSettings.RxSensitivityInDbm;
-
-            // Use a different antenna port for the reader (e.g., port 2).
-            //detectorSettings.Antennas.GetAntenna(2).IsEnabled = true;
-            //detectorSettings.Antennas.GetAntenna(2).TxPowerInDbm = detectorReaderSettings.TxPowerInDbm;
-            //detectorSettings.Antennas.GetAntenna(2).MaxRxSensitivity = detectorReaderSettings.MaxRxSensitivity;
-            //detectorSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = detectorReaderSettings.RxSensitivityInDbm;
+            // SUBSTITUIR configuração hard-coded das antenas pelo AntennaConfigurator
+            AntennaConfigurator.ConfigureAntennasHybrid(detectorSettings, GetApplicationConfig(), "detector");
 
             detectorSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), detectorReaderSettings.SearchMode);
             detectorSettings.Session = (ushort)detectorReaderSettings.Session;
@@ -227,6 +236,7 @@ namespace OctaneTagWritingTest.JobStrategies
             EnableLowLatencyReporting(detectorSettings, detectorReader);
             detectorReader.ApplySettings(detectorSettings);
         }
+
         private void ConfigureWriterReader()
         {
             // Load the predefined EPC list.
@@ -244,37 +254,8 @@ namespace OctaneTagWritingTest.JobStrategies
             writerSettings.Report.Mode = (ReportMode)Enum.Parse(typeof(ReportMode), writerReaderSettings.ReportMode);
             writerSettings.RfMode = (uint)writerReaderSettings.RfMode;
 
-            writerSettings.Antennas.DisableAll();
-            //writerSettings.Antennas.GetAntenna((ushort)writerReaderSettings.AntennaPort).IsEnabled = true;
-            //writerSettings.Antennas.GetAntenna((ushort)writerReaderSettings.AntennaPort).MaxTxPower = false;
-            //writerSettings.Antennas.GetAntenna((ushort)writerReaderSettings.AntennaPort).TxPowerInDbm = writerReaderSettings.TxPowerInDbm;
-            //writerSettings.Antennas.GetAntenna((ushort)writerReaderSettings.AntennaPort).MaxRxSensitivity = writerReaderSettings.MaxRxSensitivity;
-            //writerSettings.Antennas.GetAntenna((ushort)writerReaderSettings.AntennaPort).RxSensitivityInDbm = writerReaderSettings.RxSensitivityInDbm;
-
-            writerSettings.Antennas.GetAntenna(1).IsEnabled = true;
-            writerSettings.Antennas.GetAntenna(1).MaxTxPower = false;
-            writerSettings.Antennas.GetAntenna(1).TxPowerInDbm = writerReaderSettings.TxPowerInDbm;
-            writerSettings.Antennas.GetAntenna(1).MaxRxSensitivity = writerReaderSettings.MaxRxSensitivity;
-            writerSettings.Antennas.GetAntenna(1).RxSensitivityInDbm = writerReaderSettings.RxSensitivityInDbm;
-
-            // Use a different antenna port for the reader (e.g., port 2).
-           // writerSettings.Antennas.GetAntenna(2).IsEnabled = true;
-           // writerSettings.Antennas.GetAntenna(2).MaxTxPower = false;
-           // writerSettings.Antennas.GetAntenna(2).TxPowerInDbm = writerReaderSettings.TxPowerInDbm;
-           // writerSettings.Antennas.GetAntenna(2).MaxRxSensitivity = writerReaderSettings.MaxRxSensitivity;
-           // writerSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = writerReaderSettings.RxSensitivityInDbm;
-
-           // writerSettings.Antennas.GetAntenna(3).IsEnabled = true;
-           // writerSettings.Antennas.GetAntenna(3).MaxTxPower = false;
-           // writerSettings.Antennas.GetAntenna(3).TxPowerInDbm = writerReaderSettings.TxPowerInDbm;
-           // writerSettings.Antennas.GetAntenna(3).MaxRxSensitivity = writerReaderSettings.MaxRxSensitivity;
-           // writerSettings.Antennas.GetAntenna(3).RxSensitivityInDbm = writerReaderSettings.RxSensitivityInDbm;
-
-           // writerSettings.Antennas.GetAntenna(4).IsEnabled = true;
-           // writerSettings.Antennas.GetAntenna(4).MaxTxPower = false;
-           //writerSettings.Antennas.GetAntenna(4).TxPowerInDbm = writerReaderSettings.TxPowerInDbm;
-           // writerSettings.Antennas.GetAntenna(4).MaxRxSensitivity = writerReaderSettings.MaxRxSensitivity;
-           // writerSettings.Antennas.GetAntenna(4).RxSensitivityInDbm = writerReaderSettings.RxSensitivityInDbm;
+            // SUBSTITUIR configuração hard-coded das antenas pelo AntennaConfigurator
+            AntennaConfigurator.ConfigureAntennasHybrid(writerSettings, GetApplicationConfig(), "writer");
 
             writerSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), writerReaderSettings.SearchMode);
             writerSettings.Session = (ushort)writerReaderSettings.Session;
@@ -293,80 +274,15 @@ namespace OctaneTagWritingTest.JobStrategies
             verifierSettings.Report.IncludeFastId = verifierReaderSettings.IncludeFastId;
             verifierSettings.Report.IncludePeakRssi = verifierReaderSettings.IncludePeakRssi;
             verifierSettings.Report.IncludePcBits = true;
-            //verifierSettings.Report.IncludeEnhancedIntegra = true;
             verifierSettings.Report.IncludeAntennaPortNumber = verifierReaderSettings.IncludeAntennaPortNumber;
             verifierSettings.Report.Mode = (ReportMode)Enum.Parse(typeof(ReportMode), verifierReaderSettings.ReportMode);
             verifierSettings.RfMode = (uint)verifierReaderSettings.RfMode;
 
-            verifierSettings.Antennas.DisableAll();
-            //verifierSettings.Antennas.GetAntenna((ushort)verifierReaderSettings.AntennaPort).IsEnabled = true;
-            //verifierSettings.Antennas.GetAntenna((ushort)verifierReaderSettings.AntennaPort).TxPowerInDbm = verifierReaderSettings.TxPowerInDbm;
-            //verifierSettings.Antennas.GetAntenna((ushort)verifierReaderSettings.AntennaPort).MaxRxSensitivity = verifierReaderSettings.MaxRxSensitivity;
-            //verifierSettings.Antennas.GetAntenna((ushort)verifierReaderSettings.AntennaPort).RxSensitivityInDbm = verifierReaderSettings.RxSensitivityInDbm;
-
-            verifierSettings.Antennas.GetAntenna(1).IsEnabled = true;
-            verifierSettings.Antennas.GetAntenna(1).MaxTxPower = false;
-            verifierSettings.Antennas.GetAntenna(1).TxPowerInDbm = verifierReaderSettings.TxPowerInDbm;
-            verifierSettings.Antennas.GetAntenna(1).MaxRxSensitivity = verifierReaderSettings.MaxRxSensitivity;
-            verifierSettings.Antennas.GetAntenna(1).RxSensitivityInDbm = verifierReaderSettings.RxSensitivityInDbm;
-            // Use a different antenna port for the verifier (e.g., port 2).
-            verifierSettings.Antennas.GetAntenna(2).IsEnabled = true;
-            verifierSettings.Antennas.GetAntenna(2).MaxTxPower = false;
-            verifierSettings.Antennas.GetAntenna(2).TxPowerInDbm = verifierReaderSettings.TxPowerInDbm;
-            verifierSettings.Antennas.GetAntenna(2).MaxRxSensitivity = verifierReaderSettings.MaxRxSensitivity;
-            verifierSettings.Antennas.GetAntenna(2).RxSensitivityInDbm = verifierReaderSettings.RxSensitivityInDbm;
-
-            verifierSettings.Antennas.GetAntenna(3).IsEnabled = true;
-            verifierSettings.Antennas.GetAntenna(3).MaxTxPower = false;
-            verifierSettings.Antennas.GetAntenna(3).TxPowerInDbm = verifierReaderSettings.TxPowerInDbm;
-            verifierSettings.Antennas.GetAntenna(3).MaxRxSensitivity = verifierReaderSettings.MaxRxSensitivity;
-            verifierSettings.Antennas.GetAntenna(3).RxSensitivityInDbm = verifierReaderSettings.RxSensitivityInDbm;
-
-            //verifierSettings.Antennas.GetAntenna(4).IsEnabled = true;
-            //verifierSettings.Antennas.GetAntenna(4).MaxTxPower = false;
-            //verifierSettings.Antennas.GetAntenna(4).TxPowerInDbm = verifierReaderSettings.TxPowerInDbm;
-            //verifierSettings.Antennas.GetAntenna(4).MaxRxSensitivity = verifierReaderSettings.MaxRxSensitivity;
-            //verifierSettings.Antennas.GetAntenna(4).RxSensitivityInDbm = verifierReaderSettings.RxSensitivityInDbm;
+            // SUBSTITUIR configuração hard-coded das antenas pelo AntennaConfigurator
+            AntennaConfigurator.ConfigureAntennasHybrid(verifierSettings, GetApplicationConfig(), "verifier");
 
             verifierSettings.SearchMode = (SearchMode)Enum.Parse(typeof(SearchMode), verifierReaderSettings.SearchMode);
             verifierSettings.Session = (ushort)verifierReaderSettings.Session;
-
-            // Configure GPO ports
-            int numOfGPOs = verifierSettings.Gpos.Length;
-
-            verifierSettings.Gpos.GetGpo(1).Mode = GpoMode.Pulsed;
-            verifierSettings.Gpos.GetGpo(1).GpoPulseDurationMsec = 1000;
-
-            verifierSettings.Gpos.GetGpo(2).Mode = GpoMode.Pulsed;
-            verifierSettings.Gpos.GetGpo(2).GpoPulseDurationMsec = 1000;
-
-            verifierSettings.Gpos.GetGpo(3).Mode = GpoMode.Pulsed;
-            verifierSettings.Gpos.GetGpo(3).GpoPulseDurationMsec = 1000;
-
-            // Only set GPO4 if the reader has 4 GPOs
-            if (numOfGPOs == 4)
-            {
-                verifierSettings.Gpos.GetGpo(4).Mode = GpoMode.Pulsed;
-                verifierSettings.Gpos.GetGpo(4).GpoPulseDurationMsec = 1000;
-            }
-            // Configure GPI for port 1.
-            var gpi = verifierSettings.Gpis.GetGpi(1);
-            gpi.IsEnabled = true;
-            gpi.DebounceInMs = 200;
-
-            // Set GPI triggers for starting and stopping the operation.
-            verifierSettings.AutoStart.Mode = AutoStartMode.GpiTrigger;
-            verifierSettings.AutoStart.GpiPortNumber = 1;
-            verifierSettings.AutoStart.GpiLevel = false;
-            verifierSettings.AutoStop.Mode = AutoStopMode.GpiTrigger;
-            verifierSettings.AutoStop.GpiPortNumber = 1;
-            verifierSettings.AutoStop.GpiLevel = true;
-
-            // Attach event handlers, including our specialized GPI event handler.
-            verifierReader.GpiChanged += OnGpiEvent;
-            verifierReader.TagsReported += OnTagsReportedVerifier;
-
-
 
             EnableLowLatencyReporting(verifierSettings, verifierReader);
             verifierReader.ApplySettings(verifierSettings);
