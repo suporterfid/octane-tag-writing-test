@@ -1,0 +1,32 @@
+name: Build OctaneTagWritingTest Project
+
+on:
+  workflow_dispatch:  # Allows manual triggering from GitHub or iPhone
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore ./OctaneTagWritingTest.csproj
+
+      - name: Build project
+        run: dotnet build ./OctaneTagWritingTest.csproj --configuration Release --no-restore
+
+      - name: Publish output
+        run: dotnet publish ./OctaneTagWritingTest.csproj --configuration Release --output ./publish --no-build
+
+      - name: Upload published output
+        uses: actions/upload-artifact@v4
+        with:
+          name: octane-tag-writer-output
+          path: ./publish
