@@ -23,6 +23,7 @@ jobs:
         run: dotnet build OctaneTagWritingTest/OctaneTagWritingTest.csproj --configuration Release --no-restore
 
       - name: Publish output for Windows
+        shell: bash
         run: |
           dotnet publish OctaneTagWritingTest/OctaneTagWritingTest.csproj \
             --configuration Release \
