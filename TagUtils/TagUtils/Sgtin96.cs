@@ -147,7 +147,7 @@ namespace Impinj.TagUtils
         public static Sgtin96 FromGTIN(string Gtin, int companyPrefixLength)
         {
             Sgtin96 sgtin96 = new Sgtin96();
-            string str = Gtin.Substring(1, Gtin.Length - 1);
+            string str = Gtin.Substring(1);
             StringBuilder stringBuilder = new StringBuilder();
             if (!IsValidGtin(Gtin))
                 throw new ArgumentException("Invalid GTIN string.");
