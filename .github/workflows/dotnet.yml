@@ -17,7 +17,7 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore OctaneTagWritingTest/OctaneTagWritingTest.csproj
+        run: dotnet restore OctaneTagWritingTest/OctaneTagWritingTest.csproj --runtime win-x64
 
       - name: Build solution
         run: dotnet build OctaneTagWritingTest/OctaneTagWritingTest.csproj --configuration Release --no-restore
@@ -30,8 +30,7 @@ jobs:
             --runtime win-x64 \
             --self-contained true \
             -p:PublishSingleFile=true \
-            --output ./publish \
-            --no-build
+            --output ./publish
 
       # Optional: Run unit tests if needed
       # - name: Run tests
