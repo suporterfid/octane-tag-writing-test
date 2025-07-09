@@ -291,14 +291,14 @@ namespace OctaneTagWritingTest.JobStrategies
             verifierSettings.Session = (ushort)verifierReaderSettings.Session;
 
             verifierSettings.Gpis.EnableAll();
-            verifierSettings.Gpis.GetGpi(1).DebounceInMs = 100;
-            verifierSettings.Gpis.GetGpi(2).DebounceInMs = 100;
+            verifierSettings.Gpis.GetGpi(1).DebounceInMs = applicationConfig.GpiDebounceInMs;
+            verifierSettings.Gpis.GetGpi(2).DebounceInMs = applicationConfig.GpiDebounceInMs;
 
             verifierSettings.Gpos.GetGpo(1).Mode = GpoMode.Pulsed;
-            verifierSettings.Gpos.GetGpo(1).GpoPulseDurationMsec = 500;
+            verifierSettings.Gpos.GetGpo(1).GpoPulseDurationMsec = applicationConfig.GpoPulseDurationMs;
 
             verifierSettings.Gpos.GetGpo(2).Mode = GpoMode.Pulsed;
-            verifierSettings.Gpos.GetGpo(2).GpoPulseDurationMsec = 500;
+            verifierSettings.Gpos.GetGpo(2).GpoPulseDurationMsec = applicationConfig.GpoPulseDurationMs;
 
             verifierSettings.AutoStart.Mode = AutoStartMode.GpiTrigger;
             verifierSettings.AutoStart.GpiPortNumber = 1;
@@ -340,10 +340,11 @@ namespace OctaneTagWritingTest.JobStrategies
                 {
                     if (e.State == gpiTriggerStateToProccessVerification)
                     {
+                        // New cycle: clear any previous verification tags
+                        verificationTags.Clear();
                         // Use Interlocked.CompareExchange to ensure only one processing instance runs.
                         if (Interlocked.CompareExchange(ref gpiProcessingFlag, 1, 0) == 0)
                         {
-                            //sender.TagsReported += OnTagsReportedVerifier;
                             Console.WriteLine($"GPI Port 1 is {e.State} - setting processing flag.");
                         }
                         else
@@ -551,6 +552,8 @@ namespace OctaneTagWritingTest.JobStrategies
                     if (!expectedEpc.Equals(epcHex, StringComparison.InvariantCultureIgnoreCase))
                     {
                         Console.WriteLine($"Verification mismatch for TID {tidHex}: expected {expectedEpc}, read {epcHex}. Retrying write operation using expected EPC.");
+                        // Pulse the LED to indicate verification failure
+                        sender.SetGpo(1, true);
                         // Retry writing using the expected EPC (without generating a new one) via the verifier reader.
                         TagOpController.Instance.TriggerWriteAndVerify(
                             tag,
@@ -643,6 +646,8 @@ namespace OctaneTagWritingTest.JobStrategies
 
                     if (!success)
                     {
+                        // Pulse LED to indicate verification failure
+                        sender.SetGpo(1, true);
                         try
                         {
                             TagOpController.Instance.TriggerWriteAndVerify(

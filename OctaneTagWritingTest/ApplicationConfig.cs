@@ -24,6 +24,10 @@ public class ApplicationConfig
     public bool GpiTriggerStateToProcessVerification { get; set; } = false;
     public bool UseGpiForVerification { get; set; } = true;
 
+    // New: make GPI debounce and GPO pulse duration configurable
+    public int GpiDebounceInMs { get; set; } = 100;
+    public int GpoPulseDurationMs { get; set; } = 100;
+
     // NOVA SEÇÃO: Configuração de Antenas
     public AntennaConfig DetectorAntennas { get; set; } = new AntennaConfig();
     public AntennaConfig WriterAntennas { get; set; } = new AntennaConfig();
