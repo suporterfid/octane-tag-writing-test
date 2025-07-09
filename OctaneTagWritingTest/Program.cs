@@ -21,8 +21,10 @@ namespace OctaneTagWritingTest
                 return;
             }
 
-            // Initialize configuration
-            ApplicationConfig config;
+            // Initialize configuration with defaults to satisfy compiler
+            // The configuration will be replaced based on command line
+            // arguments or interactive input.
+            ApplicationConfig config = new ApplicationConfig();
             bool isRunningInDebugMode = false;
 
 #if DEBUG
