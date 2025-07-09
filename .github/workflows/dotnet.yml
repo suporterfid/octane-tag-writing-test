@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
       - name: Checkout repository
@@ -22,8 +22,15 @@ jobs:
       - name: Build solution
         run: dotnet build OctaneTagWritingTest/OctaneTagWritingTest.csproj --configuration Release --no-restore
 
-      - name: Publish output
-        run: dotnet publish OctaneTagWritingTest/OctaneTagWritingTest.csproj --configuration Release --output ./publish --no-build
+      - name: Publish output for Windows
+        run: |
+          dotnet publish OctaneTagWritingTest/OctaneTagWritingTest.csproj \
+            --configuration Release \
+            --runtime win-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            --output ./publish \
+            --no-build
 
       # Optional: Run unit tests if needed
       # - name: Run tests
