@@ -291,14 +291,14 @@ namespace OctaneTagWritingTest.JobStrategies
             verifierSettings.Session = (ushort)verifierReaderSettings.Session;
 
             verifierSettings.Gpis.EnableAll();
-            verifierSettings.Gpis.GetGpi(1).DebounceInMs = applicationConfig.GpiDebounceInMs;
-            verifierSettings.Gpis.GetGpi(2).DebounceInMs = applicationConfig.GpiDebounceInMs;
+            verifierSettings.Gpis.GetGpi(1).DebounceInMs = (uint)applicationConfig.GpiDebounceInMs;
+            verifierSettings.Gpis.GetGpi(2).DebounceInMs = (uint)applicationConfig.GpiDebounceInMs;
 
             verifierSettings.Gpos.GetGpo(1).Mode = GpoMode.Pulsed;
-            verifierSettings.Gpos.GetGpo(1).GpoPulseDurationMsec = applicationConfig.GpoPulseDurationMs;
+            verifierSettings.Gpos.GetGpo(1).GpoPulseDurationMsec = (uint)applicationConfig.GpoPulseDurationMs;
 
             verifierSettings.Gpos.GetGpo(2).Mode = GpoMode.Pulsed;
-            verifierSettings.Gpos.GetGpo(2).GpoPulseDurationMsec = applicationConfig.GpoPulseDurationMs;
+            verifierSettings.Gpos.GetGpo(2).GpoPulseDurationMsec = (uint)applicationConfig.GpoPulseDurationMs;
 
             verifierSettings.AutoStart.Mode = AutoStartMode.GpiTrigger;
             verifierSettings.AutoStart.GpiPortNumber = 1;
