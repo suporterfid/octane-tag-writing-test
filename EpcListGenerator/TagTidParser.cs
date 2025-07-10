@@ -56,11 +56,27 @@ namespace OctaneTagWritingTest.Helpers
             if (IsImpinjTid())
             {
                 ulong serial = 0;
-                for (int i = 6; i <= 10; i++)
-                    serial = (serial << 8) | _tid[i];
+                if (IsM700Series() || IsM800Series())
+                {
+                    // Aplica a fórmula MSS de 38 bits
+                    serial = ((ulong)(_tid[6] & 0x3F) << 32)
+                                 | ((ulong)_tid[7] << 24)
+                                 | ((ulong)_tid[8] << 16)
+                                 | ((ulong)_tid[9] << 8)
+                                 | _tid[10];
+                }
+                else
+                {
+                    if(IsR6Series())
+                    {
+                        serial = GetR6Series38BitSerial();
+                    }
+                }
 
-                return serial.ToString("X10");
+                return serial.ToString("X10"); // retorna em hexadecimal, com padding
+
             }
+
 
             return GetFallbackSerialHex();
         }
@@ -71,10 +87,45 @@ namespace OctaneTagWritingTest.Helpers
             return Convert.ToUInt64(hex, 16);
         }
 
+        private ulong GetR6Series38BitSerial()
+        {
+            if (_disposed) throw new ObjectDisposedException(nameof(TagTidParser));
+            if (!IsR6Series()) throw new InvalidOperationException("Tag is not a Monza R6 family chip.");
+
+            ulong serial = ((ulong)(_tid[6] & 0x3F) << 32)
+                         | ((ulong)_tid[7] << 24)
+                         | ((ulong)_tid[8] << 16)
+                         | ((ulong)_tid[9] << 8)
+                         | _tid[10];
+
+            return serial; // em decimal
+        }
+
         private string GetFallbackSerialHex()
         {
             return BitConverter.ToString(_tid, _tid.Length - 5, 5).Replace("-", "");
         }
+
+        private bool IsR6Series()
+        {
+            int tmn = ((_tid[2] & 0x0F) << 8) | _tid[3];
+            return tmn is 0x120 or 0x121 or 0x122 or 0x170; // inclui R6, R6-A/B, R6-P
+        }
+
+        private bool IsM700Series()
+        {
+            // Verifica se o TMN corresponde a um chip M700
+            int tmn = ((_tid[2] & 0x0F) << 8) | _tid[3];
+            return tmn is 0x190 or 0x191 or 0x1A0 or 0x1A2;
+        }
+
+        private bool IsM800Series()
+        {
+            // Verifica se o TMN corresponde a um chip M800 (M830/M850)
+            int tmn = ((_tid[2] & 0x0F) << 8) | _tid[3];
+            return tmn == 0x1B0;
+        }
+
 
         private bool IsImpinjTid()
         {
