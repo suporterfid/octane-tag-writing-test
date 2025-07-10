@@ -11,14 +11,18 @@ public class Sgtin96Tests
     {
         TDTEngine _tdtEngine = new();
         // Arrange
-        string originalGtin = "07891033586424";
+        string originalGtin = "07891033748938";
         int companyPrefixLength = 6;
+        //long serial = 0;
+        long serial = 222021562883;
 
         // Act
-        string epcIdentifier = @"gtin=" + originalGtin + ";serial=" + 0;
+        string epcIdentifier = @"gtin=" + originalGtin + ";serial=" + serial;
         string parameterList = @"filter=1;gs1companyprefixlength=6;tagLength=96";
         string binary = _tdtEngine.Translate(epcIdentifier, parameterList, @"BINARY");
         string epcHex = _tdtEngine.BinaryToHex(binary);
+        // print epcHex
+        Console.WriteLine("EPC Hex: " + epcHex.ToUpper());
 
         var epcIdentifierBinary = _tdtEngine.HexToBinary(epcHex);
         var parameterListDecode = @"tagLength=96";
@@ -31,6 +35,9 @@ public class Sgtin96Tests
         var tagDataKeyName = epcKeyParts[0];
         var tagDataKey = epcKeyParts[1];
 
+        Console.WriteLine("serial: " + serial);
+        Console.WriteLine("originalGtin: " + originalGtin);
+        Console.WriteLine(" decodedGtin: " + tagDataKey);
         // Assert
         Assert.AreEqual(originalGtin, tagDataKey);
     }
