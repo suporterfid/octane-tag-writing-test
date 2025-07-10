@@ -4,6 +4,7 @@ using System.IO;
 using System.Security.Cryptography;
 using Impinj.TagUtils;
 using OctaneTagWritingTest.Helpers;
+using TagDataTranslation;
 
 namespace EpcListGenerator
 {
@@ -12,6 +13,8 @@ namespace EpcListGenerator
     /// </summary>
     public sealed class EpcListGeneratorHelper
     {
+        private static readonly TDTEngine _tdtEngine = new();
+
         // Lazy initialization of the singleton instance (thread-safe).
         private static readonly Lazy<EpcListGeneratorHelper> instance =
             new Lazy<EpcListGeneratorHelper>(() => new EpcListGeneratorHelper());
@@ -57,10 +60,20 @@ namespace EpcListGenerator
             // Generate EPCs sequentially.
             for (long i = 1; i <= quantity; i++)
             {
-                // Create the Sgtin96 object using the provided GTIN and a partition value of 6.
-                var sgtin96 = Sgtin96.FromGTIN(gtin, 6);
-                sgtin96.SerialNumber = (ulong)i;
-                epcList.Add(sgtin96.ToEpc());
+                try
+                {
+                    string epcIdentifier = @"gtin=" + gtin + ";serial="+i;
+                    string parameterList = @"filter=1;gs1companyprefixlength=6;tagLength=96";
+                    string binary = _tdtEngine.Translate(epcIdentifier, parameterList, @"BINARY");
+                    string sgtinHex = _tdtEngine.BinaryToHex(binary);
+
+                    epcList.Add(sgtinHex.ToUpper());
+
+                }
+                catch (Exception)
+                {
+
+                }
             }
 
             return epcList;

@@ -6,9 +6,12 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using TagDataTranslation;
 
 public sealed class EpcListManager
 {
+    private static readonly TDTEngine _tdtEngine = new();
+
     // Singleton instance with lazy initialization (thread-safe)
     private static readonly Lazy<EpcListManager> instance =
         new Lazy<EpcListManager>(() => new EpcListManager());
@@ -81,9 +84,12 @@ public sealed class EpcListManager
             {
                 try
                 {
-                    var sgtin = Sgtin96.FromGTIN(prefix, 6);
+                    string epcIdentifier = @"gtin="+ prefix + ";serial=0";
+                    string parameterList = @"filter=1;gs1companyprefixlength=6;tagLength=96";
+                    string binary = _tdtEngine.Translate(epcIdentifier, parameterList, @"BINARY");
+                    string sgtinHex = _tdtEngine.BinaryToHex(binary).ToUpper();
 
-                    epcPrefix = sgtin.ToEpc().Substring(0, 14);
+                    epcPrefix = sgtinHex.Substring(0, 14);
 
                     //string epmtyEpcUri = sgtin.GetSGTINZeroValueSerialNumber();
 

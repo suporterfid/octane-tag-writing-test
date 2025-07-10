@@ -388,3 +388,6 @@ OctaneTagWritingTest/bin/Debug/OctaneTagWritingTest/Renci.SshNet.dll
 OctaneTagWritingTest/bin/Debug/OctaneTagWritingTest/TagUtils.dll
 OctaneTagWritingTest/bin/Debug/OctaneTagWritingTest/TagUtils.pdb
 OctaneTagWritingTest/bin/Debug/OctaneTagWritingTest_v1.0.4-beta1-Bin.zip
+/OctaneTagWritingTest/bin
+/TagUtils.Tests/bin
+/TagUtils.Tests/obj
