@@ -13,8 +13,8 @@ public class Sgtin96Tests
         // Arrange
         string originalGtin = "07891033748938";
         int companyPrefixLength = 6;
-        //long serial = 0;
-        long serial = 222021562883;
+        //ulong serial = 0;
+        ulong serial = 245375442947;
 
         // Act
         string epcIdentifier = @"gtin=" + originalGtin + ";serial=" + serial;

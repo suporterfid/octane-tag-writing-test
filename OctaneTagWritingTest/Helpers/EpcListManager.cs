@@ -80,16 +80,27 @@ public sealed class EpcListManager
                 prefix = prefix.Substring(0, 14);
             // throw new InvalidOperationException("Combined header and item code must be 14 characters.");
 
-            if(!string.IsNullOrEmpty(gtin))
+            string newEpc = "";
+            if (!string.IsNullOrEmpty(gtin))
             {
                 try
                 {
-                    string epcIdentifier = @"gtin="+ prefix + ";serial=0";
+                    ulong epcSerial = 0;
+
+                    using (var parser = new TagTidParser(tid))
+                    {
+                        string tidSuffix = parser.Get40BitSerialHex();
+                        epcSerial = parser.Get40BitSerialDecimal();
+                        Console.WriteLine($"Serial extraído: {tidSuffix} = {epcSerial}");
+                    }
+
+                    string epcIdentifier = @"gtin="+ prefix + ";serial="+ epcSerial;
                     string parameterList = @"filter=1;gs1companyprefixlength=6;tagLength=96";
                     string binary = _tdtEngine.Translate(epcIdentifier, parameterList, @"BINARY");
                     string sgtinHex = _tdtEngine.BinaryToHex(binary).ToUpper();
 
-                    epcPrefix = sgtinHex.Substring(0, 14);
+                    //epcPrefix = sgtinHex.Substring(0, 14);
+                    
 
                     //string epmtyEpcUri = sgtin.GetSGTINZeroValueSerialNumber();
 
@@ -97,7 +108,7 @@ public sealed class EpcListManager
                     //var emptySgtin = Sgtin96.FromSgtin96Uri(epmtyEpcUri);
                     //// get the first 14 digits of the empty EPC
                     //epcPrefix = emptySgtin.ToEpc().Substring(0, 14);
-                    
+
                 }
                 catch (Exception)
                 {
@@ -107,23 +118,23 @@ public sealed class EpcListManager
             else
             {
                 epcPrefix = prefix;
+
+                // Take the remaining 10 digits from the current EPC
+                string remainingDigits = currentEpc.Substring(14);
+
+                // Take the last 10 digits from the TID
+                string tidSuffix = tid.Substring(14);
+                tidSuffix = tidSuffix.PadLeft(10, '0');
+
+                using (var parser = new TagTidParser(tid))
+                {
+                    tidSuffix = parser.Get40BitSerialHex();
+                    Console.WriteLine($"Serial extraído: {tidSuffix}");
+                }
+
+                // Combine to create the new EPC
+                newEpc = epcPrefix + tidSuffix;
             }
-
-            // Take the remaining 10 digits from the current EPC
-            string remainingDigits = currentEpc.Substring(14);
-
-            // Take the last 10 digits from the TID
-            string tidSuffix = tid.Substring(14);
-            tidSuffix = tidSuffix.PadLeft(10, '0');
-
-            using (var parser = new TagTidParser(tid))
-            {
-                tidSuffix = parser.Get40BitSerialHex();
-                Console.WriteLine($"Serial extraído: {tidSuffix}");
-            }
-
-            // Combine to create the new EPC
-            string newEpc = epcPrefix + tidSuffix;
 
             // Store the new EPC in the dictionary associated with the TID
             generatedEpcsByTid.AddOrUpdate(tid, newEpc, (key, oldValue) => newEpc);
