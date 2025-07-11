@@ -4,11 +4,13 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
+using Serilog;
 
 namespace OctaneTagWritingTest.JobStrategies
 {
     public class JobStrategy0ReadOnlyLogging : BaseTestStrategy
     {
+        private static readonly ILogger Logger = LoggingConfiguration.CreateStrategyLogger("ReadOnlyLogging");
         private readonly Dictionary<string, int> tagReadCounts = new();
 
         public JobStrategy0ReadOnlyLogging(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings)
@@ -23,8 +25,8 @@ namespace OctaneTagWritingTest.JobStrategies
             {
                 this.cancellationToken = cancellationToken;
 
-                Console.WriteLine("Starting Read Logging Test Strategy...");
-                Console.WriteLine("Press 'q' to stop the test and return to menu.");
+                Logger.Information("Starting Read Logging Test Strategy");
+                Logger.Information("Press 'q' to stop the test and return to menu");
 
                 ConfigureReader();
 
@@ -37,11 +39,11 @@ namespace OctaneTagWritingTest.JobStrategies
                 while (!IsCancellationRequested())
                     Thread.Sleep(100);
 
-                Console.WriteLine("\nStopping test...");
+                Logger.Information("Stopping read logging test");
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error during reading test: " + ex.Message);
+                Logger.Error(ex, "Error during reading test: {ErrorMessage}", ex.Message);
             }
             finally
             {
@@ -67,7 +69,8 @@ namespace OctaneTagWritingTest.JobStrategies
                 double rssi = tag.PeakRssiInDbm;
                 ushort antennaPort = tag.AntennaPortNumber;
 
-                Console.WriteLine($"Read tag TID={tidHex}, EPC={epcHex}, Count={tagReadCounts[tidHex]}");
+                Logger.Information("Read tag TID={TID}, EPC={EPC}, Count={ReadCount}, RSSI={RSSI}, Antenna={AntennaPort}", 
+                    tidHex, epcHex, tagReadCounts[tidHex], rssi, antennaPort);
 
                 LogToCsv($"{timestamp},{tidHex},{epcHex},{tagReadCounts[tidHex]},{rssi},{antennaPort}");
             }

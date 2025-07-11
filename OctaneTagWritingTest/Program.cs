@@ -1,15 +1,22 @@
-﻿using OctaneTagWritingTest.Helpers;
+﻿﻿using OctaneTagWritingTest.Helpers;
 using System.Diagnostics;
+using Serilog;
 
 namespace OctaneTagWritingTest
 {
     internal class Program
     {
+        private static readonly ILogger Logger = LoggingConfiguration.CreateLogger<Program>();
+
         static void Main(string[] args)
         {
             // Configure the console window
             Console.Clear();
             Console.Title = "Serializer";
+
+            // Initialize structured logging first
+            LoggingConfiguration.ConfigureLogging("main", Serilog.Events.LogEventLevel.Information);
+            Logger.Information("Application starting with arguments: {Arguments}", args);
 
             // The .NET diagnostics trace listener configuration
             ConfigureTraceListeners();
@@ -33,11 +40,12 @@ namespace OctaneTagWritingTest
             // or enter interactive mode automatically for convenience
             if (args.Length == 0)
             {
-                Console.WriteLine("Debug mode detected with no arguments - entering interactive mode");
+                Logger.Information("Debug mode detected with no arguments - entering interactive mode");
                 config = InteractiveConfig.Configure();
             }
             else
             {
+                Logger.Information("Debug mode - parsing command line arguments");
                 config = CommandLineParser.ParseArgs(args);
             }
 #endif
@@ -82,6 +90,9 @@ namespace OctaneTagWritingTest
 
             // Main application loop
             RunApplicationLoop(manager);
+            
+            // Ensure logs are flushed before application exit
+            LoggingConfiguration.CloseAndFlush();
         }
 
         private static void ConfigureTraceListeners()
@@ -211,11 +222,11 @@ namespace OctaneTagWritingTest
                 }
                 catch (OperationCanceledException)
                 {
-                    Console.WriteLine("\nTest cancelled by user.");
+                    Logger.Information("Test cancelled by user");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"\nError executing test: {ex.Message}");
+                    Logger.Error(ex, "Error executing test: {ErrorMessage}", ex.Message);
                 }
 
                 // Wait for the key monitoring task to complete

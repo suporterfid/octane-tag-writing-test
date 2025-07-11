@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "8QHQpGZg36g=",
+  "dgSpecHash": "Zi+lD9JcO6I=",
   "success": true,
   "projectFilePath": "C:\\Users\\alexa\\Dropbox\\workspace\\impinj\\octane-tag-writing-test\\TagUtils\\TagUtils.csproj",
   "expectedPackageFiles": [
@@ -8,6 +8,9 @@
     "C:\\Users\\alexa\\.nuget\\packages\\libltknet-sdk\\12.0.0\\libltknet-sdk.12.0.0.nupkg.sha512",
     "C:\\Users\\alexa\\.nuget\\packages\\newtonsoft.json\\13.0.3\\newtonsoft.json.13.0.3.nupkg.sha512",
     "C:\\Users\\alexa\\.nuget\\packages\\octanesdk\\5.0.0\\octanesdk.5.0.0.nupkg.sha512",
+    "C:\\Users\\alexa\\.nuget\\packages\\serilog\\3.1.1\\serilog.3.1.1.nupkg.sha512",
+    "C:\\Users\\alexa\\.nuget\\packages\\serilog.sinks.console\\5.0.1\\serilog.sinks.console.5.0.1.nupkg.sha512",
+    "C:\\Users\\alexa\\.nuget\\packages\\serilog.sinks.file\\5.0.0\\serilog.sinks.file.5.0.0.nupkg.sha512",
     "C:\\Users\\alexa\\.nuget\\packages\\ssh.net\\2024.1.0\\ssh.net.2024.1.0.nupkg.sha512"
   ],
   "logs": []

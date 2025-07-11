@@ -9,19 +9,21 @@ using System.Threading.Tasks;
 using Impinj.OctaneSdk;
 using OctaneTagWritingTest.Helpers;
 using Org.LLRP.LTK.LLRPV1.Impinj;
+using Serilog;
 
 namespace OctaneTagWritingTest.JobStrategies
 {
-    /// <summary> /// Single-reader “CheckBox” strategy. 
+    /// <summary> /// Single-reader "CheckBox" strategy. 
     /// /// This strategy uses a single reader configured with four antennas. 
     /// /// It reads tags for a configurable period, then confirms the number of tags, 
     /// /// generates a new EPC using a fixed header ("E7") concatenated with a 12-digit SKU (provided by the user) 
-    /// /// and the last 10 hexadecimal digits of the tag’s TID – forming a 24-digit EPC. 
+    /// /// and the last 10 hexadecimal digits of the tag's TID – forming a 24-digit EPC. 
     /// /// The writing phase runs until all collected tags are written or until a write timeout is reached. 
-    /// /// At the end, it verifies each tag’s new EPC and reports the results. 
+    /// /// At the end, it verifies each tag's new EPC and reports the results. 
     /// /// </summary> 
     public class JobStrategy9CheckBox : BaseTestStrategy
     {
+        private static readonly ILogger Logger = LoggingConfiguration.CreateStrategyLogger("CheckBoxStrategy");
         private ImpinjReader writerReader;
         // Duration for tag collection (in seconds)
         private const int ReadDurationSeconds = 10;
@@ -64,8 +66,8 @@ namespace OctaneTagWritingTest.JobStrategies
             try
             {
                 this.cancellationToken = cancellationToken;
-                Console.WriteLine("=== Single Reader CheckBox Test ===");
-                Console.WriteLine("GPI events on Port 1 will trigger tag collection, write, and verification. Press 'q' to cancel.");
+                Logger.Information("=== Single Reader CheckBox Test ===");
+                Logger.Information("GPI events on Port 1 will trigger tag collection, write, and verification. Press 'q' to cancel");
 
                 // Load any required EPC list.
                 EpcListManager.Instance.LoadEpcList("epc_list.txt");
@@ -77,7 +79,7 @@ namespace OctaneTagWritingTest.JobStrategies
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error during writer reader configuration in CheckBox strategy. {ex.Message}");
+                    Logger.Error(ex, "Error during writer reader configuration in CheckBox strategy: {ErrorMessage}", ex.Message);
                     throw;
                 }
 
@@ -98,7 +100,7 @@ namespace OctaneTagWritingTest.JobStrategies
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error in JobStrategy9CheckBox: " + ex.Message);
+                Logger.Error(ex, "Error in JobStrategy9CheckBox: {ErrorMessage}", ex.Message);
             }
             finally
             {
@@ -191,7 +193,7 @@ namespace OctaneTagWritingTest.JobStrategies
                 // Use Interlocked.CompareExchange to ensure only one processing instance runs.
                 if (Interlocked.CompareExchange(ref gpiProcessingFlag, 1, 0) == 0)
                 {
-                    Console.WriteLine("GPI Port 1 is TRUE - initiating tag collection and processing.");
+                    Logger.Information("GPI Port 1 is TRUE - initiating tag collection and processing");
                     // Begin tag collection.
                     bool collectionConfirmed = await WaitForReadTagsAsync();
                     if (collectionConfirmed)
@@ -205,13 +207,13 @@ namespace OctaneTagWritingTest.JobStrategies
                 }
                 else
                 {
-                    Console.WriteLine("GPI Port 1 event received while processing already in progress. Ignoring duplicate trigger.");
+                    Logger.Warning("GPI Port 1 event received while processing already in progress. Ignoring duplicate trigger");
                 }
             }
             else
             {
                 // When GPI state becomes false, reset the processing flag.
-                Console.WriteLine("GPI Port 1 is FALSE - resetting processing flag.");
+                Logger.Information("GPI Port 1 is FALSE - resetting processing flag");
                 CleanupWriterReader();
                 Interlocked.Exchange(ref gpiProcessingFlag, 0);
                 
@@ -225,24 +227,24 @@ namespace OctaneTagWritingTest.JobStrategies
         private async Task<bool> WaitForReadTagsAsync()
         {
             isCollectingTags = true;
-            Console.WriteLine("Collecting tags for {0} seconds...", ReadDurationSeconds);
+            Logger.Information("Collecting tags for {ReadDurationSeconds} seconds", ReadDurationSeconds);
             try
             {
                 await Task.Delay(ReadDurationSeconds * 1000, cancellationToken);
             }
             catch (TaskCanceledException)
             {
-                Console.WriteLine("Tag collection was canceled.");
+                Logger.Information("Tag collection was canceled");
                 return false;
             }
             // End tag collection so that no new tags are accepted.
             isCollectingTags = false;
 
-            Console.WriteLine("Tag collection ended. Total tags collected: {0}. Confirm? (y/n)", tagData.Count);
+            Logger.Information("Tag collection ended. Total tags collected: {TagCount}. Confirm? (y/n)", tagData.Count);
             string confirmation = Console.ReadLine();
             if (!confirmation.Equals("y", StringComparison.OrdinalIgnoreCase))
             {
-                Console.WriteLine("Operation canceled by user.");
+                Logger.Information("Operation canceled by user");
                 //writerReader.Disconnect();
                 return false;
             }
@@ -255,7 +257,7 @@ namespace OctaneTagWritingTest.JobStrategies
         /// </summary>
         private async Task EncodeReadTagsAsync()
         {
-            Console.WriteLine("Starting write phase...");
+            Logger.Information("Starting write phase");
             Stopwatch globalWriteTimer = Stopwatch.StartNew();
             Stopwatch swWrite = new Stopwatch();
 
@@ -263,7 +265,7 @@ namespace OctaneTagWritingTest.JobStrategies
             {
                 if (globalWriteTimer.Elapsed.TotalSeconds > WriteTimeoutSeconds)
                 {
-                    Console.WriteLine("Global write timeout reached.");
+                    Logger.Warning("Global write timeout reached after {WriteTimeoutSeconds} seconds", WriteTimeoutSeconds);
                     break;
                 }
                 Tag tag = kvp.Value;
@@ -321,7 +323,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     if (!string.IsNullOrEmpty(tid))
                     {
                         verificationTags.TryAdd(tid, tag);
-                        Console.WriteLine("Verification read: TID: {0}, EPC: {1}", tid, epc);
+                        Logger.Information("Verification read: TID: {TID}, EPC: {EPC}", tid, epc);
                     }
                 }
             }
@@ -337,7 +339,7 @@ namespace OctaneTagWritingTest.JobStrategies
                         continue;
                     collectedTags.TryAdd(tid, tag);
                     tagData.AddOrUpdate(tid, (epc, string.Empty), (key, old) => (epc, old.VerifiedEpc));
-                    Console.WriteLine("Detected Tag: TID: {0}, EPC: {1}, Antenna: {2}", tid, epc, tag.AntennaPortNumber);
+                    Logger.Information("Detected Tag: TID: {TID}, EPC: {EPC}, Antenna: {AntennaPort}", tid, epc, tag.AntennaPortNumber);
                 }
             }
         }
@@ -348,7 +350,7 @@ namespace OctaneTagWritingTest.JobStrategies
         /// </summary>
         private async Task VerifyWrittenTagsAsync()
         {
-            Console.WriteLine("Starting verification phase...");
+            Logger.Information("Starting verification phase");
             // Prepare for verification.
             verificationTags.Clear();
             isVerificationPhase = true;
@@ -359,7 +361,7 @@ namespace OctaneTagWritingTest.JobStrategies
             }
             catch (TaskCanceledException)
             {
-                Console.WriteLine("Verification phase was canceled.");
+                Logger.Information("Verification phase was canceled");
                 isVerificationPhase = false;
                 return;
             }
@@ -376,7 +378,7 @@ namespace OctaneTagWritingTest.JobStrategies
                         || string.Equals(reportedEpc, expected.VerifiedEpc, StringComparison.Ordinal))
                     {
                         verifiedCount++;
-                        Console.WriteLine("Verification SUCCESS: TID {0} reported EPC {1}", tid, reportedEpc);
+                        Logger.Information("Verification SUCCESS: TID {TID} reported EPC {ReportedEPC}", tid, reportedEpc);
                         var status = "Success";
 
                         LogToCsv($"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{tid},{reportedEpc},{expected.VerifiedEpc}");
@@ -384,7 +386,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     }
                     else
                     {
-                        Console.WriteLine("Verification FAILURE: TID {0} expected EPC {1} but got {2}", tid, expected.VerifiedEpc, reportedEpc);
+                        Logger.Warning("Verification FAILURE: TID {TID} expected EPC {ExpectedEPC} but got {ReportedEPC}", tid, expected.VerifiedEpc, reportedEpc);
                         var status = "Failure";
 
                         LogToCsv($"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{tid},{reportedEpc},{expected.VerifiedEpc}");
@@ -393,10 +395,10 @@ namespace OctaneTagWritingTest.JobStrategies
                 }
                 else
                 {
-                    Console.WriteLine("Verification: No expected EPC recorded for TID {0}", tid);
+                    Logger.Warning("Verification: No expected EPC recorded for TID {TID}", tid);
                 }
             }
-            Console.WriteLine("Verification complete: {0} / {1} tags verified successfully.", verifiedCount, tagData.Count);
+            Logger.Information("Verification complete: {VerifiedCount} / {TotalCount} tags verified successfully", verifiedCount, tagData.Count);
         }
 
         /// <summary>
@@ -406,7 +408,7 @@ namespace OctaneTagWritingTest.JobStrategies
         {
             try
             {
-                Console.WriteLine("CleanupWriterReader running... ");
+                Logger.Information("CleanupWriterReader running");
                 if (sw != null && sw.IsRunning)
                 {
                     sw.Stop();
@@ -424,11 +426,11 @@ namespace OctaneTagWritingTest.JobStrategies
                 verificationTags.Clear();
                 tagData.Clear();
                 TagOpController.Instance.CleanUp();
-                Console.WriteLine("CleanupWriterReader done. ");
+                Logger.Information("CleanupWriterReader done");
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error during CleanupWriterReader: " + ex.Message);
+                Logger.Error(ex, "Error during CleanupWriterReader: {ErrorMessage}", ex.Message);
             }
         }
 
@@ -447,9 +449,7 @@ namespace OctaneTagWritingTest.JobStrategies
             {
                 int successCount = TagOpController.Instance.GetSuccessCount();
                 int totalReadCount = TagOpController.Instance.GetTotalReadCount();
-                Console.WriteLine($"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-                Console.WriteLine($"!!!!!!!!!!!!!!!!!!!!!!!!!! Total Read [{totalReadCount}] Success count: [{successCount}] !!!!!!!!!!!!!!!!!!!!!!!!!!");
-                Console.WriteLine($"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                Logger.Information("=== PROGRESS REPORT === Total Read: {TotalReadCount}, Success count: {SuccessCount}", totalReadCount, successCount);
                 try
                 {
                     Console.Title = $"Serializer: {totalReadCount} - {successCount}";
@@ -469,5 +469,3 @@ namespace OctaneTagWritingTest.JobStrategies
     }
 
 }
-
-

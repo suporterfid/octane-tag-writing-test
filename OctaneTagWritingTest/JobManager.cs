@@ -4,11 +4,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Serilog;
 
 namespace OctaneTagWritingTest
 {
     internal class JobManager
     {
+        private static readonly ILogger Logger = LoggingConfiguration.CreateLogger<JobManager>();
         private Dictionary<string, IJobStrategy> strategies = new Dictionary<string, IJobStrategy>();
         private Dictionary<string, ReaderSettings> readerSettings;
         private ApplicationConfig applicationConfig; // NOVO CAMPO
@@ -114,11 +116,11 @@ namespace OctaneTagWritingTest
 
         public void DisplayMenu()
         {
-            Console.WriteLine("\n=== Test Manager ===");
-            Console.WriteLine("Select a test to execute:");
+            Logger.Information("=== Test Manager ===");
+            Logger.Information("Select a test to execute:");
             foreach (var kvp in strategies)
             {
-                Console.WriteLine($"[{kvp.Key}] - {kvp.Value.GetType().Name}");
+                Logger.Information("[{Key}] - {StrategyName}", kvp.Key, kvp.Value.GetType().Name);
             }
         }
 
@@ -126,11 +128,12 @@ namespace OctaneTagWritingTest
         {
             if (strategies.ContainsKey(key))
             {
+                Logger.Information("Executing test strategy {Key}: {StrategyName}", key, strategies[key].GetType().Name);
                 strategies[key].RunJob(cancellationToken);
             }
             else
             {
-                Console.WriteLine("Invalid option.");
+                Logger.Warning("Invalid test option selected: {Key}", key);
             }
         }
     }

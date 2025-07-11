@@ -4,7 +4,7 @@
   "VerifierHostname": "192.168.68.248",
   "TestDescription": "TesteSGTIN",
   "Sgtin96Enabled": true,
-  "Sgtin96SourceGtin": "07891033748938",
+  "Sgtin96SourceGtin": "00196975121595",
 
   "EpcHeader": "B1",
   "EpcPlainItemCode": "33449900112222",
@@ -50,21 +50,21 @@
       {
         "Port": 1,
         "IsEnabled": true,
-        "TxPowerInDbm": 12,
+        "TxPowerInDbm": 17,
         "MaxRxSensitivity": true,
         "RxSensitivityInDbm": -70
       },
       {
         "Port": 2,
-        "IsEnabled": true,
-        "TxPowerInDbm": 12,
+        "IsEnabled": false,
+        "TxPowerInDbm": 15,
         "MaxRxSensitivity": true,
         "RxSensitivityInDbm": -70
       },
       {
         "Port": 3,
-        "IsEnabled": true,
-        "TxPowerInDbm": 12,
+        "IsEnabled": false,
+        "TxPowerInDbm": 15,
         "MaxRxSensitivity": true,
         "RxSensitivityInDbm": -70
       }
@@ -78,21 +78,21 @@
         "IsEnabled": true,
         "TxPowerInDbm": 12,
         "MaxRxSensitivity": true,
-        "RxSensitivityInDbm": -90
+        "RxSensitivityInDbm": -70
       },
       {
         "Port": 2,
         "IsEnabled": true,
         "TxPowerInDbm": 12,
         "MaxRxSensitivity": true,
-        "RxSensitivityInDbm": -90
+        "RxSensitivityInDbm": -70
       },
       {
         "Port": 3,
         "IsEnabled": true,
         "TxPowerInDbm": 12,
         "MaxRxSensitivity": true,
-        "RxSensitivityInDbm": -90
+        "RxSensitivityInDbm": -70
       }
     ]
   },
@@ -110,12 +110,12 @@
   "DetectorFilterOp": "NotMatch",
   "DetectorFilterMode": "OnlyFilter1",
 
-  "WriterTxPowerInDbm": 12,
+  "WriterTxPowerInDbm": 17,
   "WriterSearchMode": "SingleTarget",
   "WriterSession": 0,
   "WriterRfMode": 0,
   "WriterMaxRxSensitivity": true,
-  "WriterRxSensitivityInDbm": -90,
+  "WriterRxSensitivityInDbm": -70,
   "WriterMemoryBank": "Epc",
   "WriterBitPointer": 32,
   "WriterTagMask": "0017",
@@ -128,7 +128,7 @@
   "VerifierSession": 0,
   "VerifierRfMode": 0,
   "VerifierMaxRxSensitivity": true,
-  "VerifierRxSensitivityInDbm": -90,
+  "VerifierRxSensitivityInDbm": -70,
   "VerifierMemoryBank": "Epc",
   "VerifierBitPointer": 32,
   "VerifierTagMask": "0017",

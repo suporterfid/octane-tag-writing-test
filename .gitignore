@@ -391,3 +391,5 @@ OctaneTagWritingTest/bin/Debug/OctaneTagWritingTest_v1.0.4-beta1-Bin.zip
 /OctaneTagWritingTest/bin
 /TagUtils.Tests/bin
 /TagUtils.Tests/obj
+/EpcListGenerator/bin
+/TagUtils/obj

@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Serilog;
 
 namespace EpcListGenerator
 {
     internal class Program
     {
+        private static readonly ILogger Logger = Log.ForContext<Program>();
         // Entry point now supports async operations.
         static async Task Main(string[] args)
         {
@@ -25,25 +27,25 @@ namespace EpcListGenerator
                     string overwriteResponse = Console.ReadLine();
                     if (!overwriteResponse.Equals("y", StringComparison.OrdinalIgnoreCase))
                     {
-                        Console.WriteLine("Operation cancelled.");
+                        Logger.Information("Operation cancelled by user");
                         return;
                     }
                 }
 
-                Console.WriteLine("Generating EPC list...");
-
                 // Generate the custom EPC list.
                 List<string> epcList = EpcListGeneratorHelper.Instance.GenerateCustomEpcList(epcHeader, gtin, quantity, initalSerial);
+                
+                Logger.Information("Generating EPC list with {Quantity} EPCs", epcList.Count);
 
-                Console.WriteLine("Saving EPC list to file...");
+                Logger.Information("Saving EPC list to file: {OutputFile}", outputFile);
                 // Use asynchronous file writing for responsiveness.
                 await SaveEpcListToFileAsync(epcList, outputFile);
 
-                Console.WriteLine($"File '{outputFile}' created successfully with {epcList.Count} EPCs.");
+                Logger.Information("File '{OutputFile}' created successfully with {EpcCount} EPCs", outputFile, epcList.Count);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("An error occurred: " + ex.Message);
+                Logger.Error(ex, "An error occurred during EPC list generation: {ErrorMessage}", ex.Message);
             }
         }
 
@@ -104,7 +106,7 @@ namespace EpcListGenerator
                 if (string.IsNullOrWhiteSpace(gtin))
                 {
                     gtin = "99999999999999";
-                    Console.WriteLine($"GTIN not provided. Using default GTIN: {gtin}");
+                    Logger.Information("GTIN not provided. Using default GTIN: {DefaultGtin}", gtin);
                 }
 
                 // Prompt for quantity.
