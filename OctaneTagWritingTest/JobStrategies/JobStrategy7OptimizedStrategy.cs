@@ -13,11 +13,17 @@ namespace OctaneTagWritingTest.JobStrategies
         private readonly ConcurrentDictionary<string, int> retryCount = new ConcurrentDictionary<string, int>();
         private readonly ConcurrentDictionary<string, Stopwatch> swWriteTimers = new ConcurrentDictionary<string, Stopwatch>();
         private readonly ConcurrentDictionary<string, Stopwatch> swVerifyTimers = new ConcurrentDictionary<string, Stopwatch>();
-        private const int maxRetries = 3;
+        private readonly int maxRetries;
+        private readonly bool enableRetries;
+        private readonly bool measureSpeedOnly;
 
-        public JobStrategy7OptimizedStrategy(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings)
+        public JobStrategy7OptimizedStrategy(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings, 
+            int maxRetries = 3, bool enableRetries = true, bool measureSpeedOnly = false)
             : base(hostname, logFile, readerSettings)
         {
+            this.maxRetries = maxRetries;
+            this.enableRetries = enableRetries;
+            this.measureSpeedOnly = measureSpeedOnly;
             TagOpController.Instance.CleanUp();
         }
 
@@ -26,7 +32,9 @@ namespace OctaneTagWritingTest.JobStrategies
             try
             {
                 this.cancellationToken = cancellationToken;
-                Console.WriteLine("Starting optimized inline write, permalock, and verification strategy...");
+                string strategyDescription = measureSpeedOnly ? "speed measurement" : 
+                    enableRetries ? $"optimized write with up to {maxRetries} retries" : "optimized write without retries";
+                Console.WriteLine($"Starting {strategyDescription} strategy...");
 
                 ConfigureReader();
 
@@ -114,7 +122,7 @@ namespace OctaneTagWritingTest.JobStrategies
 
                     int retries = retryCount.GetOrAdd(tidHex, 0);
 
-                    if (resultStatus == "Verification Failure" && retries < maxRetries)
+                    if (enableRetries && resultStatus == "Verification Failure" && retries < maxRetries)
                     {
                         retryCount[tidHex] = retries + 1;
                         Console.WriteLine($"Verification failed, retry {retryCount[tidHex]} for TID {tidHex}");

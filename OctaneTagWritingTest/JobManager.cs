@@ -29,14 +29,17 @@ namespace OctaneTagWritingTest
                 testDescription = "Writing-Test-1-Round-1";
             }
             
+            // Core strategies - maintained
             strategies.Add("0", new JobStrategy0ReadOnlyLogging(hostnameWriter, $"TestCase0_ReadOnlyLogging_Log-{testDescription}.csv", readerSettings));
-            strategies.Add("1", new JobStrategy1SpeedStrategy(hostnameWriter, $"TestCase1_Log-SpeedStrategy-{testDescription}.csv", readerSettings));    
-            strategies.Add("2", new JobStrategy2MultiAntennaWriteStrategy(hostnameWriter, $"TestCase3_MultiAntenna_Log-{testDescription}.csv", readerSettings));
+            strategies.Add("2", new JobStrategy2MultiAntennaWriteStrategy(hostnameWriter, $"TestCase2_MultiAntenna_Log-{testDescription}.csv", readerSettings));
             strategies.Add("3", new JobStrategy3BatchSerializationPermalockStrategy(hostnameWriter, $"TestCase3_Log-BatchSerializationPermalockStrategy-{testDescription}.csv", readerSettings));
-            strategies.Add("4", new JobStrategy4VerificationCycleStrategy(hostnameWriter, $"TestCase4_VerificationCycle_Log-{testDescription}.csv", readerSettings));
-            strategies.Add("5", new JobStrategy5EnduranceStrategy(hostnameWriter, $"TestCase8_Endurance_Log-{testDescription}.csv", readerSettings));
-            strategies.Add("6", new JobStrategy6RobustnessStrategy(hostnameWriter, $"TestCase6_Robustness_Log-{testDescription}.csv", readerSettings));
-            strategies.Add("7", new JobStrategy7OptimizedStrategy(hostnameWriter, $"TestCase7_Log-OptimizedStrategy-{testDescription}.csv", readerSettings));
+            strategies.Add("5", new JobStrategy5EnduranceStrategy(hostnameWriter, $"TestCase5_Endurance_Log-{testDescription}.csv", readerSettings));
+            
+            // Consolidated strategies - JobStrategy7 now handles multiple scenarios
+            strategies.Add("1", new JobStrategy7OptimizedStrategy(hostnameWriter, $"TestCase1_Log-SpeedStrategy-{testDescription}.csv", readerSettings, maxRetries: 0, enableRetries: false, measureSpeedOnly: true)); // Speed test (was JobStrategy1)
+            strategies.Add("4", new JobStrategy5EnduranceStrategy(hostnameWriter, $"TestCase4_VerificationCycle_Log-{testDescription}.csv", readerSettings, maxCycles: 1)); // Single cycle verification (was JobStrategy4)
+            strategies.Add("6", new JobStrategy7OptimizedStrategy(hostnameWriter, $"TestCase6_Robustness_Log-{testDescription}.csv", readerSettings, maxRetries: 5, enableRetries: true)); // Robustness with 5 retries (was JobStrategy6)
+            strategies.Add("7", new JobStrategy7OptimizedStrategy(hostnameWriter, $"TestCase7_Log-OptimizedStrategy-{testDescription}.csv", readerSettings)); // Default optimized strategy
             
             // STRATEGY 8 ATUALIZADA: Passar ApplicationConfig
             strategies.Add("8", new JobStrategy8MultipleReaderEnduranceStrategy(

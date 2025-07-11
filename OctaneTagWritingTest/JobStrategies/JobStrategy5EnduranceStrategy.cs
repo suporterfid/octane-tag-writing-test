@@ -10,14 +10,15 @@ namespace OctaneTagWritingTest.JobStrategies
 {
     public class JobStrategy5EnduranceStrategy : BaseTestStrategy
     {
-        private const int MaxCycles = 10000;
+        private readonly int maxCycles;
         private readonly ConcurrentDictionary<string, int> cycleCount = new();
         private readonly ConcurrentDictionary<string, Stopwatch> swWriteTimers = new();
         private readonly ConcurrentDictionary<string, Stopwatch> swVerifyTimers = new();
         private Timer successCountTimer;
 
-        public JobStrategy5EnduranceStrategy(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings) : base(hostname, logFile, readerSettings)
+        public JobStrategy5EnduranceStrategy(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings, int maxCycles = 10000) : base(hostname, logFile, readerSettings)
         {
+            this.maxCycles = maxCycles;
             TagOpController.Instance.CleanUp();
         }
 
@@ -94,9 +95,9 @@ namespace OctaneTagWritingTest.JobStrategies
 
                 cycleCount.TryAdd(tidHex, 0);
 
-                if (cycleCount[tidHex] >= MaxCycles)
+                if (cycleCount[tidHex] >= maxCycles)
                 {
-                    Console.WriteLine($"Max cycles reached for TID {tidHex}, skipping further processing.");
+                    Console.WriteLine($"Max cycles ({maxCycles}) reached for TID {tidHex}, skipping further processing.");
                     continue;
                 }
 
