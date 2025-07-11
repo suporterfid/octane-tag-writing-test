@@ -99,8 +99,9 @@ public sealed class EpcListManager
                     string binary = _tdtEngine.Translate(epcIdentifier, parameterList, @"BINARY");
                     string sgtinHex = _tdtEngine.BinaryToHex(binary).ToUpper();
 
+                    newEpc = sgtinHex;
                     //epcPrefix = sgtinHex.Substring(0, 14);
-                    
+
 
                     //string epmtyEpcUri = sgtin.GetSGTINZeroValueSerialNumber();
 

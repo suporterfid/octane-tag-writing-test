@@ -1,10 +1,10 @@
 {
-  "DetectorHostname": "192.168.1.101",
-  "WriterHostname": "192.168.1.102",
-  "VerifierHostname": "192.168.1.103",
+  "DetectorHostname": "192.168.68.96",
+  "WriterHostname": "192.168.68.95",
+  "VerifierHostname": "192.168.68.248",
   "TestDescription": "TesteSGTIN",
   "Sgtin96Enabled": true,
-  "Sgtin96SourceGtin": "80614141123458",
+  "Sgtin96SourceGtin": "07891033748938",
 
   "EpcHeader": "B1",
   "EpcPlainItemCode": "33449900112222",
@@ -25,21 +25,21 @@
         "IsEnabled": true,
         "TxPowerInDbm": 12,
         "MaxRxSensitivity": true,
-        "RxSensitivityInDbm": -90
+        "RxSensitivityInDbm": -70
       },
       {
         "Port": 2,
         "IsEnabled": true,
         "TxPowerInDbm": 12,
         "MaxRxSensitivity": true,
-        "RxSensitivityInDbm": -90
+        "RxSensitivityInDbm": -70
       },
       {
         "Port": 3,
         "IsEnabled": true,
         "TxPowerInDbm": 12,
         "MaxRxSensitivity": true,
-        "RxSensitivityInDbm": -90
+        "RxSensitivityInDbm": -70
       }
 
     ]
@@ -52,21 +52,21 @@
         "IsEnabled": true,
         "TxPowerInDbm": 12,
         "MaxRxSensitivity": true,
-        "RxSensitivityInDbm": -90
+        "RxSensitivityInDbm": -70
       },
       {
         "Port": 2,
         "IsEnabled": true,
         "TxPowerInDbm": 12,
         "MaxRxSensitivity": true,
-        "RxSensitivityInDbm": -90
+        "RxSensitivityInDbm": -70
       },
       {
         "Port": 3,
         "IsEnabled": true,
         "TxPowerInDbm": 12,
         "MaxRxSensitivity": true,
-        "RxSensitivityInDbm": -90
+        "RxSensitivityInDbm": -70
       }
     ]
   },
@@ -134,4 +134,5 @@
   "VerifierTagMask": "0017",
   "VerifierBitCount": 16,
   "VerifierFilterOp": "NotMatch",
-  "VerifierFilterMode": "OnlyFilter1"}
+  "VerifierFilterMode": "OnlyFilter1"
+}

@@ -90,6 +90,52 @@ public class Sgtin96Tests
     }
 
     [Test]
+    public void FromGTIN_andM750TID_ShouldPreserveOriginalGTIN_WhenDecodedBack()
+    {
+        TDTEngine _tdtEngine = new();
+        // Arrange
+        string originalGtin = "07891033748938";
+        int companyPrefixLength = 6;
+        //ulong serial = 0;
+        ulong serial = 0;
+        string tid = "E280119020006356D8630332"; // M730 TID example
+
+        Console.WriteLine($"TID M750: {tid}");
+
+        using (var parser = new TagTidParser(tid))
+        {
+            string tidSuffix = parser.Get40BitSerialHex();
+            serial = parser.Get40BitSerialDecimal();
+            Console.WriteLine($"Serial extraído: {tidSuffix} = {serial}");
+        }
+
+        // Act
+        string epcIdentifier = @"gtin=" + originalGtin + ";serial=" + serial;
+        string parameterList = @"filter=1;gs1companyprefixlength=6;tagLength=96";
+        string binary = _tdtEngine.Translate(epcIdentifier, parameterList, @"BINARY");
+        string epcHex = _tdtEngine.BinaryToHex(binary);
+        // print epcHex
+        Console.WriteLine("EPC Hex: " + epcHex.ToUpper());
+
+        var epcIdentifierBinary = _tdtEngine.HexToBinary(epcHex);
+        var parameterListDecode = @"tagLength=96";
+        var decodedEpc = _tdtEngine.Translate(epcIdentifierBinary, parameterListDecode, @"LEGACY");
+        var decodedEpcParts = decodedEpc.Split(";");
+        var epcKey = decodedEpcParts[0];
+        var epcSerial = "";
+        if (decodedEpcParts.Length == 2) epcSerial = decodedEpcParts[1];
+        var epcKeyParts = epcKey.Split("=");
+        var tagDataKeyName = epcKeyParts[0];
+        var tagDataKey = epcKeyParts[1];
+
+        Console.WriteLine("serial: " + serial);
+        Console.WriteLine("originalGtin: " + originalGtin);
+        Console.WriteLine(" decodedGtin: " + tagDataKey);
+        // Assert
+        Assert.AreEqual(originalGtin, tagDataKey);
+    }
+
+    [Test]
     public void FromGTIN_andR6TID_ShouldPreserveOriginalGTIN_WhenDecodedBack()
     {
         TDTEngine _tdtEngine = new();

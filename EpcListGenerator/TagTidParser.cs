@@ -44,14 +44,7 @@ namespace OctaneTagWritingTest.Helpers
         {
             if (_disposed) throw new ObjectDisposedException(nameof(TagTidParser));
 
-            if (IsNxpUcode9Tid())
-            {
-                ulong serial = 0;
-                for (int i = 7; i <= 11; i++)
-                    serial = (serial << 8) | _tid[i];
-
-                return serial.ToString("X10");
-            }
+            
 
             if (IsImpinjTid())
             {
@@ -75,6 +68,15 @@ namespace OctaneTagWritingTest.Helpers
 
                 return serial.ToString("X10"); // retorna em hexadecimal, com padding
 
+            }
+
+            if (IsNxpUcode9Tid())
+            {
+                ulong serial = 0;
+                for (int i = 7; i <= 11; i++)
+                    serial = (serial << 8) | _tid[i];
+
+                return serial.ToString("X10");
             }
 
 
