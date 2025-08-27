@@ -4,7 +4,7 @@
   "VerifierHostname": "192.168.68.248",
   "TestDescription": "TesteSGTIN",
   "Sgtin96Enabled": true,
-  "Sgtin96SourceGtin": "00196975121595",
+  "Sgtin96SourceGtin": "00197593899620",
 
   "EpcHeader": "B1",
   "EpcPlainItemCode": "33449900112222",
