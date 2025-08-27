@@ -42,6 +42,7 @@ namespace OctaneTagWritingTest.JobStrategies
         private bool useGpiForVerification = true;
         private bool gpiTriggerStateToProccessVerification = false;
         private ushort gpiPortToProcessVerification = 1;
+        private ushort gpiPortToStopVerification => (ushort)(gpiPortToProcessVerification == 1 ? 2 : 1);
         // Separate dictionary for capturing tags during the verification phase.
         private static ConcurrentDictionary<string, Tag> verificationTags = new ConcurrentDictionary<string, Tag>();
 
@@ -307,7 +308,7 @@ namespace OctaneTagWritingTest.JobStrategies
             verifierSettings.AutoStart.GpiLevel = gpiTriggerStateToProccessVerification;
 
             verifierSettings.AutoStop.Mode = AutoStopMode.GpiTrigger;
-            verifierSettings.AutoStop.GpiPortNumber = gpiPortToProcessVerification;
+            verifierSettings.AutoStop.GpiPortNumber = gpiPortToStopVerification;
             verifierSettings.AutoStop.GpiLevel = !gpiTriggerStateToProccessVerification;
 
             EnableLowLatencyReporting(verifierSettings, verifierReader);
@@ -328,19 +329,20 @@ namespace OctaneTagWritingTest.JobStrategies
        
         /// <summary>
         /// Handles GPI events for the reader.
-        /// Only processes events for the configured GPI port.
-        /// If the event State is true and not already processing, starts the tag collection flow.
-        /// When the state is false, resets the processing flag.
+        /// Processes events for the configured GPI start and stop ports.
+        /// If the start port state matches the configured trigger, begins the tag collection flow.
+        /// When the stop port is triggered, resets the processing flag.
         /// </summary>
         private async void OnGpiEvent(ImpinjReader sender, GpiEvent e)
         {
-            if (e.PortNumber != gpiPortToProcessVerification)
+            ushort stopPort = gpiPortToStopVerification;
+            if (e.PortNumber != gpiPortToProcessVerification && e.PortNumber != stopPort)
                 return;
             try
             {
                 if(useGpiForVerification)
                 {
-                    if (e.State == gpiTriggerStateToProccessVerification)
+                    if (e.PortNumber == gpiPortToProcessVerification && e.State == gpiTriggerStateToProccessVerification)
                     {
                         // New cycle: clear any previous verification tags
                         verificationTags.Clear();
@@ -354,11 +356,10 @@ namespace OctaneTagWritingTest.JobStrategies
                             Console.WriteLine($"GPI Port {gpiPortToProcessVerification} event received while processing already in progress. Ignoring duplicate trigger.");
                         }
                     }
-                    else
+                    else if (e.PortNumber == stopPort && e.State == !gpiTriggerStateToProccessVerification)
                     {
-                        // When GPI state becomes false, reset the processing flag.
-                        Console.WriteLine($"GPI Port {gpiPortToProcessVerification} is {e.State} - resetting processing flag.");
-                        //sender.TagsReported -= OnTagsReportedVerifier;
+                        // When GPI stop port is triggered, reset the processing flag.
+                        Console.WriteLine($"GPI Port {stopPort} is {e.State} - resetting processing flag.");
                         if(verificationTags.Count == 0)
                         {
                             sender.SetGpo(1, true);
@@ -367,13 +368,13 @@ namespace OctaneTagWritingTest.JobStrategies
                         Interlocked.Exchange(ref gpiProcessingFlag, 0);
                     }
                 }
-                
+
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"{ex.Message}");
             }
-            
+
         }
         private void OnTagsReportedDetector(ImpinjReader sender, TagReport report)
         {
