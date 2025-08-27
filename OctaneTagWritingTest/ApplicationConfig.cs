@@ -23,6 +23,7 @@ public class ApplicationConfig
 
     public bool GpiTriggerStateToProcessVerification { get; set; } = false;
     public bool UseGpiForVerification { get; set; } = true;
+    public int GpiPortToProcessVerification { get; set; } = 1;
 
     // New: make GPI debounce and GPO pulse duration configurable
     public int GpiDebounceInMs { get; set; } = 100;

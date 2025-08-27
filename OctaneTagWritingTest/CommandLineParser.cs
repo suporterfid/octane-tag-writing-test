@@ -59,6 +59,10 @@
             if (!string.IsNullOrEmpty(gpiTriggerState) && bool.TryParse(gpiTriggerState, out bool triggerState))
                 config.GpiTriggerStateToProcessVerification = triggerState;
 
+            string gpiPort = GetArgumentValue(args, "--gpi-port");
+            if (!string.IsNullOrEmpty(gpiPort) && int.TryParse(gpiPort, out int port))
+                config.GpiPortToProcessVerification = port;
+
             // Configuração de antenas via linha de comando
             ParseAntennaConfig(args, "--detector-antennas", config.DetectorAntennas);
             ParseAntennaConfig(args, "--writer-antennas", config.WriterAntennas);
@@ -135,6 +139,7 @@
             Console.WriteLine("  GPI CONFIGURATION:");
             Console.WriteLine("  --use-gpi-verification <true/false>    Enable/disable GPI for verification");
             Console.WriteLine("  --gpi-trigger-state <true/false>       GPI trigger state for verification processing");
+            Console.WriteLine("  --gpi-port <1|2>                        GPI port number used for verification");
             Console.WriteLine();
             Console.WriteLine("  ANTENNA CONFIGURATION:");
             Console.WriteLine("  --detector-antennas     Detector antennas config (format: port:power:maxRx:rxSens)");
