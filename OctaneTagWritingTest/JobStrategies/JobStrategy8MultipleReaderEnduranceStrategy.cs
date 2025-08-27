@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
+using System.Threading.Tasks;
 using Impinj.OctaneSdk;
 using OctaneTagWritingTest.Helpers;
 using Org.LLRP.LTK.LLRPV1.Impinj;
@@ -35,12 +36,20 @@ namespace OctaneTagWritingTest.JobStrategies
         private string writerAddress;
         private string verifierAddress;
 
+        private bool HasDetector => !string.IsNullOrWhiteSpace(detectorAddress);
+        private bool HasWriter => !string.IsNullOrWhiteSpace(writerAddress);
+        private bool HasVerifier => !string.IsNullOrWhiteSpace(verifierAddress);
+
         private Timer successCountTimer;
 
         // Flag to indicate if the GPI processing is already running.
         private int gpiProcessingFlag = 0;
         private bool useGpiForVerification = true;
         private bool gpiTriggerStateToProccessVerification = false;
+        private ushort gpiPortToProcessVerification = 1;
+        private ushort gpiPortToStopVerification => (ushort)(gpiPortToProcessVerification == 1 ? 2 : 1);
+        private ushort gpoPortPulsed;
+        private ushort gpoPortStatic;
         // Separate dictionary for capturing tags during the verification phase.
         private static ConcurrentDictionary<string, Tag> verificationTags = new ConcurrentDictionary<string, Tag>();
 
@@ -63,6 +72,9 @@ namespace OctaneTagWritingTest.JobStrategies
             // CONFIGURAR as variáveis GPI a partir do ApplicationConfig
             useGpiForVerification = appConfig.UseGpiForVerification;
             gpiTriggerStateToProccessVerification = appConfig.GpiTriggerStateToProcessVerification;
+            gpiPortToProcessVerification = (ushort)appConfig.GpiPortToProcessVerification;
+            gpoPortPulsed = (ushort)appConfig.GpoPortPulsed;
+            gpoPortStatic = (ushort)appConfig.GpoPortStatic;
 
 
             detectorReader = new ImpinjReader();
@@ -89,78 +101,109 @@ namespace OctaneTagWritingTest.JobStrategies
                 Console.WriteLine("=== Multiple Reader Endurance Test ===");
                 Console.WriteLine("Press 'q' to stop the test and return to menu.");
 
+                if (!HasDetector && !HasWriter && !HasVerifier)
+                {
+                    Console.WriteLine("No reader configured. Aborting test.");
+                    return;
+                }
+
                 // Configure readers.
 
-                try
+                if (HasDetector)
                 {
-                    ConfigureDetectorReader();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("ConfigureDetectorReader - Error: " + ex.Message);
-                    throw;
-                }
-
-                try
-                {
-                    ConfigureWriterReader();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("ConfigureWriterReader - Error in dual reader endurance test: " + ex.Message);
-                    throw ex;
-                }
-                try
-                {
-                    ConfigureVerifierReader();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("ConfigureVerifierReader - Error in dual reader endurance test: " + ex.Message);
-                    throw ex;
+                    try
+                    {
+                        ConfigureDetectorReader();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("ConfigureDetectorReader - Error: " + ex.Message);
+                        throw;
+                    }
                 }
 
-
-                // Register event handlers.
-                detectorReader.TagsReported += OnTagsReportedDetector;
-                // Register event handlers for the writer reader.
-                writerReader.TagsReported += OnTagsReportedWriter;
-                writerReader.TagOpComplete += OnTagOpComplete;
-
-                // Register event handlers for the verifier reader.
-                verifierReader.TagsReported += OnTagsReportedVerifier;
-                verifierReader.TagOpComplete += OnTagOpComplete;
-                verifierReader.GpiChanged += OnGpiEvent;
-
-                // Start readers.
-
-                try
+                if (HasWriter)
                 {
-                    detectorReader.Start();
+                    try
+                    {
+                        ConfigureWriterReader();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("ConfigureWriterReader - Error in dual reader endurance test: " + ex.Message);
+                        throw ex;
+                    }
                 }
-                catch (Exception ex)
+
+                if (HasVerifier)
                 {
-                    Console.WriteLine("detectorReader - Error in dual reader endurance test: " + ex.Message);
-                    throw ex;
+                    try
+                    {
+                        ConfigureVerifierReader();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("ConfigureVerifierReader - Error in dual reader endurance test: " + ex.Message);
+                        throw ex;
+                    }
                 }
-                try
+
+                // Register event handlers only for active readers
+                if (HasDetector)
                 {
-                    writerReader.Start();
+                    detectorReader.TagsReported += OnTagsReportedDetector;
                 }
-                catch (Exception ex)
+                if (HasWriter)
                 {
-                    Console.WriteLine("writerReader - Error in dual reader endurance test: " + ex.Message);
-                    throw ex;
+                    writerReader.TagsReported += OnTagsReportedWriter;
+                    writerReader.TagOpComplete += OnTagOpComplete;
                 }
-                //try
-                //{
-                //    verifierReader.Start();
-                //}
-                //catch (Exception ex)
-                //{
-                //    Console.WriteLine("verifierReader - Error in dual reader endurance test: " + ex.Message);
-                //    throw ex;
-                //}
+                if (HasVerifier)
+                {
+                    verifierReader.TagsReported += OnTagsReportedVerifier;
+                    verifierReader.TagOpComplete += OnTagOpComplete;
+                    verifierReader.GpiChanged += OnGpiEvent;
+                }
+
+                // Start readers
+                if (HasDetector)
+                {
+                    try
+                    {
+                        detectorReader.Start();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("detectorReader - Error in dual reader endurance test: " + ex.Message);
+                        throw ex;
+                    }
+                }
+
+                if (HasWriter)
+                {
+                    try
+                    {
+                        writerReader.Start();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("writerReader - Error in dual reader endurance test: " + ex.Message);
+                        throw ex;
+                    }
+                }
+
+                if (HasVerifier && !useGpiForVerification)
+                {
+                    try
+                    {
+                        verifierReader.Start();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("verifierReader - Error in dual reader endurance test: " + ex.Message);
+                        throw ex;
+                    }
+                }
                 
                 
                 
@@ -294,18 +337,17 @@ namespace OctaneTagWritingTest.JobStrategies
             verifierSettings.Gpis.GetGpi(1).DebounceInMs = (uint)applicationConfig.GpiDebounceInMs;
             verifierSettings.Gpis.GetGpi(2).DebounceInMs = (uint)applicationConfig.GpiDebounceInMs;
 
-            verifierSettings.Gpos.GetGpo(1).Mode = GpoMode.Pulsed;
-            verifierSettings.Gpos.GetGpo(1).GpoPulseDurationMsec = (uint)applicationConfig.GpoPulseDurationMs;
+            verifierSettings.Gpos.GetGpo(gpoPortPulsed).Mode = GpoMode.Pulsed;
+            verifierSettings.Gpos.GetGpo(gpoPortPulsed).GpoPulseDurationMsec = (uint)applicationConfig.GpoPulseDurationMs;
 
-            verifierSettings.Gpos.GetGpo(2).Mode = GpoMode.Pulsed;
-            verifierSettings.Gpos.GetGpo(2).GpoPulseDurationMsec = (uint)applicationConfig.GpoPulseDurationMs;
+            verifierSettings.Gpos.GetGpo(gpoPortStatic).Mode = GpoMode.Normal;
 
             verifierSettings.AutoStart.Mode = AutoStartMode.GpiTrigger;
-            verifierSettings.AutoStart.GpiPortNumber = 1;
+            verifierSettings.AutoStart.GpiPortNumber = gpiPortToProcessVerification;
             verifierSettings.AutoStart.GpiLevel = gpiTriggerStateToProccessVerification;
 
             verifierSettings.AutoStop.Mode = AutoStopMode.GpiTrigger;
-            verifierSettings.AutoStop.GpiPortNumber = 1;
+            verifierSettings.AutoStop.GpiPortNumber = gpiPortToStopVerification;
             verifierSettings.AutoStop.GpiLevel = !gpiTriggerStateToProccessVerification;
 
             EnableLowLatencyReporting(verifierSettings, verifierReader);
@@ -323,55 +365,70 @@ namespace OctaneTagWritingTest.JobStrategies
             reader.ApplySettings(setReaderConfigMessage, addRoSpecMessage);
         }
 
+        private ImpinjReader SelectWriterReader()
+        {
+            if (writerReader != null && writerReader.IsConnected)
+                return writerReader;
+            if (verifierReader != null && verifierReader.IsConnected)
+                return verifierReader;
+            if (detectorReader != null && detectorReader.IsConnected)
+                return detectorReader;
+            return null;
+        }
+
        
         /// <summary>
         /// Handles GPI events for the reader.
-        /// Only processes events for Port 1.
-        /// If the event State is true and not already processing, starts the tag collection flow.
-        /// When the state is false, resets the processing flag.
+        /// Processes events for the configured GPI start and stop ports.
+        /// If the start port state matches the configured trigger, begins the tag collection flow.
+        /// When the stop port is triggered, resets the processing flag.
         /// </summary>
         private async void OnGpiEvent(ImpinjReader sender, GpiEvent e)
         {
-            if (e.PortNumber != 1)
+            ushort stopPort = gpiPortToStopVerification;
+            if (e.PortNumber != gpiPortToProcessVerification && e.PortNumber != stopPort)
                 return;
             try
             {
                 if(useGpiForVerification)
                 {
-                    if (e.State == gpiTriggerStateToProccessVerification)
+                    if (e.PortNumber == gpiPortToProcessVerification && e.State == gpiTriggerStateToProccessVerification)
                     {
                         // New cycle: clear any previous verification tags
                         verificationTags.Clear();
                         // Use Interlocked.CompareExchange to ensure only one processing instance runs.
                         if (Interlocked.CompareExchange(ref gpiProcessingFlag, 1, 0) == 0)
                         {
-                            Console.WriteLine($"GPI Port 1 is {e.State} - setting processing flag.");
+                            Console.WriteLine($"GPI Port {gpiPortToProcessVerification} is {e.State} - setting processing flag.");
                         }
                         else
                         {
-                            Console.WriteLine("GPI Port 1 event received while processing already in progress. Ignoring duplicate trigger.");
+                            Console.WriteLine($"GPI Port {gpiPortToProcessVerification} event received while processing already in progress. Ignoring duplicate trigger.");
                         }
                     }
-                    else
+                    else if (e.PortNumber == stopPort && e.State == !gpiTriggerStateToProccessVerification)
                     {
-                        // When GPI state becomes false, reset the processing flag.
-                        Console.WriteLine($"GPI Port 1 is {e.State} - resetting processing flag.");
-                        //sender.TagsReported -= OnTagsReportedVerifier;
-                        if(verificationTags.Count == 0)
+                        // When GPI stop port is triggered, reset the processing flag.
+                        Console.WriteLine($"GPI Port {stopPort} is {e.State} - resetting processing flag.");
+                        if (verificationTags.Count == 0)
                         {
-                            sender.SetGpo(1, true);
+                            sender.SetGpo(gpoPortPulsed, true);
+                            sender.SetGpo(gpoPortStatic, true);
+                            Console.WriteLine($"GPO port {gpoPortStatic} set to true (static). Press Enter to reset and resume...");
+                            await Task.Run(() => Console.ReadLine());
+                            sender.SetGpo(gpoPortStatic, false);
                         }
                         verificationTags.Clear();
                         Interlocked.Exchange(ref gpiProcessingFlag, 0);
                     }
                 }
-                
+
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"{ex.Message}");
             }
-            
+
         }
         private void OnTagsReportedDetector(ImpinjReader sender, TagReport report)
         {
@@ -398,18 +455,22 @@ namespace OctaneTagWritingTest.JobStrategies
                     TagOpController.Instance.RecordExpectedEpc(tidHex, expectedEpc);
                     Console.WriteLine($"Detector: Assigned new EPC for TID {tidHex}: {expectedEpc}");
 
-                    // Trigger the write operation using the writer reader.
-                    TagOpController.Instance.TriggerWriteAndVerify(
-                        tag,
-                        expectedEpc,
-                        writerReader,
-                        cancellationToken,
-                        swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
-                        newAccessPassword,
-                        true,
-                        1,
-                        true,
-                        0);
+                    // Trigger the write operation using whichever reader can write
+                    var writer = SelectWriterReader();
+                    if (writer != null)
+                    {
+                        TagOpController.Instance.TriggerWriteAndVerify(
+                            tag,
+                            expectedEpc,
+                            writer,
+                            cancellationToken,
+                            swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
+                            newAccessPassword,
+                            true,
+                            1,
+                            true,
+                            0);
+                    }
                 }
                 // (Optionally, you might also update any UI or log this detection.)
             }
@@ -553,19 +614,23 @@ namespace OctaneTagWritingTest.JobStrategies
                     {
                         Console.WriteLine($"Verification mismatch for TID {tidHex}: expected {expectedEpc}, read {epcHex}. Retrying write operation using expected EPC.");
                         // Pulse the LED to indicate verification failure
-                        sender.SetGpo(1, true);
-                        // Retry writing using the expected EPC (without generating a new one) via the verifier reader.
-                        TagOpController.Instance.TriggerWriteAndVerify(
-                            tag,
-                            expectedEpc,
-                            sender,
-                            cancellationToken,
-                            swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
-                            newAccessPassword,
-                            true,
-                            1,
-                            false,
-                            3);
+                        sender.SetGpo(gpoPortPulsed, true);
+                        // Retry writing using the available writer
+                        var writer = SelectWriterReader();
+                        if (writer != null)
+                        {
+                            TagOpController.Instance.TriggerWriteAndVerify(
+                                tag,
+                                expectedEpc,
+                                writer,
+                                cancellationToken,
+                                swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
+                                newAccessPassword,
+                                true,
+                                1,
+                                false,
+                                3);
+                        }
                     }
                     else
                     {
@@ -647,20 +712,24 @@ namespace OctaneTagWritingTest.JobStrategies
                     if (!success)
                     {
                         // Pulse LED to indicate verification failure
-                        sender.SetGpo(1, true);
+                        sender.SetGpo(gpoPortPulsed, true);
                         try
                         {
-                            TagOpController.Instance.TriggerWriteAndVerify(
-                            readResult.Tag,
-                            expectedEpc,
-                            sender,
-                            cancellationToken,
-                            swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
-                            newAccessPassword,
-                            true,
-                            1,
-                            true,
-                            3);
+                            var writer = SelectWriterReader();
+                            if (writer != null)
+                            {
+                                TagOpController.Instance.TriggerWriteAndVerify(
+                                    readResult.Tag,
+                                    expectedEpc,
+                                    writer,
+                                    cancellationToken,
+                                    swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
+                                    newAccessPassword,
+                                    true,
+                                    1,
+                                    true,
+                                    3);
+                            }
                         }
                         catch (Exception)
                         {

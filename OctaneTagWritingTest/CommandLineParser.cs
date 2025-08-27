@@ -59,6 +59,18 @@
             if (!string.IsNullOrEmpty(gpiTriggerState) && bool.TryParse(gpiTriggerState, out bool triggerState))
                 config.GpiTriggerStateToProcessVerification = triggerState;
 
+            string gpiPort = GetArgumentValue(args, "--gpi-port");
+            if (!string.IsNullOrEmpty(gpiPort) && int.TryParse(gpiPort, out int port))
+                config.GpiPortToProcessVerification = port;
+
+            string gpoPulsePort = GetArgumentValue(args, "--gpo-pulse-port");
+            if (!string.IsNullOrEmpty(gpoPulsePort) && int.TryParse(gpoPulsePort, out int gpoPulse))
+                config.GpoPortPulsed = gpoPulse;
+
+            string gpoStaticPort = GetArgumentValue(args, "--gpo-static-port");
+            if (!string.IsNullOrEmpty(gpoStaticPort) && int.TryParse(gpoStaticPort, out int gpoStatic))
+                config.GpoPortStatic = gpoStatic;
+
             // Configuração de antenas via linha de comando
             ParseAntennaConfig(args, "--detector-antennas", config.DetectorAntennas);
             ParseAntennaConfig(args, "--writer-antennas", config.WriterAntennas);
@@ -135,6 +147,9 @@
             Console.WriteLine("  GPI CONFIGURATION:");
             Console.WriteLine("  --use-gpi-verification <true/false>    Enable/disable GPI for verification");
             Console.WriteLine("  --gpi-trigger-state <true/false>       GPI trigger state for verification processing");
+            Console.WriteLine("  --gpi-port <1|2>                        GPI port number used for verification");
+            Console.WriteLine("  --gpo-pulse-port <n>                   GPO port number for pulsed signal");
+            Console.WriteLine("  --gpo-static-port <n>                  GPO port number for static signal");
             Console.WriteLine();
             Console.WriteLine("  ANTENNA CONFIGURATION:");
             Console.WriteLine("  --detector-antennas     Detector antennas config (format: port:power:maxRx:rxSens)");

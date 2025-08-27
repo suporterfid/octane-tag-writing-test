@@ -3,9 +3,10 @@
 public class ApplicationConfig
 {
     // Reader network settings
-    public string DetectorHostname { get; set; } = "192.168.68.80";
-    public string WriterHostname { get; set; } = "192.168.68.81";
-    public string VerifierHostname { get; set; } = "192.168.68.82";
+    // Leaving hostnames empty allows running strategies with a subset of readers
+    public string DetectorHostname { get; set; } = string.Empty;
+    public string WriterHostname { get; set; } = string.Empty;
+    public string VerifierHostname { get; set; } = string.Empty;
 
     public bool Sgtin96Enabled { get; set; } = true;
 
@@ -23,6 +24,10 @@ public class ApplicationConfig
 
     public bool GpiTriggerStateToProcessVerification { get; set; } = false;
     public bool UseGpiForVerification { get; set; } = true;
+    public int GpiPortToProcessVerification { get; set; } = 1;
+
+    public int GpoPortPulsed { get; set; } = 1;
+    public int GpoPortStatic { get; set; } = 2;
 
     // New: make GPI debounce and GPO pulse duration configurable
     public int GpiDebounceInMs { get; set; } = 100;

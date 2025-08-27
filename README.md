@@ -102,12 +102,51 @@ OctaneTagWritingTest/
 
 ### 8. Multiple Reader Endurance Strategy (JobStrategy8)
 - **Estratégia avançada com múltiplos leitores**
-- Utiliza três leitores: detector, writer e verifier
+- Pode operar com qualquer combinação de leitores: detector, writer e verifier
 - Detector: monitora tags no campo
 - Writer: executa operações de escrita
 - Verifier: verifica integridade dos dados escritos
 - Suporte a GPI para sincronização
 - Logging detalhado com timestamps e métricas
+
+Esta estratégia agora permite executar o teste com 1, 2 ou 3 leitores. Basta informar os hostnames dos leitores desejados; leitores omitidos serão ignorados. Composições suportadas:
+
+- detector + writer + verifier
+- detector + writer
+- detector + verifier
+- writer + verifier
+- apenas detector
+- apenas writer
+- apenas verifier
+
+#### Parâmetros de Linha de Comando
+
+| Parâmetro | Descrição |
+|-----------|-----------|
+| `--detector <hostname>` | Hostname/IP do leitor detector. |
+| `--writer <hostname>` | Hostname/IP do leitor writer. |
+| `--verifier <hostname>` | Hostname/IP do leitor verifier. |
+| `--desc <description>` | Descrição utilizada nos logs do teste. |
+| `--sku <sku>` | SKU de 12 dígitos para codificação. |
+| `--header <header>` | Cabeçalho EPC quando não utiliza SGTIN‑96. |
+| `--code <code>` | Código de item EPC quando não utiliza SGTIN‑96. |
+| `--quantity <number>` | Quantidade de EPCs a gerar. |
+| `--detector-power <dbm>` | Potência de transmissão do detector. |
+| `--writer-power <dbm>` | Potência de transmissão do writer. |
+| `--verifier-power <dbm>` | Potência de transmissão do verifier. |
+| `--use-gpi-verification <true/false>` | Habilita GPI para fase de verificação. |
+| `--gpi-trigger-state <true/false>` | Estado do GPI que inicia a verificação. |
+| `--gpi-port <1|2>` | Porta GPI usada para processar verificação. |
+| `--gpo-pulse-port <n>` | Porta GPO utilizada para pulso. |
+| `--gpo-static-port <n>` | Porta GPO utilizada de forma estática. |
+| `--detector-antennas "port:power:maxRx:rxSens,..."` | Configuração das antenas do detector. |
+| `--writer-antennas "port:power:maxRx:rxSens,..."` | Configuração das antenas do writer. |
+| `--verifier-antennas "port:power:maxRx:rxSens,..."` | Configuração das antenas do verifier. |
+| `--config <path>` | Carrega parâmetros de um arquivo JSON. |
+| `--interactive` | Inicia modo de configuração interativo. |
+| `--help` | Mostra mensagem de ajuda. |
+
+> **Dica:** informe apenas os parâmetros correspondentes aos leitores presentes. Se um hostname não for fornecido (ou estiver vazio), esse leitor será desconsiderado.
 
 ### 9. CheckBox Strategy (JobStrategy9)
 - Teste específico para funcionalidades CheckBox
