@@ -109,6 +109,33 @@ OctaneTagWritingTest/
 - Suporte a GPI para sincronização
 - Logging detalhado com timestamps e métricas
 
+#### Parâmetros de Linha de Comando
+
+| Parâmetro | Descrição |
+|-----------|-----------|
+| `--detector <hostname>` | Hostname/IP do leitor detector. |
+| `--writer <hostname>` | Hostname/IP do leitor writer. |
+| `--verifier <hostname>` | Hostname/IP do leitor verifier. |
+| `--desc <description>` | Descrição utilizada nos logs do teste. |
+| `--sku <sku>` | SKU de 12 dígitos para codificação. |
+| `--header <header>` | Cabeçalho EPC quando não utiliza SGTIN‑96. |
+| `--code <code>` | Código de item EPC quando não utiliza SGTIN‑96. |
+| `--quantity <number>` | Quantidade de EPCs a gerar. |
+| `--detector-power <dbm>` | Potência de transmissão do detector. |
+| `--writer-power <dbm>` | Potência de transmissão do writer. |
+| `--verifier-power <dbm>` | Potência de transmissão do verifier. |
+| `--use-gpi-verification <true/false>` | Habilita GPI para fase de verificação. |
+| `--gpi-trigger-state <true/false>` | Estado do GPI que inicia a verificação. |
+| `--gpi-port <1|2>` | Porta GPI usada para processar verificação. |
+| `--gpo-pulse-port <n>` | Porta GPO utilizada para pulso. |
+| `--gpo-static-port <n>` | Porta GPO utilizada de forma estática. |
+| `--detector-antennas "port:power:maxRx:rxSens,..."` | Configuração das antenas do detector. |
+| `--writer-antennas "port:power:maxRx:rxSens,..."` | Configuração das antenas do writer. |
+| `--verifier-antennas "port:power:maxRx:rxSens,..."` | Configuração das antenas do verifier. |
+| `--config <path>` | Carrega parâmetros de um arquivo JSON. |
+| `--interactive` | Inicia modo de configuração interativo. |
+| `--help` | Mostra mensagem de ajuda. |
+
 ### 9. CheckBox Strategy (JobStrategy9)
 - Teste específico para funcionalidades CheckBox
 - Validação de SKUs específicos
