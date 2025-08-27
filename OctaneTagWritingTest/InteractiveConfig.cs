@@ -45,6 +45,14 @@ public static class InteractiveConfig
         string gpiTriggerStr = PromptForBoolValue("GPI trigger state to process verification", config.GpiTriggerStateToProcessVerification);
         config.GpiTriggerStateToProcessVerification = bool.Parse(gpiTriggerStr);
 
+        string gpoPulsePortStr = PromptForValue("GPO port number for pulsed signal", config.GpoPortPulsed.ToString());
+        if (int.TryParse(gpoPulsePortStr, out int gpoPulse))
+            config.GpoPortPulsed = gpoPulse;
+
+        string gpoStaticPortStr = PromptForValue("GPO port number for static signal", config.GpoPortStatic.ToString());
+        if (int.TryParse(gpoStaticPortStr, out int gpoStatic))
+            config.GpoPortStatic = gpoStatic;
+
         // Configuração avançada de antenas
         Console.WriteLine("\n=== Advanced Antenna Configuration ===");
         Console.Write("Configure individual antennas? (y/n) [n]: ");

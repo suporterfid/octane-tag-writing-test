@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
+using System.Threading.Tasks;
 using Impinj.OctaneSdk;
 using OctaneTagWritingTest.Helpers;
 using Org.LLRP.LTK.LLRPV1.Impinj;
@@ -43,6 +44,8 @@ namespace OctaneTagWritingTest.JobStrategies
         private bool gpiTriggerStateToProccessVerification = false;
         private ushort gpiPortToProcessVerification = 1;
         private ushort gpiPortToStopVerification => (ushort)(gpiPortToProcessVerification == 1 ? 2 : 1);
+        private ushort gpoPortPulsed;
+        private ushort gpoPortStatic;
         // Separate dictionary for capturing tags during the verification phase.
         private static ConcurrentDictionary<string, Tag> verificationTags = new ConcurrentDictionary<string, Tag>();
 
@@ -66,6 +69,8 @@ namespace OctaneTagWritingTest.JobStrategies
             useGpiForVerification = appConfig.UseGpiForVerification;
             gpiTriggerStateToProccessVerification = appConfig.GpiTriggerStateToProcessVerification;
             gpiPortToProcessVerification = (ushort)appConfig.GpiPortToProcessVerification;
+            gpoPortPulsed = (ushort)appConfig.GpoPortPulsed;
+            gpoPortStatic = (ushort)appConfig.GpoPortStatic;
 
 
             detectorReader = new ImpinjReader();
@@ -297,11 +302,10 @@ namespace OctaneTagWritingTest.JobStrategies
             verifierSettings.Gpis.GetGpi(1).DebounceInMs = (uint)applicationConfig.GpiDebounceInMs;
             verifierSettings.Gpis.GetGpi(2).DebounceInMs = (uint)applicationConfig.GpiDebounceInMs;
 
-            verifierSettings.Gpos.GetGpo(1).Mode = GpoMode.Pulsed;
-            verifierSettings.Gpos.GetGpo(1).GpoPulseDurationMsec = (uint)applicationConfig.GpoPulseDurationMs;
+            verifierSettings.Gpos.GetGpo(gpoPortPulsed).Mode = GpoMode.Pulsed;
+            verifierSettings.Gpos.GetGpo(gpoPortPulsed).GpoPulseDurationMsec = (uint)applicationConfig.GpoPulseDurationMs;
 
-            verifierSettings.Gpos.GetGpo(2).Mode = GpoMode.Pulsed;
-            verifierSettings.Gpos.GetGpo(2).GpoPulseDurationMsec = (uint)applicationConfig.GpoPulseDurationMs;
+            verifierSettings.Gpos.GetGpo(gpoPortStatic).Mode = GpoMode.Normal;
 
             verifierSettings.AutoStart.Mode = AutoStartMode.GpiTrigger;
             verifierSettings.AutoStart.GpiPortNumber = gpiPortToProcessVerification;
@@ -360,9 +364,13 @@ namespace OctaneTagWritingTest.JobStrategies
                     {
                         // When GPI stop port is triggered, reset the processing flag.
                         Console.WriteLine($"GPI Port {stopPort} is {e.State} - resetting processing flag.");
-                        if(verificationTags.Count == 0)
+                        if (verificationTags.Count == 0)
                         {
-                            sender.SetGpo(1, true);
+                            sender.SetGpo(gpoPortPulsed, true);
+                            sender.SetGpo(gpoPortStatic, true);
+                            Console.WriteLine($"GPO port {gpoPortStatic} set to true (static). Press Enter to reset and resume...");
+                            await Task.Run(() => Console.ReadLine());
+                            sender.SetGpo(gpoPortStatic, false);
                         }
                         verificationTags.Clear();
                         Interlocked.Exchange(ref gpiProcessingFlag, 0);
@@ -556,7 +564,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     {
                         Console.WriteLine($"Verification mismatch for TID {tidHex}: expected {expectedEpc}, read {epcHex}. Retrying write operation using expected EPC.");
                         // Pulse the LED to indicate verification failure
-                        sender.SetGpo(1, true);
+                        sender.SetGpo(gpoPortPulsed, true);
                         // Retry writing using the expected EPC (without generating a new one) via the verifier reader.
                         TagOpController.Instance.TriggerWriteAndVerify(
                             tag,
@@ -650,7 +658,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     if (!success)
                     {
                         // Pulse LED to indicate verification failure
-                        sender.SetGpo(1, true);
+                        sender.SetGpo(gpoPortPulsed, true);
                         try
                         {
                             TagOpController.Instance.TriggerWriteAndVerify(
