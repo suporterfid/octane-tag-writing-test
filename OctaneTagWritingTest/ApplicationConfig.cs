@@ -3,9 +3,10 @@
 public class ApplicationConfig
 {
     // Reader network settings
-    public string DetectorHostname { get; set; } = "192.168.68.80";
-    public string WriterHostname { get; set; } = "192.168.68.81";
-    public string VerifierHostname { get; set; } = "192.168.68.82";
+    // Leaving hostnames empty allows running strategies with a subset of readers
+    public string DetectorHostname { get; set; } = string.Empty;
+    public string WriterHostname { get; set; } = string.Empty;
+    public string VerifierHostname { get; set; } = string.Empty;
 
     public bool Sgtin96Enabled { get; set; } = true;
 

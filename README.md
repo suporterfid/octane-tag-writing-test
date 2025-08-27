@@ -102,12 +102,22 @@ OctaneTagWritingTest/
 
 ### 8. Multiple Reader Endurance Strategy (JobStrategy8)
 - **Estratégia avançada com múltiplos leitores**
-- Utiliza três leitores: detector, writer e verifier
+- Pode operar com qualquer combinação de leitores: detector, writer e verifier
 - Detector: monitora tags no campo
 - Writer: executa operações de escrita
 - Verifier: verifica integridade dos dados escritos
 - Suporte a GPI para sincronização
 - Logging detalhado com timestamps e métricas
+
+Esta estratégia agora permite executar o teste com 1, 2 ou 3 leitores. Basta informar os hostnames dos leitores desejados; leitores omitidos serão ignorados. Composições suportadas:
+
+- detector + writer + verifier
+- detector + writer
+- detector + verifier
+- writer + verifier
+- apenas detector
+- apenas writer
+- apenas verifier
 
 #### Parâmetros de Linha de Comando
 
@@ -135,6 +145,8 @@ OctaneTagWritingTest/
 | `--config <path>` | Carrega parâmetros de um arquivo JSON. |
 | `--interactive` | Inicia modo de configuração interativo. |
 | `--help` | Mostra mensagem de ajuda. |
+
+> **Dica:** informe apenas os parâmetros correspondentes aos leitores presentes. Se um hostname não for fornecido (ou estiver vazio), esse leitor será desconsiderado.
 
 ### 9. CheckBox Strategy (JobStrategy9)
 - Teste específico para funcionalidades CheckBox
