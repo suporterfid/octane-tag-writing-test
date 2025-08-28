@@ -216,7 +216,7 @@ namespace OctaneTagWritingTest
                         }
                         Thread.Sleep(100); // Reduce CPU usage
                     }
-                });
+                }, cts.Token);
 
                 try
                 {
