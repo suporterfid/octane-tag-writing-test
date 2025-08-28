@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Impinj.OctaneSdk;
 using OctaneTagWritingTest.Helpers;
 using Org.LLRP.LTK.LLRPV1.Impinj;
+using OctaneTagWritingTest.Infrastructure;
 
 namespace OctaneTagWritingTest.JobStrategies
 {
@@ -28,10 +29,10 @@ namespace OctaneTagWritingTest.JobStrategies
         private readonly ConcurrentDictionary<string, Stopwatch> swWriteTimers = new ConcurrentDictionary<string, Stopwatch>();
         private readonly ConcurrentDictionary<string, Stopwatch> swVerifyTimers = new ConcurrentDictionary<string, Stopwatch>();
 
-        private ImpinjReader detectorReader;
+        private IReaderClient detectorReader;
         // Two separate readers: one for writing and one for verifying.
-        private ImpinjReader writerReader;
-        private ImpinjReader verifierReader;
+        private IReaderClient writerReader;
+        private IReaderClient verifierReader;
         private string detectorAddress;
         private string writerAddress;
         private string verifierAddress;
@@ -77,9 +78,9 @@ namespace OctaneTagWritingTest.JobStrategies
             gpoPortStatic = (ushort)appConfig.GpoPortStatic;
 
 
-            detectorReader = new ImpinjReader();
-            writerReader = new ImpinjReader();
-            verifierReader = new ImpinjReader();
+            detectorReader = new ImpinjReaderClient();
+            writerReader = new ImpinjReaderClient();
+            verifierReader = new ImpinjReaderClient();
 
             // Clean up any previous tag operation state.
             TagOpController.Instance.CleanUp();
@@ -98,6 +99,7 @@ namespace OctaneTagWritingTest.JobStrategies
             try
             {
                 this.cancellationToken = cancellationToken;
+                LogFlowStart();
                 Console.WriteLine("=== Multiple Reader Endurance Test ===");
                 Console.WriteLine("Press 'q' to stop the test and return to menu.");
 
@@ -204,9 +206,8 @@ namespace OctaneTagWritingTest.JobStrategies
                         throw;
                     }
                 }
-                
-                
-                
+
+                LogFlowRun();
 
                 // Create CSV header if the log file does not exist.
                 if (!File.Exists(logFile))
@@ -354,7 +355,7 @@ namespace OctaneTagWritingTest.JobStrategies
             verifierReader.ApplySettings(verifierSettings);
         }
 
-        private void EnableLowLatencyReporting(Settings settings, ImpinjReader reader)
+        private void EnableLowLatencyReporting(Settings settings, IReaderClient reader)
         {
             var addRoSpecMessage = reader.BuildAddROSpecMessage(settings);
             var setReaderConfigMessage = reader.BuildSetReaderConfigMessage(settings);
@@ -365,7 +366,7 @@ namespace OctaneTagWritingTest.JobStrategies
             reader.ApplySettings(setReaderConfigMessage, addRoSpecMessage);
         }
 
-        private ImpinjReader SelectWriterReader()
+        private IReaderClient SelectWriterReader()
         {
             if (writerReader != null && writerReader.IsConnected)
                 return writerReader;

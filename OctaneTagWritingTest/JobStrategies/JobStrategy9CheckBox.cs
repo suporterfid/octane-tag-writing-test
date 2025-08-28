@@ -10,6 +10,7 @@ using Impinj.OctaneSdk;
 using OctaneTagWritingTest.Helpers;
 using Org.LLRP.LTK.LLRPV1.Impinj;
 using Serilog;
+using OctaneTagWritingTest.Infrastructure;
 
 namespace OctaneTagWritingTest.JobStrategies
 {
@@ -24,7 +25,7 @@ namespace OctaneTagWritingTest.JobStrategies
     public class JobStrategy9CheckBox : BaseTestStrategy
     {
         private static readonly ILogger Logger = LoggingConfiguration.CreateStrategyLogger("CheckBoxStrategy");
-        private ImpinjReader writerReader;
+        private IReaderClient writerReader;
         // Duration for tag collection (in seconds)
         private const int ReadDurationSeconds = 10;
         // Overall timeout for write operations (in seconds)
@@ -66,6 +67,7 @@ namespace OctaneTagWritingTest.JobStrategies
             try
             {
                 this.cancellationToken = cancellationToken;
+                LogFlowStart();
                 Logger.Information("=== Single Reader CheckBox Test ===");
                 Logger.Information("GPI events on Port 1 will trigger tag collection, write, and verification. Press 'q' to cancel");
 
@@ -76,6 +78,7 @@ namespace OctaneTagWritingTest.JobStrategies
                 try
                 {
                     ConfigureWriterReader();
+                    LogFlowRun();
                 }
                 catch (Exception ex)
                 {
@@ -115,7 +118,7 @@ namespace OctaneTagWritingTest.JobStrategies
         {
             var writerSettings = GetSettingsForRole("writer");
             if(writerReader == null)
-                writerReader = new ImpinjReader();
+                writerReader = new ImpinjReaderClient();
 
             if(!writerReader.IsConnected)
             {
@@ -166,7 +169,7 @@ namespace OctaneTagWritingTest.JobStrategies
 
         }
 
-        private void EnableLowLatencyReporting(Settings settings, ImpinjReader reader)
+        private void EnableLowLatencyReporting(Settings settings, IReaderClient reader)
         {
             var addRoSpecMessage = reader.BuildAddROSpecMessage(settings);
             var setReaderConfigMessage = reader.BuildSetReaderConfigMessage(settings);

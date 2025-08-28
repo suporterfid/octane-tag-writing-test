@@ -1,5 +1,6 @@
 ﻿using Impinj.OctaneSdk;
 using OctaneTagWritingTest.Helpers;
+using OctaneTagWritingTest.Infrastructure;
 using Org.LLRP.LTK.LLRPV1;
 using Org.LLRP.LTK.LLRPV1.Impinj;
 using System;
@@ -8,6 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Serilog;
 
 namespace OctaneTagWritingTest
 {
@@ -16,7 +18,7 @@ namespace OctaneTagWritingTest
     /// </summary>
     public abstract class BaseTestStrategy : IJobStrategy
     {
-        protected ImpinjReader reader;
+        protected IReaderClient reader;
         protected string hostname;
         protected string newAccessPassword = "00000000";
         protected string targetTid;  // Will be set with first TID read
@@ -25,6 +27,7 @@ namespace OctaneTagWritingTest
         protected Stopwatch sw = new Stopwatch();
         protected CancellationToken cancellationToken;
         protected Dictionary<string, ReaderSettings> settings;
+        protected readonly ILogger FlowLogger;
 
         /// <summary>
         /// Initializes a new instance of the BaseTestStrategy class
@@ -32,13 +35,20 @@ namespace OctaneTagWritingTest
         /// <param name="hostname">The hostname of the RFID reader</param>
         /// <param name="logFile">The path to the log file for test results</param>
         /// <param name="readerSettings">Dictionary of reader settings by role</param>
-        public BaseTestStrategy(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings)
+        /// <param name="readerClient">Optional reader client for dependency injection</param>
+        public BaseTestStrategy(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings, IReaderClient readerClient = null)
         {
             this.hostname = hostname;
             this.logFile = logFile;
-            reader = new ImpinjReader();
+            reader = readerClient ?? new ImpinjReaderClient();
             this.settings = readerSettings;
+            FlowLogger = LoggingConfiguration.CreateStrategyLogger(GetType().Name);
         }
+
+        protected void LogFlowStart() => FlowLogger.Information("[FLOW] Start");
+        protected void LogFlowConfigure() => FlowLogger.Information("[FLOW] Configure");
+        protected void LogFlowRun() => FlowLogger.Information("[FLOW] Run");
+        protected void LogFlowStop() => FlowLogger.Information("[FLOW] Stop");
 
         /// <summary>
         /// Gets the settings for a specific reader role
@@ -92,6 +102,7 @@ namespace OctaneTagWritingTest
         /// </remarks>
         protected virtual Settings ConfigureReader(string role = "writer")
         {
+            LogFlowConfigure();
             EpcListManager.Instance.LoadEpcList("epc_list.txt");
 
             var roleSettings = GetSettingsForRole(role);
@@ -149,7 +160,11 @@ namespace OctaneTagWritingTest
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error during reader cleanup: {ex.Message}");
+                FlowLogger.Warning(ex, "Error during reader cleanup");
+            }
+            finally
+            {
+                LogFlowStop();
             }
         }
 

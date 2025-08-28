@@ -7,10 +7,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using TagDataTranslation;
+using Serilog;
+using OctaneTagWritingTest;
 
 public sealed class EpcListManager
 {
     private static readonly TDTEngine _tdtEngine = new();
+    private static readonly ILogger Logger = LoggingConfiguration.CreateLogger<EpcListManager>();
 
     // Singleton instance with lazy initialization (thread-safe)
     private static readonly Lazy<EpcListManager> instance =
@@ -91,7 +94,7 @@ public sealed class EpcListManager
                     {
                         string tidSuffix = parser.Get40BitSerialHex();
                         epcSerial = parser.Get40BitSerialDecimal();
-                        Console.WriteLine($"Serial extraído: {tidSuffix} = {epcSerial}");
+                        Logger.Debug("Serial extrado {TidSuffix} = {Serial}", tidSuffix, epcSerial);
                     }
 
                     string epcIdentifier = @"gtin="+ prefix + ";serial="+ epcSerial;
@@ -111,9 +114,9 @@ public sealed class EpcListManager
                     //epcPrefix = emptySgtin.ToEpc().Substring(0, 14);
 
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-
+                    Logger.Warning(ex, "Failed to generate EPC for GTIN {GTIN} from TID {TID}", gtin, tid);
                 }
             }
             else
@@ -130,7 +133,7 @@ public sealed class EpcListManager
                 using (var parser = new TagTidParser(tid))
                 {
                     tidSuffix = parser.Get40BitSerialHex();
-                    Console.WriteLine($"Serial extraído: {tidSuffix}");
+                    Logger.Debug("Serial extrado {TidSuffix}", tidSuffix);
                 }
 
                 // Combine to create the new EPC
@@ -140,7 +143,7 @@ public sealed class EpcListManager
             // Store the new EPC in the dictionary associated with the TID
             generatedEpcsByTid.AddOrUpdate(tid, newEpc, (key, oldValue) => newEpc);
 
-            Console.WriteLine($"Created new EPC {newEpc} for TID {tid} using current EPC {currentEpc}");
+            Logger.Debug("Created new EPC {NewEpc} for TID {Tid} using current EPC {CurrentEpc}", newEpc, tid, currentEpc);
             return newEpc;
         }
     }
