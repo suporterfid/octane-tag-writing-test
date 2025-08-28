@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using Impinj.TagUtils;
 using OctaneTagWritingTest.Helpers;
 using TagDataTranslation;
+using Serilog;
 
 namespace EpcListGenerator
 {
@@ -14,6 +15,7 @@ namespace EpcListGenerator
     public sealed class EpcListGeneratorHelper
     {
         private static readonly TDTEngine _tdtEngine = new();
+        private static readonly ILogger Logger = Log.ForContext<EpcListGeneratorHelper>();
 
         // Lazy initialization of the singleton instance (thread-safe).
         private static readonly Lazy<EpcListGeneratorHelper> instance =
@@ -62,17 +64,16 @@ namespace EpcListGenerator
             {
                 try
                 {
-                    string epcIdentifier = @"gtin=" + gtin + ";serial="+i;
+                    string epcIdentifier = @"gtin=" + gtin + ";serial=" + i;
                     string parameterList = @"filter=1;gs1companyprefixlength=6;tagLength=96";
                     string binary = _tdtEngine.Translate(epcIdentifier, parameterList, @"BINARY");
                     string sgtinHex = _tdtEngine.BinaryToHex(binary);
 
                     epcList.Add(sgtinHex.ToUpper());
-
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-
+                    Logger.Warning(ex, "Failed to generate EPC for GTIN {GTIN} with serial {Serial}", gtin, i);
                 }
             }
 
