@@ -191,7 +191,9 @@ namespace OctaneTagWritingTest
                 manager.DisplayMenu();
                 Console.Write("Choose an option (or 'q' to quit): ");
                 string option = Console.ReadLine();
-                if (option?.ToLower() == "q")
+                if (string.IsNullOrWhiteSpace(option))
+                    continue;
+                if (string.Equals(option, "q", StringComparison.OrdinalIgnoreCase))
                     break;
 
                 // Create cancellation token source for the test
@@ -213,7 +215,7 @@ namespace OctaneTagWritingTest
                         }
                         Thread.Sleep(100); // Reduce CPU usage
                     }
-                });
+                }, cts.Token);
 
                 try
                 {
