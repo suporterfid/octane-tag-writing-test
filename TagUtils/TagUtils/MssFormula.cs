@@ -2,11 +2,13 @@
 using System;
 using System.Text;
 using System.Text.RegularExpressions;
+using Serilog;
 
 namespace Impinj.TagUtils
 {
     public class MssFormula
     {
+        private static readonly ILogger Logger = Log.ForContext<MssFormula>();
         private static string ZeroedOut96BitValue = string.Empty.PadLeft(96, '0');
 
         public static string GenerateMssSerialNumberWithSerializationPrefix(
@@ -53,7 +55,7 @@ namespace Impinj.TagUtils
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                Logger.Error(ex, "Error generating MSS serial number with serialization prefix");
             }
             return str.ToHex();
         }
@@ -98,7 +100,7 @@ namespace Impinj.TagUtils
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                Logger.Error(ex, "Error generating MSS 96-bit serial number");
             }
             return str.ToHex();
         }
@@ -132,7 +134,7 @@ namespace Impinj.TagUtils
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                Logger.Error(ex, "Error converting MSS 96-bit serial number to TID");
             }
             return str.ToHex();
         }

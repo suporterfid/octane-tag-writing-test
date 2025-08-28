@@ -12,7 +12,7 @@ namespace OctaneTagWritingTest.Helpers
 {
     public sealed class TagOpController
     {
-        private static readonly ILogger Logger = LoggingConfiguration.CreateLogger<TagOpController>();
+        private readonly ILogger logger;
         // Dictionary: key = TID, value = expected EPC.
         private readonly Dictionary<string, string> expectedEpcByTid = new Dictionary<string, string>();
         // Dictionaries for recording operation results
@@ -29,8 +29,9 @@ namespace OctaneTagWritingTest.Helpers
         private readonly SerialGenerator serialGenerator;
         
         // Private constructor for singleton
-        private TagOpController() 
+        private TagOpController(ILogger logger)
         {
+            this.logger = logger;
             serialByTid = new ConcurrentDictionary<string, string>();
             serialGenerator = new SerialGenerator();
         }
@@ -50,7 +51,7 @@ namespace OctaneTagWritingTest.Helpers
                 }
                 catch (InvalidOperationException ex)
                 {
-                    Logger.Warning(ex, "Failed to generate unique serial for TID {TID}, using fallback", tid);
+                    logger.Warning(ex, "Failed to generate unique serial for TID {TID}, using fallback", tid);
                     // Fallback to using a timestamp-based serial if random generation fails
                     string fallbackSerial = DateTime.Now.Ticks.ToString().Substring(0, 10);
                     while (serialGenerator.IsSerialUsed(fallbackSerial))
@@ -63,7 +64,8 @@ namespace OctaneTagWritingTest.Helpers
         }
 
         // Lazy singleton instance.
-        private static readonly Lazy<TagOpController> _instance = new Lazy<TagOpController>(() => new TagOpController());
+        private static readonly Lazy<TagOpController> _instance = new Lazy<TagOpController>(() =>
+            new TagOpController(LoggingConfiguration.CreateLogger<TagOpController>()));
         public static TagOpController Instance => _instance.Value;
 
         // New properties to hold the current target TID and flag.
@@ -88,7 +90,7 @@ namespace OctaneTagWritingTest.Helpers
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error(ex, "Error during TagOpController cleanup");
+                    logger.Error(ex, "Error during TagOpController cleanup");
                 }
             }
         }
@@ -146,7 +148,7 @@ namespace OctaneTagWritingTest.Helpers
                     if(!operationResultWithSuccessByTid.ContainsKey(tid))
                     {
                         operationResultWithSuccessByTid.TryAdd(tid, result);
-                        Logger.Information("Operation success recorded for TID {TID} with result {Result}. Total success count: {SuccessCount}", 
+                        logger.Information("Operation success recorded for TID {TID} with result {Result}. Total success count: {SuccessCount}", 
                             tid, result, operationResultWithSuccessByTid.Count());
                     }
                     
@@ -185,7 +187,7 @@ namespace OctaneTagWritingTest.Helpers
                 // If after the maximum retries the EPC still exists, fall back to using SerialGenerator
                 if (GetExistingEpc(nextEpc))
                 {
-                    Logger.Warning("EpcListManager failed to generate unique EPC for TID {TID}, falling back to SerialGenerator", tid);
+                    logger.Warning("EpcListManager failed to generate unique EPC for TID {TID}, falling back to SerialGenerator", tid);
                     string serial = GetOrGenerateSerial(tid);
                     // Format the serial as an EPC (maintaining the same format as the original EPC)
                     nextEpc = FormatSerialAsEpc(serial, epc);
@@ -193,7 +195,7 @@ namespace OctaneTagWritingTest.Helpers
                     // Verify the generated EPC is unique
                     if (GetExistingEpc(nextEpc))
                     {
-                        Logger.Error("Failed to generate unique EPC for TID {TID} even with SerialGenerator fallback", tid);
+                        logger.Error("Failed to generate unique EPC for TID {TID} even with SerialGenerator fallback", tid);
                         throw new InvalidOperationException("Failed to generate unique EPC even with SerialGenerator fallback");
                     }
                 }
@@ -218,7 +220,7 @@ namespace OctaneTagWritingTest.Helpers
             if (string.IsNullOrEmpty(originalEpc) || originalEpc.Length < 4)
             {
                 prefix = DEFAULT_PREFIX;
-                Logger.Warning("Invalid original EPC format for serial {Serial}, using default prefix {DefaultPrefix}", serial, DEFAULT_PREFIX);
+                logger.Warning("Invalid original EPC format for serial {Serial}, using default prefix {DefaultPrefix}", serial, DEFAULT_PREFIX);
             }
             else
             {
@@ -227,7 +229,7 @@ namespace OctaneTagWritingTest.Helpers
                 if (!prefix.All(c => "0123456789ABCDEFabcdef".Contains(c)))
                 {
                     prefix = DEFAULT_PREFIX;
-                    Logger.Warning("Invalid EPC prefix format (non-hexadecimal) for serial {Serial}, using default prefix {DefaultPrefix}", serial, DEFAULT_PREFIX);
+                    logger.Warning("Invalid EPC prefix format (non-hexadecimal) for serial {Serial}, using default prefix {DefaultPrefix}", serial, DEFAULT_PREFIX);
                 }
             }
 
@@ -286,17 +288,17 @@ namespace OctaneTagWritingTest.Helpers
                 }
                 catch (Exception ex)
                 {
-                    Logger.Warning(ex, "Failed to track permalock sequence {SequenceId} for TID {TID}", seq.Id, tag.Tid.ToHexString());
+                    logger.Warning(ex, "Failed to track permalock sequence {SequenceId} for TID {TID}", seq.Id, tag.Tid.ToHexString());
                 }
 
                 CheckAndCleanAccessSequencesOnReader(addedWriteSequences, reader);
 
                 reader.AddOpSequence(seq);
-                Logger.Information("Scheduled permalock operation for TID {TID}", tag.Tid.ToHexString());
+                logger.Information("Scheduled permalock operation for TID {TID}", tag.Tid.ToHexString());
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "Error performing permalock operation on tag TID {TID}", tag.Tid.ToHexString());
+                logger.Error(ex, "Error performing permalock operation on tag TID {TID}", tag.Tid.ToHexString());
             }
         }
 
@@ -329,16 +331,16 @@ namespace OctaneTagWritingTest.Helpers
                 }
                 catch (Exception ex)
                 {
-                    Logger.Warning(ex, "Failed to track lock sequence {SequenceId} for TID {TID}", seq.Id, tag.Tid.ToHexString());
+                    logger.Warning(ex, "Failed to track lock sequence {SequenceId} for TID {TID}", seq.Id, tag.Tid.ToHexString());
                 }
                 CheckAndCleanAccessSequencesOnReader(addedWriteSequences, reader);
 
                 reader.AddOpSequence(seq);
-                Logger.Information("Scheduled lock operation for TID {TID}", tag.Tid.ToHexString());
+                logger.Information("Scheduled lock operation for TID {TID}", tag.Tid.ToHexString());
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "Error performing lock operation on tag TID {TID}", tag.Tid.ToHexString());
+                logger.Error(ex, "Error performing lock operation on tag TID {TID}", tag.Tid.ToHexString());
             }
         }
 
@@ -348,34 +350,34 @@ namespace OctaneTagWritingTest.Helpers
             {
                 if(addedSequences.Count > 50)
                 {
-                    Logger.Information("Cleaning up {SequenceCount} access sequences on reader", addedSequences.Count);
+                    logger.Information("Cleaning up {SequenceCount} access sequences on reader", addedSequences.Count);
                     reader.DeleteAllOpSequences();
                     addedSequences.Clear();
-                    Logger.Information("Reader sequences cleaned up successfully");
+                    logger.Information("Reader sequences cleaned up successfully");
                 }
 
             }
             catch (Exception e)
             {
-                Logger.Warning(e, "Warning while trying to clean up {SequenceCount} sequences", addedSequences.Count);
+                logger.Warning(e, "Warning while trying to clean up {SequenceCount} sequences", addedSequences.Count);
                 
             }
 
         }
         /// <summary>
-        /// Triggers a partial write operation that updates only the specified number of characters in the EPC while preserving the rest.
+        /// Issues a write sequence that modifies only a portion of the EPC and schedules a verification read.
         /// </summary>
-        /// <param name="tag">The tag to write to</param>
-        /// <param name="newEpcToWrite">The new EPC value to partially write</param>
-        /// <param name="reader">The RFID reader instance</param>
-        /// <param name="cancellationToken">Token to cancel the operation</param>
-        /// <param name="swWrite">Stopwatch for timing the write operation</param>
-        /// <param name="newAccessPassword">Access password for the tag</param>
-        /// <param name="encodeOrDefault">If true, uses the provided EPC; if false, uses a default pattern</param>
-        /// <param name="charactersToWrite">Number of characters to write (minimum 8, default 14)</param>
-        /// <param name="targetAntennaPort">Target antenna port (default 1)</param>
-        /// <param name="useBlockWrite">Whether to use block write operations (default true)</param>
-        /// <param name="sequenceMaxRetries">Maximum number of retries for the sequence (default 5)</param>
+        /// <param name="tag">Tag reported by the reader. The existing EPC is used to fill any unwritten characters.</param>
+        /// <param name="newEpcToWrite">Full EPC to apply. Only the first <paramref name="charactersToWrite"/> characters are written.</param>
+        /// <param name="reader">Reader that will execute the write/verify sequence.</param>
+        /// <param name="cancellationToken">Cancels the operation before the sequence is queued.</param>
+        /// <param name="swWrite">Stopwatch used to measure the write latency; restarted when the operation begins.</param>
+        /// <param name="newAccessPassword">Hexadecimal access password required for the write.</param>
+        /// <param name="encodeOrDefault">When <c>true</c>, the method writes <paramref name="newEpcToWrite"/>. When <c>false</c>, a default EPC pattern is generated.</param>
+        /// <param name="charactersToWrite">Number of hex characters to overwrite (minimum 8, defaults to 14).</param>
+        /// <param name="targetAntennaPort">Optional antenna port for the operation; defaults to port 1.</param>
+        /// <param name="useBlockWrite">If set, the reader performs a block write (two words) instead of individual word writes.</param>
+        /// <param name="sequenceMaxRetries">Maximum number of retries allowed for the operation sequence. Use <c>0</c> for no retry limit.</param>
         public void TriggerPartialWriteAndVerify(Tag tag, string newEpcToWrite, IReaderClient reader, CancellationToken cancellationToken, Stopwatch swWrite, string newAccessPassword, bool encodeOrDefault, int charactersToWrite = 14, ushort targetAntennaPort = 1, bool useBlockWrite = true, ushort sequenceMaxRetries = 5)
         {
             if (cancellationToken.IsCancellationRequested) return;
@@ -400,7 +402,7 @@ namespace OctaneTagWritingTest.Helpers
                 : $"B071000000000000000000{processedTids.Count:D2}";
 
             string currentTid = tag.Tid.ToHexString();
-            Logger.Information("Attempting partial write operation for TID {TID}: {OldEPC} -> {NewEPC} (Writing first {CharactersToWrite} characters) - Read RSSI {RSSI}", 
+            logger.Information("Attempting partial write operation for TID {TID}: {OldEPC} -> {NewEPC} (Writing first {CharactersToWrite} characters) - Read RSSI {RSSI}", 
                 currentTid, oldEpc, epcData, charactersToWrite, tag.PeakRssiInDbm);
             
             TagOpSequence seq = new TagOpSequence();
@@ -442,7 +444,7 @@ namespace OctaneTagWritingTest.Helpers
             }
             catch (Exception ex)
             {
-                Logger.Warning(ex, "Failed to track write sequence {SequenceId} for TID {TID}", seq.Id, tag.Tid.ToHexString());
+                logger.Warning(ex, "Failed to track write sequence {SequenceId} for TID {TID}", seq.Id, tag.Tid.ToHexString());
             }
 
             CheckAndCleanAccessSequencesOnReader(addedWriteSequences, reader);
@@ -452,22 +454,22 @@ namespace OctaneTagWritingTest.Helpers
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "Error adding partial write sequence {SequenceId} for TID {TID}", seq.Id, currentTid);
+                logger.Error(ex, "Error adding partial write sequence {SequenceId} for TID {TID}", seq.Id, currentTid);
                 try
                 {
-                    Logger.Information("Cleaning up {SequenceCount} access sequences after partial write error for TID {TID}", addedWriteSequences.Count, currentTid);
+                    logger.Information("Cleaning up {SequenceCount} access sequences after partial write error for TID {TID}", addedWriteSequences.Count, currentTid);
                     reader.DeleteAllOpSequences();
                     addedWriteSequences.Clear();
                     reader.AddOpSequence(seq);
-                    Logger.Information("Reader sequences cleaned up successfully after partial write error");
+                    logger.Information("Reader sequences cleaned up successfully after partial write error");
                 }
                 catch (Exception cleanupEx)
                 {
-                    Logger.Error(cleanupEx, "Error during cleanup of {SequenceCount} sequences after partial write failure", addedWriteSequences.Count);
+                    logger.Error(cleanupEx, "Error during cleanup of {SequenceCount} sequences after partial write failure", addedWriteSequences.Count);
                 }
             }
             
-            Logger.Information("Added partial write OpSequence {SequenceId} for TID {TID} - Current EPC: {OldEPC} -> Expected EPC {NewEPC}", 
+            logger.Information("Added partial write OpSequence {SequenceId} for TID {TID} - Current EPC: {OldEPC} -> Expected EPC {NewEPC}", 
                 seq.Id, currentTid, oldEpc, epcData);
 
             RecordExpectedEpc(currentTid, epcData);
@@ -510,7 +512,7 @@ namespace OctaneTagWritingTest.Helpers
             writeOp.WordPointer = WordPointers.Epc;
             writeOp.Data = TagData.FromHexString(epcData);
 
-            Logger.Information("Adding write operation sequence to write new EPC {EPC} to tag TID {TID}", epcData, currentTid);
+            logger.Information("Adding write operation sequence to write new EPC {EPC} to tag TID {TID}", epcData, currentTid);
             seq.Ops.Add(writeOp);
 
             // If the new EPC is a different length, update the PC bits.
@@ -518,7 +520,7 @@ namespace OctaneTagWritingTest.Helpers
             {
                 ushort newEpcLenWords = (ushort)(newEpcToWrite.Length / 4);
                 ushort newPcBits = PcBits.AdjustPcBits(tag.PcBits, newEpcLenWords);
-                Logger.Information("Adding PC bits write operation for TID {TID}: {OldPcBits} -> {NewPcBits}", 
+                logger.Information("Adding PC bits write operation for TID {TID}: {OldPcBits} -> {NewPcBits}", 
                     currentTid, tag.PcBits.ToString("X4"), newPcBits.ToString("X4"));
 
                 TagWriteOp writePc = new TagWriteOp();
@@ -536,7 +538,7 @@ namespace OctaneTagWritingTest.Helpers
             }
             catch (Exception ex)
             {
-                Logger.Warning(ex, "Failed to track write sequence {SequenceId} for TID {TID}", seq.Id, tag.Tid.ToHexString());
+                logger.Warning(ex, "Failed to track write sequence {SequenceId} for TID {TID}", seq.Id, tag.Tid.ToHexString());
             }
 
             CheckAndCleanAccessSequencesOnReader(addedWriteSequences, reader);
@@ -546,23 +548,22 @@ namespace OctaneTagWritingTest.Helpers
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "Error adding write sequence {SequenceId} for TID {TID}", seq.Id, currentTid);
+                logger.Error(ex, "Error adding write sequence {SequenceId} for TID {TID}", seq.Id, currentTid);
                 try
                 {
-                    Logger.Information("Cleaning up {SequenceCount} access sequences after write error for TID {TID}", addedWriteSequences.Count, currentTid);
+                    logger.Information("Cleaning up {SequenceCount} access sequences after write error for TID {TID}", addedWriteSequences.Count, currentTid);
                     reader.DeleteAllOpSequences();
                     addedWriteSequences.Clear();
                     reader.AddOpSequence(seq);
-                    Logger.Information("Reader sequences cleaned up successfully after write error");
+                    logger.Information("Reader sequences cleaned up successfully after write error");
                 }
                 catch (Exception cleanupEx)
                 {
-                    Logger.Error(cleanupEx, "Error during cleanup of {SequenceCount} sequences after write failure", addedWriteSequences.Count);
+                    logger.Error(cleanupEx, "Error during cleanup of {SequenceCount} sequences after write failure", addedWriteSequences.Count);
                 }
             }
 
 
-            //Console.WriteLine($"Added Write OpSequence {seq.Id} to TID {currentTid} - Current EPC: {oldEpc} -> Expected EPC {epcData}");
             
             
 
@@ -600,7 +601,7 @@ namespace OctaneTagWritingTest.Helpers
             }
             catch (Exception ex)
             {
-                Logger.Warning(ex, "Failed to track read sequence {SequenceId} for TID {TID}", seq.Id, tag.Tid.ToHexString());
+                logger.Warning(ex, "Failed to track read sequence {SequenceId} for TID {TID}", seq.Id, tag.Tid.ToHexString());
             }
 
             CheckAndCleanAccessSequencesOnReader(addedReadSequences, reader);
@@ -612,18 +613,18 @@ namespace OctaneTagWritingTest.Helpers
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "Error adding verification read sequence {SequenceId} for TID {TID}", seq.Id, currentTid);
+                logger.Error(ex, "Error adding verification read sequence {SequenceId} for TID {TID}", seq.Id, currentTid);
                 try
                 {
-                    Logger.Information("Cleaning up {SequenceCount} read sequences after verification error for TID {TID}", addedReadSequences.Count, currentTid);
+                    logger.Information("Cleaning up {SequenceCount} read sequences after verification error for TID {TID}", addedReadSequences.Count, currentTid);
                     reader.DeleteAllOpSequences();
                     addedReadSequences.Clear();
                     reader.AddOpSequence(seq);
-                    Logger.Information("Reader sequences cleaned up successfully after verification error");
+                    logger.Information("Reader sequences cleaned up successfully after verification error");
                 }
                 catch (Exception cleanupEx)
                 {
-                    Logger.Error(cleanupEx, "Error during cleanup of {SequenceCount} read sequences after verification failure", addedReadSequences.Count);
+                    logger.Error(cleanupEx, "Error during cleanup of {SequenceCount} read sequences after verification failure", addedReadSequences.Count);
                 }
             }
         }
@@ -638,7 +639,7 @@ namespace OctaneTagWritingTest.Helpers
             LocalTargetTid = tidHex;
             IsLocalTargetTidSet = true;
 
-            Logger.Information("Tag {TID} already has expected EPC: {EPC} - Success count {SuccessCount}", 
+            logger.Information("Tag {TID} already has expected EPC: {EPC} - Success count {SuccessCount}", 
                 tidHex, tag.Epc.ToHexString(), GetSuccessCount());
             swVerify.Stop();
             string verifiedEpc = tag.Epc.ToHexString() ?? "N/A";
@@ -683,7 +684,7 @@ namespace OctaneTagWritingTest.Helpers
             }
             catch (Exception ex)
             {
-                Logger.Warning(ex, "Unable to write data to CSV log file {LogFile}", logFile);
+                logger.Warning(ex, "Unable to write data to CSV log file {LogFile}", logFile);
             }
         }
 
@@ -701,7 +702,7 @@ namespace OctaneTagWritingTest.Helpers
             if (resultStatus == "Failure" && attempts < maxRecoveryAttempts)
             {
                 recoveryCount[tidHex] = attempts + 1;
-                Logger.Warning("Verification failed for TID {TID}, retry attempt {RetryCount}", tidHex, recoveryCount[tidHex]);
+                logger.Warning("Verification failed for TID {TID}, retry attempt {RetryCount}", tidHex, recoveryCount[tidHex]);
                 // Use the same method (partial or full write) that was originally used
                 if (expectedEpc.Length == readResult.Tag.Epc.ToHexString().Length)
                 {
@@ -717,7 +718,7 @@ namespace OctaneTagWritingTest.Helpers
                 double rssi = readResult.Tag.IsPcBitsPresent ? readResult.Tag.PeakRssiInDbm : 0;
                 ushort antennaPort = readResult.Tag.IsAntennaPortNumberPresent ? readResult.Tag.AntennaPortNumber : (ushort)0;
 
-                Logger.Information("Verification result for TID {TID}: EPC read = {VerifiedEPC} ({ResultStatus})", 
+                logger.Information("Verification result for TID {TID}: EPC read = {VerifiedEPC} ({ResultStatus})", 
                     tidHex, verifiedEpc, resultStatus);
 
                 string logLine = $"{timestamp},{tidHex},{readResult.Tag.Epc.ToHexString()},{expectedEpc},{verifiedEpc},{swWrite.ElapsedMilliseconds},{swVerify.ElapsedMilliseconds},{resultStatus},{attempts},{rssi},{antennaPort}";
