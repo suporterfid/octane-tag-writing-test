@@ -67,6 +67,7 @@ namespace OctaneTagWritingTest.JobStrategies
             try
             {
                 this.cancellationToken = cancellationToken;
+                LogFlowStart();
                 Logger.Information("=== Single Reader CheckBox Test ===");
                 Logger.Information("GPI events on Port 1 will trigger tag collection, write, and verification. Press 'q' to cancel");
 
@@ -77,6 +78,7 @@ namespace OctaneTagWritingTest.JobStrategies
                 try
                 {
                     ConfigureWriterReader();
+                    LogFlowRun();
                 }
                 catch (Exception ex)
                 {

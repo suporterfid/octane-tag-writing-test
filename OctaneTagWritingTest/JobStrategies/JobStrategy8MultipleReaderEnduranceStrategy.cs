@@ -99,6 +99,7 @@ namespace OctaneTagWritingTest.JobStrategies
             try
             {
                 this.cancellationToken = cancellationToken;
+                LogFlowStart();
                 Console.WriteLine("=== Multiple Reader Endurance Test ===");
                 Console.WriteLine("Press 'q' to stop the test and return to menu.");
 
@@ -205,9 +206,8 @@ namespace OctaneTagWritingTest.JobStrategies
                         throw;
                     }
                 }
-                
-                
-                
+
+                LogFlowRun();
 
                 // Create CSV header if the log file does not exist.
                 if (!File.Exists(logFile))

@@ -23,6 +23,7 @@ namespace OctaneTagWritingTest.JobStrategies
             try
             {
                 this.cancellationToken = cancellationToken;
+                LogFlowStart();
 
                 Console.WriteLine("Starting robustness test (write with retries using 2 antennas)...");
 
@@ -31,6 +32,7 @@ namespace OctaneTagWritingTest.JobStrategies
                 reader.TagsReported += OnTagsReported;
                 reader.TagOpComplete += OnTagOpComplete;
                 reader.Start();
+                LogFlowRun();
 
                 if (!File.Exists(logFile))
                     TagOpController.Instance.LogToCsv(logFile, "Timestamp,TID,OldEPC,NewEPC,WriteTime,Result,RSSI,AntennaPort");
