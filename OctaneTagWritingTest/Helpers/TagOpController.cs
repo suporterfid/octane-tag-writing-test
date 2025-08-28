@@ -283,9 +283,9 @@ namespace OctaneTagWritingTest.Helpers
                 {
                     addedWriteSequences.TryAdd(seq.Id.ToString(), tag.Tid.ToHexString());
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-
+                    Logger.Warning(ex, "Failed to track permalock sequence {SequenceId} for TID {TID}", seq.Id, tag.Tid.ToHexString());
                 }
 
                 CheckAndCleanAccessSequencesOnReader(addedWriteSequences, reader);
@@ -326,9 +326,9 @@ namespace OctaneTagWritingTest.Helpers
                 {
                     addedWriteSequences.TryAdd(seq.Id.ToString(), tag.Tid.ToHexString());
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-
+                    Logger.Warning(ex, "Failed to track lock sequence {SequenceId} for TID {TID}", seq.Id, tag.Tid.ToHexString());
                 }
                 CheckAndCleanAccessSequencesOnReader(addedWriteSequences, reader);
 
@@ -439,8 +439,9 @@ namespace OctaneTagWritingTest.Helpers
             {
                 addedWriteSequences.TryAdd(seq.Id.ToString(), tag.Tid.ToHexString());
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Logger.Warning(ex, "Failed to track write sequence {SequenceId} for TID {TID}", seq.Id, tag.Tid.ToHexString());
             }
 
             CheckAndCleanAccessSequencesOnReader(addedWriteSequences, reader);
@@ -532,9 +533,9 @@ namespace OctaneTagWritingTest.Helpers
             {
                 addedWriteSequences.TryAdd(seq.Id.ToString(), tag.Tid.ToHexString());
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                Logger.Warning(ex, "Failed to track write sequence {SequenceId} for TID {TID}", seq.Id, tag.Tid.ToHexString());
             }
 
             CheckAndCleanAccessSequencesOnReader(addedWriteSequences, reader);
@@ -596,9 +597,9 @@ namespace OctaneTagWritingTest.Helpers
             {
                 addedReadSequences.TryAdd(seq.Id.ToString(), tag.Tid.ToHexString());
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-
+                Logger.Warning(ex, "Failed to track read sequence {SequenceId} for TID {TID}", seq.Id, tag.Tid.ToHexString());
             }
 
             CheckAndCleanAccessSequencesOnReader(addedReadSequences, reader);
