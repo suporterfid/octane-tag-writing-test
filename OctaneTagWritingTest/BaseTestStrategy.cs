@@ -1,5 +1,6 @@
 ﻿using Impinj.OctaneSdk;
 using OctaneTagWritingTest.Helpers;
+using OctaneTagWritingTest.Infrastructure;
 using Org.LLRP.LTK.LLRPV1;
 using Org.LLRP.LTK.LLRPV1.Impinj;
 using System;
@@ -16,7 +17,7 @@ namespace OctaneTagWritingTest
     /// </summary>
     public abstract class BaseTestStrategy : IJobStrategy
     {
-        protected ImpinjReader reader;
+        protected IReaderClient reader;
         protected string hostname;
         protected string newAccessPassword = "00000000";
         protected string targetTid;  // Will be set with first TID read
@@ -32,11 +33,12 @@ namespace OctaneTagWritingTest
         /// <param name="hostname">The hostname of the RFID reader</param>
         /// <param name="logFile">The path to the log file for test results</param>
         /// <param name="readerSettings">Dictionary of reader settings by role</param>
-        public BaseTestStrategy(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings)
+        /// <param name="readerClient">Optional reader client for dependency injection</param>
+        public BaseTestStrategy(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings, IReaderClient readerClient = null)
         {
             this.hostname = hostname;
             this.logFile = logFile;
-            reader = new ImpinjReader();
+            reader = readerClient ?? new ImpinjReaderClient();
             this.settings = readerSettings;
         }
 

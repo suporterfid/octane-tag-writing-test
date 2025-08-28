@@ -7,10 +7,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using TagDataTranslation;
+using Serilog;
+using OctaneTagWritingTest;
 
 public sealed class EpcListManager
 {
     private static readonly TDTEngine _tdtEngine = new();
+    private static readonly ILogger Logger = LoggingConfiguration.CreateLogger<EpcListManager>();
 
     // Singleton instance with lazy initialization (thread-safe)
     private static readonly Lazy<EpcListManager> instance =
@@ -111,9 +114,9 @@ public sealed class EpcListManager
                     //epcPrefix = emptySgtin.ToEpc().Substring(0, 14);
 
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-
+                    Logger.Warning(ex, "Failed to generate EPC for GTIN {GTIN} from TID {TID}", gtin, tid);
                 }
             }
             else

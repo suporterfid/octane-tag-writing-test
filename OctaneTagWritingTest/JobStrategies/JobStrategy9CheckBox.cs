@@ -10,6 +10,7 @@ using Impinj.OctaneSdk;
 using OctaneTagWritingTest.Helpers;
 using Org.LLRP.LTK.LLRPV1.Impinj;
 using Serilog;
+using OctaneTagWritingTest.Infrastructure;
 
 namespace OctaneTagWritingTest.JobStrategies
 {
@@ -24,7 +25,7 @@ namespace OctaneTagWritingTest.JobStrategies
     public class JobStrategy9CheckBox : BaseTestStrategy
     {
         private static readonly ILogger Logger = LoggingConfiguration.CreateStrategyLogger("CheckBoxStrategy");
-        private ImpinjReader writerReader;
+        private IReaderClient writerReader;
         // Duration for tag collection (in seconds)
         private const int ReadDurationSeconds = 10;
         // Overall timeout for write operations (in seconds)
@@ -115,7 +116,7 @@ namespace OctaneTagWritingTest.JobStrategies
         {
             var writerSettings = GetSettingsForRole("writer");
             if(writerReader == null)
-                writerReader = new ImpinjReader();
+                writerReader = new ImpinjReaderClient();
 
             if(!writerReader.IsConnected)
             {
@@ -166,7 +167,7 @@ namespace OctaneTagWritingTest.JobStrategies
 
         }
 
-        private void EnableLowLatencyReporting(Settings settings, ImpinjReader reader)
+        private void EnableLowLatencyReporting(Settings settings, IReaderClient reader)
         {
             var addRoSpecMessage = reader.BuildAddROSpecMessage(settings);
             var setReaderConfigMessage = reader.BuildSetReaderConfigMessage(settings);
