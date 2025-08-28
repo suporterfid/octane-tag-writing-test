@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Serilog;
+using OctaneTagWritingTest.Infrastructure;
 
 namespace OctaneTagWritingTest.Helpers
 {
@@ -252,7 +253,7 @@ namespace OctaneTagWritingTest.Helpers
             }
         }
 
-        public void PermaLockTag(Tag tag, string accessPassword, ImpinjReader reader)
+        public void PermaLockTag(Tag tag, string accessPassword, IReaderClient reader)
         {
             try
             {
@@ -299,7 +300,7 @@ namespace OctaneTagWritingTest.Helpers
             }
         }
 
-        public void LockTag(Tag tag, string accessPassword, ImpinjReader reader)
+        public void LockTag(Tag tag, string accessPassword, IReaderClient reader)
         {
             try
             {
@@ -341,7 +342,7 @@ namespace OctaneTagWritingTest.Helpers
             }
         }
 
-        public void CheckAndCleanAccessSequencesOnReader(ConcurrentDictionary<string, string> addedSequences, ImpinjReader reader)
+        public void CheckAndCleanAccessSequencesOnReader(ConcurrentDictionary<string, string> addedSequences, IReaderClient reader)
         {
             try
             {
@@ -375,7 +376,7 @@ namespace OctaneTagWritingTest.Helpers
         /// <param name="targetAntennaPort">Target antenna port (default 1)</param>
         /// <param name="useBlockWrite">Whether to use block write operations (default true)</param>
         /// <param name="sequenceMaxRetries">Maximum number of retries for the sequence (default 5)</param>
-        public void TriggerPartialWriteAndVerify(Tag tag, string newEpcToWrite, ImpinjReader reader, CancellationToken cancellationToken, Stopwatch swWrite, string newAccessPassword, bool encodeOrDefault, int charactersToWrite = 14, ushort targetAntennaPort = 1, bool useBlockWrite = true, ushort sequenceMaxRetries = 5)
+        public void TriggerPartialWriteAndVerify(Tag tag, string newEpcToWrite, IReaderClient reader, CancellationToken cancellationToken, Stopwatch swWrite, string newAccessPassword, bool encodeOrDefault, int charactersToWrite = 14, ushort targetAntennaPort = 1, bool useBlockWrite = true, ushort sequenceMaxRetries = 5)
         {
             if (cancellationToken.IsCancellationRequested) return;
 
@@ -472,7 +473,7 @@ namespace OctaneTagWritingTest.Helpers
             RecordExpectedEpc(currentTid, epcData);
         }
 
-        public void TriggerWriteAndVerify(Tag tag, string newEpcToWrite, ImpinjReader reader, CancellationToken cancellationToken, Stopwatch swWrite, string newAccessPassword, bool encodeOrDefault, ushort targetAntennaPort = 1, bool useBlockWrite = true, ushort sequenceMaxRetries = 5)
+        public void TriggerWriteAndVerify(Tag tag, string newEpcToWrite, IReaderClient reader, CancellationToken cancellationToken, Stopwatch swWrite, string newAccessPassword, bool encodeOrDefault, ushort targetAntennaPort = 1, bool useBlockWrite = true, ushort sequenceMaxRetries = 5)
         {
             if (cancellationToken.IsCancellationRequested) return;
 
@@ -568,7 +569,7 @@ namespace OctaneTagWritingTest.Helpers
             RecordExpectedEpc(currentTid, epcData);
         }
 
-        public void TriggerVerificationRead(Tag tag, ImpinjReader reader, CancellationToken cancellationToken, Stopwatch swVerify, string newAccessPassword)
+        public void TriggerVerificationRead(Tag tag, IReaderClient reader, CancellationToken cancellationToken, Stopwatch swVerify, string newAccessPassword)
         {
             if (cancellationToken.IsCancellationRequested) return;
 
@@ -686,7 +687,7 @@ namespace OctaneTagWritingTest.Helpers
             }
         }
 
-        public void ProcessVerificationResult(TagReadOpResult readResult, string tidHex, ConcurrentDictionary<string, int> recoveryCount, Stopwatch swWrite, Stopwatch swVerify, string logFile, ImpinjReader reader, CancellationToken cancellationToken, string newAccessPassword, int maxRecoveryAttempts)
+        public void ProcessVerificationResult(TagReadOpResult readResult, string tidHex, ConcurrentDictionary<string, int> recoveryCount, Stopwatch swWrite, Stopwatch swVerify, string logFile, IReaderClient reader, CancellationToken cancellationToken, string newAccessPassword, int maxRecoveryAttempts)
         {
             swVerify.Stop();
 
