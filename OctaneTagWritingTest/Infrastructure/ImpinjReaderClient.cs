@@ -17,7 +17,7 @@ namespace OctaneTagWritingTest.Infrastructure
             remove { _reader.TagsReported -= value; }
         }
 
-        public event TagOpCompleteEventHandler TagOpComplete
+        public event ImpinjReader.TagOpCompleteHandler TagOpComplete
         {
             add { _reader.TagOpComplete += value; }
             remove { _reader.TagOpComplete -= value; }
