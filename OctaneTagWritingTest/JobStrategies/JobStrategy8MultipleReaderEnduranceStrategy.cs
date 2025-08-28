@@ -131,7 +131,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     catch (Exception ex)
                     {
                         Console.WriteLine("ConfigureWriterReader - Error in dual reader endurance test: " + ex.Message);
-                        throw ex;
+                        throw;
                     }
                 }
 
@@ -144,7 +144,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     catch (Exception ex)
                     {
                         Console.WriteLine("ConfigureVerifierReader - Error in dual reader endurance test: " + ex.Message);
-                        throw ex;
+                        throw;
                     }
                 }
 
@@ -175,7 +175,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     catch (Exception ex)
                     {
                         Console.WriteLine("detectorReader - Error in dual reader endurance test: " + ex.Message);
-                        throw ex;
+                        throw;
                     }
                 }
 
@@ -188,7 +188,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     catch (Exception ex)
                     {
                         Console.WriteLine("writerReader - Error in dual reader endurance test: " + ex.Message);
-                        throw ex;
+                        throw;
                     }
                 }
 
@@ -201,7 +201,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     catch (Exception ex)
                     {
                         Console.WriteLine("verifierReader - Error in dual reader endurance test: " + ex.Message);
-                        throw ex;
+                        throw;
                     }
                 }
                 
