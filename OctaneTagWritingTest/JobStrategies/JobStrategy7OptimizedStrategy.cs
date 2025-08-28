@@ -32,7 +32,8 @@ namespace OctaneTagWritingTest.JobStrategies
             try
             {
                 this.cancellationToken = cancellationToken;
-                string strategyDescription = measureSpeedOnly ? "speed measurement" : 
+                LogFlowStart();
+                string strategyDescription = measureSpeedOnly ? "speed measurement" :
                     enableRetries ? $"optimized write with up to {maxRetries} retries" : "optimized write without retries";
                 Console.WriteLine($"Starting {strategyDescription} strategy...");
 
@@ -41,6 +42,7 @@ namespace OctaneTagWritingTest.JobStrategies
                 reader.TagsReported += OnTagsReported;
                 reader.TagOpComplete += OnTagOpComplete;
                 reader.Start();
+                LogFlowRun();
 
                 if (!File.Exists(logFile))
                 {

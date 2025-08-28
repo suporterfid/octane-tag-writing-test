@@ -25,12 +25,14 @@ namespace OctaneTagWritingTest.JobStrategies
             try
             {
                 this.cancellationToken = cancellationToken;
+                LogFlowStart();
 
                 ConfigureReader();
 
                 reader.TagsReported += OnTagsReported;
                 reader.TagOpComplete += OnTagOpComplete;
                 reader.Start();
+                LogFlowRun();
 
                 if (!File.Exists(logFile))
                 {

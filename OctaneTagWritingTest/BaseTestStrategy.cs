@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Serilog;
 
 namespace OctaneTagWritingTest
 {
@@ -26,6 +27,7 @@ namespace OctaneTagWritingTest
         protected Stopwatch sw = new Stopwatch();
         protected CancellationToken cancellationToken;
         protected Dictionary<string, ReaderSettings> settings;
+        protected readonly ILogger FlowLogger;
 
         /// <summary>
         /// Initializes a new instance of the BaseTestStrategy class
@@ -40,7 +42,13 @@ namespace OctaneTagWritingTest
             this.logFile = logFile;
             reader = readerClient ?? new ImpinjReaderClient();
             this.settings = readerSettings;
+            FlowLogger = LoggingConfiguration.CreateStrategyLogger(GetType().Name);
         }
+
+        protected void LogFlowStart() => FlowLogger.Information("[FLOW] Start");
+        protected void LogFlowConfigure() => FlowLogger.Information("[FLOW] Configure");
+        protected void LogFlowRun() => FlowLogger.Information("[FLOW] Run");
+        protected void LogFlowStop() => FlowLogger.Information("[FLOW] Stop");
 
         /// <summary>
         /// Gets the settings for a specific reader role
@@ -94,6 +102,7 @@ namespace OctaneTagWritingTest
         /// </remarks>
         protected virtual Settings ConfigureReader(string role = "writer")
         {
+            LogFlowConfigure();
             EpcListManager.Instance.LoadEpcList("epc_list.txt");
 
             var roleSettings = GetSettingsForRole(role);
@@ -151,7 +160,11 @@ namespace OctaneTagWritingTest
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error during reader cleanup: {ex.Message}");
+                FlowLogger.Warning(ex, "Error during reader cleanup");
+            }
+            finally
+            {
+                LogFlowStop();
             }
         }
 

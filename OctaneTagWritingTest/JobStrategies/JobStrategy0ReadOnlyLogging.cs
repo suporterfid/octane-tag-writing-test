@@ -24,6 +24,7 @@ namespace OctaneTagWritingTest.JobStrategies
             try
             {
                 this.cancellationToken = cancellationToken;
+                LogFlowStart();
 
                 Logger.Information("Starting Read Logging Test Strategy");
                 Logger.Information("Press 'q' to stop the test and return to menu");
@@ -32,6 +33,7 @@ namespace OctaneTagWritingTest.JobStrategies
 
                 reader.TagsReported += OnTagsReported;
                 reader.Start();
+                LogFlowRun();
 
                 if (!File.Exists(logFile))
                     LogToCsv("Timestamp,TID,EPC,ReadCount,RSSI,AntennaPort");

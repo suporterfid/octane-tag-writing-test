@@ -27,6 +27,7 @@ namespace OctaneTagWritingTest.JobStrategies
             try
             {
                 this.cancellationToken = cancellationToken;
+                LogFlowStart();
                 Console.WriteLine("=== Endurance Test ===");
                 Console.WriteLine("Press 'q' to stop the test and return to menu.");
 
@@ -36,6 +37,7 @@ namespace OctaneTagWritingTest.JobStrategies
                 reader.TagOpComplete += OnTagOpComplete;
 
                 reader.Start();
+                LogFlowRun();
 
                 if (!File.Exists(logFile))
                     LogToCsv("Timestamp,TID,Previous_EPC,Expected_EPC,Verified_EPC,WriteTime_ms,VerifyTime_ms,Result,CycleCount,RSSI,AntennaPort");
