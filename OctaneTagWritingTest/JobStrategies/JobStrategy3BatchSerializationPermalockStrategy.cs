@@ -119,7 +119,7 @@ namespace OctaneTagWritingTest.JobStrategies
             }
         }
 
-        private void LogToCsv(string logLine)
+        private new void LogToCsv(string logLine)
         {
             TagOpController.Instance.LogToCsv(logFile, logLine);
         }

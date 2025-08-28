@@ -21,7 +21,7 @@ namespace OctaneTagWritingTest
         protected IReaderClient reader;
         protected string hostname;
         protected string newAccessPassword = "00000000";
-        protected string targetTid;  // Will be set with first TID read
+        protected string targetTid = string.Empty;  // Will be set with first TID read
         protected bool isTargetTidSet = false;
         protected string logFile;
         protected Stopwatch sw = new Stopwatch();

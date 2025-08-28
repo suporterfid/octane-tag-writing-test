@@ -18,7 +18,7 @@ namespace OctaneTagWritingTest
         // CONSTRUTOR ATUALIZADO: Adicionar ApplicationConfig
         public JobManager(string hostnameDetector, string hostnameWriter, string hostnameVerifier, 
                          string testDescription, Dictionary<string, ReaderSettings> settings, 
-                         ApplicationConfig appConfig, string sku = null)  // NOVO PARÂMETRO
+                         ApplicationConfig appConfig, string? sku = null)  // NOVO PARÂMETRO
         {
             this.readerSettings = settings;
             this.applicationConfig = appConfig; // ARMAZENAR a configuração
@@ -55,7 +55,7 @@ namespace OctaneTagWritingTest
 
         // CONSTRUTOR LEGACY: Para manter compatibilidade com código existente
         public JobManager(string hostnameDetector, string hostnameWriter, string hostnameVerifier, 
-                         string testDescription, Dictionary<string, ReaderSettings> settings, string sku = null)
+                         string testDescription, Dictionary<string, ReaderSettings> settings, string? sku = null)
         {
             // Criar uma ApplicationConfig padrão a partir dos ReaderSettings
             var defaultConfig = CreateDefaultApplicationConfig(settings, hostnameDetector, hostnameWriter, hostnameVerifier);

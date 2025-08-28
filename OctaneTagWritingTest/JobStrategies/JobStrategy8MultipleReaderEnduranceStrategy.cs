@@ -366,7 +366,7 @@ namespace OctaneTagWritingTest.JobStrategies
             reader.ApplySettings(setReaderConfigMessage, addRoSpecMessage);
         }
 
-        private IReaderClient SelectWriterReader()
+        private IReaderClient? SelectWriterReader()
         {
             if (writerReader != null && writerReader.IsConnected)
                 return writerReader;
@@ -747,7 +747,7 @@ namespace OctaneTagWritingTest.JobStrategies
         /// Appends a line to the CSV log file.
         /// </summary>
         /// <param name="line">The CSV line to append.</param>
-        private void LogToCsv(string line)
+        private new void LogToCsv(string line)
         {
             TagOpController.Instance.LogToCsv(logFile, line);
         }
@@ -757,7 +757,7 @@ namespace OctaneTagWritingTest.JobStrategies
         /// This method is called by the timer every 10 seconds.
         /// </summary>
         /// <param name="state">Timer state (not used)</param>
-        private void DisplayProgress(object state)
+        private void DisplayProgress(object? state)
         {
             try
             {

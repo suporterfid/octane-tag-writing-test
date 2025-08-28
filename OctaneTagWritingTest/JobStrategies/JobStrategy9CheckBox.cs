@@ -50,10 +50,10 @@ namespace OctaneTagWritingTest.JobStrategies
         // Flag to indicate that the verification phase is active.
         private bool isVerificationPhase = false;
 
-        public JobStrategy9CheckBox(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings, string sku)
+        public JobStrategy9CheckBox(string hostname, string logFile, Dictionary<string, ReaderSettings> readerSettings, string? sku)
             : base(hostname, logFile, readerSettings)
         {
-            if (sku.Length != 12)
+            if (string.IsNullOrEmpty(sku) || sku.Length != 12)
             {
                 throw new ArgumentException("SKU must contain exactly 12 digits.", nameof(sku));
             }
@@ -244,8 +244,8 @@ namespace OctaneTagWritingTest.JobStrategies
             isCollectingTags = false;
 
             Logger.Information("Tag collection ended. Total tags collected: {TagCount}. Confirm? (y/n)", tagData.Count);
-            string confirmation = Console.ReadLine();
-            if (!confirmation.Equals("y", StringComparison.OrdinalIgnoreCase))
+            string? confirmation = Console.ReadLine();
+            if (!string.Equals(confirmation, "y", StringComparison.OrdinalIgnoreCase))
             {
                 Logger.Information("Operation canceled by user");
                 //writerReader.Disconnect();
@@ -441,12 +441,12 @@ namespace OctaneTagWritingTest.JobStrategies
         /// Appends a line to the CSV log file.
         /// </summary>
         /// <param name="line">The CSV line to append.</param>
-        private void LogToCsv(string line)
+        private new void LogToCsv(string line)
         {
             TagOpController.Instance.LogToCsv(logFile, line);
         }
 
-        private void LogSuccessCount(object state)
+        private void LogSuccessCount(object? state)
         {
             try
             {

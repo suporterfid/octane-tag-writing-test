@@ -28,8 +28,10 @@ namespace Impinj.TagUtils
                 if (!(key == ETagType.Unknown.ToEnumMemberAttrValue()))
                 {
                     TagMemoryField field = TagDesign[key].Memory[TagAccessLocation.Tid].Fields[ETagBitField.Id.ToEnumMemberAttrValue()];
-                    string str2 = field.Value.Substring(2);
-                    if (field.Bits.ApplyToHexValue(tid).TrimStart('0') == str2)
+                    string fieldValue = field.Value ?? string.Empty;
+                    string str2 = fieldValue.Length >= 2 ? fieldValue.Substring(2) : fieldValue;
+                    var bits = field.Bits ?? new List<NumberRange>();
+                    if (bits.ApplyToHexValue(tid).TrimStart('0') == str2)
                     {
                         str1 = key;
                         tagTraits.Merge((TagTraits)TagDesign[key].Clone());

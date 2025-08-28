@@ -11,37 +11,37 @@ namespace Impinj.TagUtils
         public bool? IsLockable { get; set; } = new bool?();
 
         [JsonConverter(typeof(NumberRangesJsonConverter))]
-        public List<NumberRange> Bits { get; set; } = null;
+        public List<NumberRange>? Bits { get; set; } = null;
 
         [JsonConverter(typeof(NumberRangesJsonConverter))]
-        public List<NumberRange> Blocks { get; set; } = null;
+        public List<NumberRange>? Blocks { get; set; } = null;
 
         [JsonConverter(typeof(NumberRangesJsonConverter))]
         [JsonProperty("Lockable Bits")]
-        public List<NumberRange> LockableBits { get; set; } = null;
+        public List<NumberRange>? LockableBits { get; set; } = null;
 
-        public string Value { get; set; } = null;
+        public string? Value { get; set; } = null;
 
-        public string Description { get; set; } = null;
+        public string? Description { get; set; } = null;
 
-        public List<TagMemoryField> Dynamic { get; set; } = null;
+        public List<TagMemoryField>? Dynamic { get; set; } = null;
 
         [JsonProperty("Depends On")]
-        public Dictionary<TagAccessLocation, TagMemoryField> DependsOn { get; set; } = null;
+        public Dictionary<TagAccessLocation, TagMemoryField>? DependsOn { get; set; } = null;
 
         [JsonProperty("Applies To")]
-        public Dictionary<TagAccessLocation, TagMemoryField> AppliesTo { get; set; } = null;
+        public Dictionary<TagAccessLocation, TagMemoryField>? AppliesTo { get; set; } = null;
 
-        public string Field { get; set; } = null;
+        public string? Field { get; set; } = null;
 
         [JsonConstructor]
-        public TagMemoryField(string bitsString = null, string value = null)
+        public TagMemoryField(string? bitsString = null, string? value = null)
         {
             Bits = new List<NumberRange>().AddFrom(bitsString);
             Value = value;
         }
 
-        public TagMemoryField(long bit, string value = null)
+        public TagMemoryField(long bit, string? value = null)
           : this(bit.ToString(), value)
         {
         }

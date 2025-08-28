@@ -8,7 +8,7 @@ namespace Impinj.Utils
 {
     public static class JsonConvertExtensions
     {
-        public static T ToEnum<T>(this string value) => JsonConvert.DeserializeObject<T>("\"" + value + "\"");
+        public static T ToEnum<T>(this string value) => JsonConvert.DeserializeObject<T>("\"" + value + "\"")!;
 
         public static void SerializeToFile<T>(this T target, string fileName)
         {
@@ -38,7 +38,7 @@ namespace Impinj.Utils
                 return JsonConvert.DeserializeObject<T>(File.ReadAllText(fileName), new JsonSerializerSettings()
                 {
                     TypeNameHandling = TypeNameHandling.Auto
-                });
+                })!;
             }
             catch (Exception ex)
             {

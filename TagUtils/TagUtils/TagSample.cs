@@ -13,10 +13,10 @@ namespace Impinj.TagUtils
         public string Type { get; private set; } = "Unknown Tag Type";
 
         [JsonIgnore]
-        public TagLibrary Library { get; private set; } = null;
+        public TagLibrary? Library { get; private set; } = null;
 
         [JsonIgnore]
-        public TagTraits Traits { get; private set; } = null;
+        public TagTraits? Traits { get; private set; } = null;
 
         public string BackscatteredEPC { get; private set; } = string.Empty;
 
@@ -36,7 +36,7 @@ namespace Impinj.TagUtils
         [JsonIgnore]
         public bool LikelyInPublicMode { get; internal set; } = false;
 
-        public TagSample(TagLibrary library, string backscatteredEpc = "", string tid = "")
+        public TagSample(TagLibrary? library, string backscatteredEpc = "", string tid = "")
         {
             Library = library;
             BackscatteredEPC = backscatteredEpc;
@@ -61,18 +61,26 @@ namespace Impinj.TagUtils
                 foreach (TagMemoryField tagMemoryField1 in keyValuePair.Value.Fields.Values.Where(f => f.Dynamic != null))
                 {
                     bool flag2 = false;
-                    foreach (TagMemoryField tagMemoryField2 in tagMemoryField1.Dynamic)
+                    foreach (TagMemoryField tagMemoryField2 in tagMemoryField1.Dynamic!)
                     {
+                        if (tagMemoryField2.DependsOn == null || tagMemoryField2.DependsOn.Keys.Count == 0)
+                            continue;
                         TagAccessLocation key = tagMemoryField2.DependsOn.Keys.First();
-                        string hex;
-                        if (BankData.TryGetValue(key, out hex) && tagMemoryField2.DependsOn[key].Bits.ApplyToHexValue(hex).AddPrefix(16) == tagMemoryField2.DependsOn[key].Value.AddPrefix(16))
+                        string? hex;
+                        if (BankData.TryGetValue(key, out hex))
                         {
-                            tagMemoryField1.AppliesTo = tagMemoryField2.AppliesTo ?? tagMemoryField1.AppliesTo;
-                            tagMemoryField1.Bits = tagMemoryField2.Bits ?? tagMemoryField1.Bits;
-                            tagMemoryField1.Description = tagMemoryField2.Description ?? tagMemoryField1.Description;
-                            tagMemoryField1.Value = tagMemoryField2.Value ?? tagMemoryField1.Value;
-                            flag2 = true;
-                            break;
+                            var dependsField = tagMemoryField2.DependsOn[key];
+                            var bits = dependsField.Bits ?? new List<NumberRange>();
+                            var expected = dependsField.Value?.AddPrefix(16) ?? string.Empty;
+                            if (bits.ApplyToHexValue(hex!).AddPrefix(16) == expected)
+                            {
+                                tagMemoryField1.AppliesTo = tagMemoryField2.AppliesTo ?? tagMemoryField1.AppliesTo;
+                                tagMemoryField1.Bits = tagMemoryField2.Bits ?? tagMemoryField1.Bits;
+                                tagMemoryField1.Description = tagMemoryField2.Description ?? tagMemoryField1.Description;
+                                tagMemoryField1.Value = tagMemoryField2.Value ?? tagMemoryField1.Value;
+                                flag2 = true;
+                                break;
+                            }
                         }
                     }
                     flag1 &= flag2;

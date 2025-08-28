@@ -11,7 +11,7 @@ namespace OctaneTagWritingTest.Infrastructure
     {
         private readonly ImpinjReader _reader = new();
 
-        public event TagsReportedEventHandler TagsReported
+        public event ImpinjReader.TagsReportedHandler TagsReported
         {
             add { _reader.TagsReported += value; }
             remove { _reader.TagsReported -= value; }
@@ -23,7 +23,7 @@ namespace OctaneTagWritingTest.Infrastructure
             remove { _reader.TagOpComplete -= value; }
         }
 
-        public event GpiEventHandler GpiChanged
+        public event ImpinjReader.GpiChangedHandler GpiChanged
         {
             add { _reader.GpiChanged += value; }
             remove { _reader.GpiChanged -= value; }

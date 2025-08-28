@@ -12,7 +12,7 @@ namespace Impinj.TagUtils
 
         public uint SequenceId { get; set; } = 0;
 
-        public Action<TagSample, IExecutedTagOperation> PostAction { get; set; }
+        public Action<TagSample, IExecutedTagOperation> PostAction { get; set; } = (_, _) => { };
 
         public void IncrementOperationId() => OperationId = _tagAccessIdentifierCounter++;
 

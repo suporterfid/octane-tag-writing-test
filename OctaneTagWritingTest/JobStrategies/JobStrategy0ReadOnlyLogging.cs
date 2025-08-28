@@ -78,7 +78,7 @@ namespace OctaneTagWritingTest.JobStrategies
             }
         }
 
-        private void LogToCsv(string data)
+        private new void LogToCsv(string data)
         {
             lock (this)
             {

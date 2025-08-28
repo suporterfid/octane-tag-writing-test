@@ -1,6 +1,6 @@
 public static class InteractiveConfig
 {
-    public static ApplicationConfig Configure(ApplicationConfig initialConfig = null)
+    public static ApplicationConfig Configure(ApplicationConfig? initialConfig = null)
     {
         ApplicationConfig config = initialConfig ?? new ApplicationConfig();
 

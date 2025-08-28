@@ -9,9 +9,9 @@ namespace OctaneTagWritingTest.Infrastructure
     /// </summary>
     public interface IReaderClient
     {
-        event TagsReportedEventHandler TagsReported;
+        event ImpinjReader.TagsReportedHandler TagsReported;
         event ImpinjReader.TagOpCompleteHandler TagOpComplete;
-        event GpiEventHandler GpiChanged;
+        event ImpinjReader.GpiChangedHandler GpiChanged;
 
         void Connect(string hostname);
         void ApplyDefaultSettings();

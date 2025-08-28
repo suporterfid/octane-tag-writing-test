@@ -136,9 +136,9 @@ namespace Impinj.TagUtils
 
         public static long BitCount(this List<NumberRange> numberRanges) => numberRanges.Sum(n => n.Count);
 
-        public static List<NumberRange> AddFrom(
+        public static List<NumberRange>? AddFrom(
           this List<NumberRange> numberRanges,
-          string strNumberRanges)
+          string? strNumberRanges)
         {
             if (string.IsNullOrWhiteSpace(strNumberRanges))
                 return null;

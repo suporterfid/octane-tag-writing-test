@@ -64,7 +64,7 @@ namespace OctaneTagWritingTest.JobStrategies
             }
         }
 
-        private void LogSuccessCount(object state)
+        private void LogSuccessCount(object? state)
         {
             try
             {
@@ -168,7 +168,7 @@ namespace OctaneTagWritingTest.JobStrategies
 
 
 
-        private void LogToCsv(string logLine)
+        private new void LogToCsv(string logLine)
         {
             TagOpController.Instance.LogToCsv(logFile, logLine);
         }

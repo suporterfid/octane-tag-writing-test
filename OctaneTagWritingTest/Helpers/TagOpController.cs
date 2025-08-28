@@ -69,7 +69,7 @@ namespace OctaneTagWritingTest.Helpers
         public static TagOpController Instance => _instance.Value;
 
         // New properties to hold the current target TID and flag.
-        public string LocalTargetTid { get; private set; }
+        public string LocalTargetTid { get; private set; } = string.Empty;
         public bool IsLocalTargetTidSet { get; private set; }
 
         private readonly object fileLock = new object();
@@ -124,11 +124,11 @@ namespace OctaneTagWritingTest.Helpers
             }
         }
 
-        public string GetExpectedEpc(string tid)
+        public string? GetExpectedEpc(string tid)
         {
             lock (lockObj)
             {
-                if (expectedEpcByTid.TryGetValue(tid, out string expected))
+                if (expectedEpcByTid.TryGetValue(tid, out string? expected))
                     return expected;
                 return null;
             }
@@ -575,7 +575,7 @@ namespace OctaneTagWritingTest.Helpers
             if (cancellationToken.IsCancellationRequested) return;
 
             string currentTid = tag.Tid.ToHexString();
-            string expectedEpc = GetExpectedEpc(currentTid);
+            string expectedEpc = GetExpectedEpc(currentTid) ?? string.Empty;
 
             TagOpSequence seq = new TagOpSequence();
             //seq.AntennaId = ;
@@ -692,7 +692,7 @@ namespace OctaneTagWritingTest.Helpers
         {
             swVerify.Stop();
 
-            string expectedEpc = GetExpectedEpc(tidHex);
+            string expectedEpc = GetExpectedEpc(tidHex) ?? string.Empty;
             string verifiedEpc = readResult.Data?.ToHexString() ?? "N/A";
             string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             string resultStatus = verifiedEpc.Equals(expectedEpc, StringComparison.OrdinalIgnoreCase) ? "Success" : "Failure";

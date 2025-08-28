@@ -7,7 +7,7 @@ namespace Impinj.TagUtils
     {
         public string TagTid = string.Empty;
         public string EpcValue = string.Empty;
-        public string TargetSgtin96Value = null;
+        public string? TargetSgtin96Value = null;
         public string PcValue = string.Empty;
         public string AccessPwValue = string.Empty;
         public CompletionCriteriaEnum completionCriteria = CompletionCriteriaEnum.None;
@@ -49,15 +49,15 @@ namespace Impinj.TagUtils
           string Tid,
           CompletionCriteriaEnum completion_criteria,
           string Epc,
-          string TargetEpcSgtin96 = null,
-          string Pc = null,
-          string Access_Pw = null)
+          string? TargetEpcSgtin96 = null,
+          string? Pc = null,
+          string? Access_Pw = null)
         {
             TagTid = Tid;
             EpcValue = Epc;
             TargetSgtin96Value = TargetEpcSgtin96;
-            PcValue = Pc;
-            AccessPwValue = Access_Pw;
+            PcValue = Pc ?? string.Empty;
+            AccessPwValue = Access_Pw ?? string.Empty;
             completionCriteria = completion_criteria;
         }
     }

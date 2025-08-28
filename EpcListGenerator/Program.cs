@@ -24,8 +24,8 @@ namespace EpcListGenerator
                 if (File.Exists(outputFile))
                 {
                     Console.Write($"Output file '{outputFile}' already exists. Overwrite? (y/n): ");
-                    string overwriteResponse = Console.ReadLine();
-                    if (!overwriteResponse.Equals("y", StringComparison.OrdinalIgnoreCase))
+                    var overwriteResponse = Console.ReadLine();
+                    if (!string.Equals(overwriteResponse, "y", StringComparison.OrdinalIgnoreCase))
                     {
                         Logger.Information("Operation cancelled by user");
                         return;
@@ -94,7 +94,7 @@ namespace EpcListGenerator
             {
                 // Prompt for EPC header.
                 Console.Write($"Enter the EPC header (4 characters) [default: {epcHeader}]: ");
-                string inputHeader = Console.ReadLine();
+                string? inputHeader = Console.ReadLine();
                 if (!string.IsNullOrWhiteSpace(inputHeader))
                 {
                     epcHeader = inputHeader;
@@ -102,7 +102,7 @@ namespace EpcListGenerator
 
                 // Prompt for GTIN.
                 Console.Write("Enter the GTIN (14 characters): ");
-                gtin = Console.ReadLine();
+                gtin = Console.ReadLine() ?? string.Empty;
                 if (string.IsNullOrWhiteSpace(gtin))
                 {
                     gtin = "99999999999999";
@@ -111,7 +111,7 @@ namespace EpcListGenerator
 
                 // Prompt for quantity.
                 Console.Write("Enter the number of EPCs to generate: ");
-                string quantityInput = Console.ReadLine();
+                string? quantityInput = Console.ReadLine();
                 if (!long.TryParse(quantityInput, out quantity))
                 {
                     throw new ArgumentException("Invalid quantity entered.");
@@ -119,7 +119,7 @@ namespace EpcListGenerator
 
                 // Prompt for output file path.
                 Console.Write($"Enter the output file path [default: {outputFile}]: ");
-                string inputOutput = Console.ReadLine();
+                string? inputOutput = Console.ReadLine();
                 if (!string.IsNullOrWhiteSpace(inputOutput))
                 {
                     outputFile = inputOutput;
@@ -127,7 +127,7 @@ namespace EpcListGenerator
 
                 // Prompt for initial serial counter.
                 Console.Write("Enter the initial serial counter [default: 1]: ");
-                string initialSerialInput = Console.ReadLine();
+                string? initialSerialInput = Console.ReadLine();
                 if (!string.IsNullOrWhiteSpace(initialSerialInput))
                 {
                     if (!long.TryParse(initialSerialInput, out initialSerial))

@@ -8,7 +8,7 @@ namespace Impinj.TagUtils
         [JsonProperty("Is Supported")]
         public bool? IsSupported { get; set; } = new bool?();
 
-        public string Description { get; set; } = null;
+        public string? Description { get; set; } = null;
 
         public object Clone() => MemberwiseClone();
     }

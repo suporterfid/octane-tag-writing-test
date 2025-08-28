@@ -30,16 +30,24 @@ namespace Impinj.Utils
 
         public static string ToEnumMemberAttrValue(this Enum @enum)
         {
-            MemberInfo memberInfo = @enum.GetType().GetMember(@enum.ToString()).FirstOrDefault();
-            EnumMemberAttribute enumMemberAttribute = (object)memberInfo != null ? memberInfo.GetCustomAttributes(false).OfType<EnumMemberAttribute>().FirstOrDefault() : null;
-            return enumMemberAttribute == null ? @enum.ToString() : enumMemberAttribute.Value;
+            MemberInfo? memberInfo = @enum.GetType().GetMember(@enum.ToString()).FirstOrDefault();
+            EnumMemberAttribute? enumMemberAttribute = memberInfo?.GetCustomAttributes(false).OfType<EnumMemberAttribute>().FirstOrDefault();
+            return enumMemberAttribute?.Value ?? @enum.ToString();
         }
 
-        public static T FromEnumMemberAttrValue<T>(this string str)
+        public static T FromEnumMemberAttrValue<T>(this string str) where T : struct, Enum
         {
             Type enumType = typeof(T);
-            IEnumerable<string> source = Enum.GetNames(enumType).Where(name => ((IEnumerable<EnumMemberAttribute>)enumType.GetField(name).GetCustomAttributes(typeof(EnumMemberAttribute), true)).Single().Value == str);
-            return source.Any() ? (T)Enum.Parse(enumType, source.ElementAt(0)) : default;
+            var name = Enum.GetNames(enumType)
+                .FirstOrDefault(n =>
+                {
+                    var field = enumType.GetField(n);
+                    var attr = field?.GetCustomAttributes(typeof(EnumMemberAttribute), true)
+                        .OfType<EnumMemberAttribute>()
+                        .SingleOrDefault();
+                    return attr?.Value == str;
+                });
+            return name != null ? (T)Enum.Parse(enumType, name) : default;
         }
     }
 }
