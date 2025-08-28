@@ -23,16 +23,10 @@ namespace OctaneTagWritingTest
                 .MinimumLevel.Is(logLevel)
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
                 .MinimumLevel.Override("System", LogEventLevel.Warning)
-                .Enrich.WithProperty("Application", "OctaneTagWritingTest")
-                .Enrich.WithProperty("TestDescription", testDescription)
-                .Enrich.WithProperty("MachineName", Environment.MachineName)
-                .Enrich.WithProperty("ProcessId", Environment.ProcessId)
-                .Enrich.WithThreadId()
                 .WriteTo.Console(
-                    outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {Properties:j}{NewLine}{Exception}")
+                    outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj} {NewLine}{Exception}")
                 .WriteTo.File(
                     path: logFileName,
-                    formatter: new CompactJsonFormatter(),
                     rollingInterval: RollingInterval.Day,
                     retainedFileCountLimit: 30,
                     shared: true)
