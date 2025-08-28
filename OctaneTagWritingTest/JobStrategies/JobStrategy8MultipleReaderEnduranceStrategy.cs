@@ -521,11 +521,11 @@ namespace OctaneTagWritingTest.JobStrategies
                     TagOpController.Instance.TriggerWriteAndVerify(
                         tag,
                         expectedEpc,
-                        sender,
+                        writerReader,
                         cancellationToken,
                         swWriteTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
                         newAccessPassword,
-                        true, 
+                        true,
                         1,
                         true,
                         3);
@@ -673,10 +673,10 @@ namespace OctaneTagWritingTest.JobStrategies
                     {
                         Console.WriteLine($"OnTagOpComplete - Write operation succeeded for TID {tidHex} on reader {sender.Name}.");
                         // After a successful write, trigger a verification read on the verifier reader.
-                        
+
                         TagOpController.Instance.TriggerVerificationRead(
                             result.Tag,
-                            sender,
+                            verifierReader,
                             cancellationToken,
                             swVerifyTimers.GetOrAdd(tidHex, _ => new Stopwatch()),
                             newAccessPassword);
