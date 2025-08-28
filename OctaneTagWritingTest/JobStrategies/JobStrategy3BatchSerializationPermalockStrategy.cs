@@ -98,7 +98,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     var swWrite = writeTimers.GetOrAdd(tidHex, _ => new Stopwatch());
                     swWrite.Stop();
 
-                    var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                    var timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss");
                     var oldEpc = writeResult.Tag.Epc.ToHexString();
                     var newEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
                     var res = writeResult.Result.ToString();
