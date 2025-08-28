@@ -16,8 +16,8 @@ namespace OctaneTagWritingTest
         /// <param name="logLevel">Minimum log level (default: Information)</param>
         public static void ConfigureLogging(string testDescription = "default", LogEventLevel logLevel = LogEventLevel.Information)
         {
-            var logFileName = $"logs/octane-tag-writing-{testDescription}-{DateTime.Now:yyyyMMdd-HHmmss}.log";
-            var errorLogFileName = $"logs/octane-tag-writing-{testDescription}-errors-{DateTime.Now:yyyyMMdd-HHmmss}.log";
+            var logFileName = $"logs/octane-tag-writing-{testDescription}-{DateTime.UtcNow:yyyyMMdd-HHmmss}.log";
+            var errorLogFileName = $"logs/octane-tag-writing-{testDescription}-errors-{DateTime.UtcNow:yyyyMMdd-HHmmss}.log";
 
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Is(logLevel)

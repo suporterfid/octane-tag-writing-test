@@ -8,7 +8,7 @@ namespace OctaneTagWritingTest
     {
         private static readonly ILogger Logger = LoggingConfiguration.CreateLogger<Program>();
 
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
             // Configure the console window
             Console.Clear();
@@ -89,8 +89,8 @@ namespace OctaneTagWritingTest
                 config.Sku);
 
             // Main application loop
-            RunApplicationLoop(manager);
-            
+            await RunApplicationLoop(manager);
+
             // Ensure logs are flushed before application exit
             LoggingConfiguration.CloseAndFlush();
         }
@@ -184,7 +184,7 @@ namespace OctaneTagWritingTest
     };
         }
 
-        private static void RunApplicationLoop(JobManager manager)
+        private static async Task RunApplicationLoop(JobManager manager)
         {
             while (true)
             {
@@ -201,20 +201,23 @@ namespace OctaneTagWritingTest
                 using var cts = new CancellationTokenSource();
 
                 // Start a task to monitor for the 'q' key press
-                var keyMonitorTask = Task.Run(() =>
+                var keyMonitorTask = Task.Run(async () =>
                 {
-                    while (!cts.Token.IsCancellationRequested)
+                    while (true)
                     {
+                        cts.Token.ThrowIfCancellationRequested();
+
                         if (Console.KeyAvailable)
                         {
                             var key = Console.ReadKey(true);
                             if (key.KeyChar == 'q')
                             {
                                 cts.Cancel();
-                                return;
+                                cts.Token.ThrowIfCancellationRequested();
                             }
                         }
-                        Thread.Sleep(100); // Reduce CPU usage
+
+                        await Task.Delay(100, cts.Token);
                     }
                 }, cts.Token);
 
@@ -232,8 +235,14 @@ namespace OctaneTagWritingTest
                     Logger.Error(ex, "Error executing test: {ErrorMessage}", ex.Message);
                 }
 
-                // Wait for the key monitoring task to complete
-                keyMonitorTask.Wait();
+                try
+                {
+                    await keyMonitorTask;
+                }
+                catch (OperationCanceledException)
+                {
+                    // Key monitoring cancelled
+                }
             }
         }
     }
