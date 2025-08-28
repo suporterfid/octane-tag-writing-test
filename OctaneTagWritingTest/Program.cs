@@ -190,8 +190,11 @@ namespace OctaneTagWritingTest
             {
                 manager.DisplayMenu();
                 Console.Write("Choose an option (or 'q' to quit): ");
-                string option = Console.ReadLine();
-                if (option?.ToLower() == "q")
+                string? option = Console.ReadLine();
+                if (string.IsNullOrWhiteSpace(option))
+                    continue;
+
+                if (option.Equals("q", StringComparison.OrdinalIgnoreCase))
                     break;
 
                 // Create cancellation token source for the test
