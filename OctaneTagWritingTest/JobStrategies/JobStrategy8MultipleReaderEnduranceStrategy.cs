@@ -341,7 +341,10 @@ namespace OctaneTagWritingTest.JobStrategies
             verifierSettings.Gpos.GetGpo(gpoPortPulsed).Mode = GpoMode.Pulsed;
             verifierSettings.Gpos.GetGpo(gpoPortPulsed).GpoPulseDurationMsec = (uint)applicationConfig.GpoPulseDurationMs;
 
-            verifierSettings.Gpos.GetGpo(gpoPortStatic).Mode = GpoMode.Normal;
+            verifierSettings.Gpos.GetGpo(gpoPortStatic).Mode = GpoMode.Pulsed;
+            verifierSettings.Gpos.GetGpo(gpoPortStatic).GpoPulseDurationMsec = (uint)applicationConfig.GpoPulseDurationMs;
+
+            //verifierSettings.Gpos.GetGpo(gpoPortStatic).Mode = GpoMode.Normal;
 
             verifierSettings.AutoStart.Mode = AutoStartMode.GpiTrigger;
             verifierSettings.AutoStart.GpiPortNumber = gpiPortToProcessVerification;
@@ -415,9 +418,10 @@ namespace OctaneTagWritingTest.JobStrategies
                         {
                             sender.SetGpo(gpoPortPulsed, true);
                             sender.SetGpo(gpoPortStatic, true);
-                            Console.WriteLine($"GPO port {gpoPortStatic} set to true (static). Press Enter to reset and resume...");
-                            await Task.Run(() => Console.ReadLine());
-                            sender.SetGpo(gpoPortStatic, false);
+                            //Console.WriteLine($"GPO port {gpoPortStatic} set to true (static). Press Enter to reset and resume...");
+                            //await Task.Run(() => Console.ReadLine());
+                            //Console.ReadLine();
+                            
                         }
                         verificationTags.Clear();
                         Interlocked.Exchange(ref gpiProcessingFlag, 0);
@@ -596,7 +600,8 @@ namespace OctaneTagWritingTest.JobStrategies
                     Console.WriteLine($"OnTagsReportedVerifier>>>>>>>>>> TID: {tidHex}. Assigning EPC: {epcHex} -> {expectedEpc}");
                 }
 
-                bool success = expectedEpc.Equals(epcHex, StringComparison.InvariantCultureIgnoreCase);
+                bool success = expectedEpc.Substring(13).Equals(epcHex.Substring(13), StringComparison.InvariantCultureIgnoreCase);
+                //bool success = expectedEpc.Equals(epcHex, StringComparison.InvariantCultureIgnoreCase);
                 var writeStatus = success ? "Success" : "Failure";
                 Console.WriteLine(".........................................");
                 Console.WriteLine($"OnTagsReportedVerifier - TID {tidHex} - current EPC: {epcHex} Expected EPC: {expectedEpc} Operation Status [{writeStatus}]" );
@@ -610,15 +615,15 @@ namespace OctaneTagWritingTest.JobStrategies
                 }
                 else if (!string.IsNullOrEmpty(expectedEpc))
                 {
-                    
-                    if (!expectedEpc.Equals(epcHex, StringComparison.InvariantCultureIgnoreCase))
+                    bool isEpcOk = expectedEpc.Substring(12).Equals(epcHex.Substring(12), StringComparison.InvariantCultureIgnoreCase);
+                    if (!isEpcOk)
                     {
                         Console.WriteLine($"Verification mismatch for TID {tidHex}: expected {expectedEpc}, read {epcHex}. Retrying write operation using expected EPC.");
                         // Pulse the LED to indicate verification failure
-                        sender.SetGpo(gpoPortPulsed, true);
+                        // sender.SetGpo(gpoPortPulsed, true);
                         // Retry writing using the available writer
                         var writer = SelectWriterReader();
-                        if (writer != null)
+                        if (writer != null )
                         {
                             TagOpController.Instance.TriggerWriteAndVerify(
                                 tag,

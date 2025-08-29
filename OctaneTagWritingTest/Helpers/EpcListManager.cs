@@ -98,7 +98,7 @@ public sealed class EpcListManager
                     }
 
                     string epcIdentifier = @"gtin="+ prefix + ";serial="+ epcSerial;
-                    string parameterList = @"filter=1;gs1companyprefixlength=6;tagLength=96";
+                    string parameterList = @"filter=1;gs1companyprefixlength=7;tagLength=96";
                     string binary = _tdtEngine.Translate(epcIdentifier, parameterList, @"BINARY");
                     string sgtinHex = _tdtEngine.BinaryToHex(binary).ToUpper();
 
