@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Serilog;
+using Common.Logging;
 using OctaneTagWritingTest.Infrastructure;
 
 namespace OctaneTagWritingTest.Helpers
@@ -72,7 +73,7 @@ namespace OctaneTagWritingTest.Helpers
         public string LocalTargetTid { get; private set; } = string.Empty;
         public bool IsLocalTargetTidSet { get; private set; }
 
-        private readonly object fileLock = new object();
+        private readonly ConcurrentDictionary<string, string> csvHeaders = new();
 
         public void CleanUp()
         {
@@ -670,21 +671,26 @@ namespace OctaneTagWritingTest.Helpers
         }
 
         /// <summary>
-        /// Appends a line to the CSV log file
+        /// Appends a line to the CSV log file. The first call for a given file is
+        /// treated as the header and will not produce a log entry.
         /// </summary>
         /// <param name="line">The line to append to the log file</param>
         public void LogToCsv(string logFile, string line)
         {
             try
             {
-                lock (fileLock)
+                if (csvHeaders.TryAdd(logFile, line))
                 {
-                    File.AppendAllText(logFile, line + Environment.NewLine);
+                    // First call sets the header without logging a line.
+                    return;
                 }
+
+                var header = csvHeaders[logFile];
+                LoggingService.Instance.LogCsv(logFile, header, line);
             }
             catch (Exception ex)
             {
-                logger.Warning(ex, "Unable to write data to CSV log file {LogFile}", logFile);
+                logger.Warning(ex, "Unable to enqueue data to CSV log file {LogFile}", logFile);
             }
         }
 

@@ -66,6 +66,24 @@ public sealed class LoggingService : IDisposable, IAsyncDisposable
         _channel.Writer.TryWrite(logEvent);
     }
 
+    /// <summary>
+    /// Enqueues a CSV log event for asynchronous processing.
+    /// </summary>
+    /// <param name="file">Destination CSV file path.</param>
+    /// <param name="header">CSV header to ensure is written once per file.</param>
+    /// <param name="line">CSV data line to append.</param>
+    public void LogCsv(string file, string header, string line)
+    {
+        if (_channel is null)
+        {
+            throw new InvalidOperationException("LoggingService has not been started.");
+        }
+
+        var logEvent = new LogEvent(DateTime.UtcNow, LogLevel.Information, string.Empty, null,
+            new CsvPayload(file, header, line));
+        _channel.Writer.TryWrite(logEvent);
+    }
+
     public void LogTrace(string template, params object[] args) => Log(LogLevel.Trace, template, args);
     public void LogDebug(string template, params object[] args) => Log(LogLevel.Debug, template, args);
     public void LogInfo(string template, params object[] args) => Log(LogLevel.Information, template, args);

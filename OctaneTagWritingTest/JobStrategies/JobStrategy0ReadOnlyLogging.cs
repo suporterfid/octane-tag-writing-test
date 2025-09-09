@@ -80,10 +80,7 @@ namespace OctaneTagWritingTest.JobStrategies
 
         private new void LogToCsv(string data)
         {
-            lock (this)
-            {
-                File.AppendAllText(logFile, data + Environment.NewLine);
-            }
+            TagOpController.Instance.LogToCsv(logFile, data);
         }
 
         

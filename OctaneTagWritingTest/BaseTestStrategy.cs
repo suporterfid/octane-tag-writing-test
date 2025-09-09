@@ -85,7 +85,7 @@ namespace OctaneTagWritingTest
         /// <param name="line">The line to append to the log file</param>
         protected void LogToCsv(string line)
         {
-            File.AppendAllText(logFile, line + Environment.NewLine);
+            TagOpController.Instance.LogToCsv(logFile, line);
         }
 
         /// <summary>

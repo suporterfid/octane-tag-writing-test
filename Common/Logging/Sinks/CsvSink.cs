@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -35,8 +36,16 @@ public sealed class CsvSink : ILogSink, IAsyncDisposable, IDisposable
 
     private static async Task ProcessChannel(string path, Channel<CsvPayload> channel)
     {
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
         var exists = File.Exists(path);
         await using var stream = new StreamWriter(path, append: true, Encoding.UTF8);
+        var batch = new List<string>(64);
+
         await foreach (var payload in channel.Reader.ReadAllAsync())
         {
             if (!exists)
@@ -44,7 +53,26 @@ public sealed class CsvSink : ILogSink, IAsyncDisposable, IDisposable
                 await stream.WriteLineAsync(payload.Header);
                 exists = true;
             }
-            await stream.WriteLineAsync(payload.Line);
+
+            batch.Add(payload.Line);
+            if (batch.Count >= 50)
+            {
+                foreach (var line in batch)
+                {
+                    await stream.WriteLineAsync(line);
+                }
+                await stream.FlushAsync();
+                batch.Clear();
+            }
+        }
+
+        if (batch.Count > 0)
+        {
+            foreach (var line in batch)
+            {
+                await stream.WriteLineAsync(line);
+            }
+            await stream.FlushAsync();
         }
     }
 
