@@ -14,9 +14,9 @@ namespace Impinj.Utils
     {
         private
 #nullable disable
-        StringBuilder sbValue = new StringBuilder();
+        readonly StringBuilder _value;
 
-        public int Length => sbValue.Length;
+        public int Length => _value.Length;
 
         public Hexadecimal(string value)
         {
@@ -30,7 +30,7 @@ namespace Impinj.Utils
                 return c < 'a' || c > 'f';
             }))
                 throw new ArgumentException(str2 + " Only hex digits (including those beginning with '0x') are supported!");
-            sbValue = source.All(c =>
+            _value = source.All(c =>
             {
                 if (c >= '0' && c <= '9')
                     return true;
@@ -60,14 +60,14 @@ namespace Impinj.Utils
             return interpolatedStringHandler.ToStringAndClear();
         }
 
-        public string ToRawHexString() => sbValue.ToString();
+        public string ToRawHexString() => _value.ToString();
 
         public BitArray ToBitArray()
         {
-            bool[] bits = new bool[sbValue.Length * 4];
-            for (int i = 0; i < sbValue.Length; i++)
+            bool[] bits = new bool[_value.Length * 4];
+            for (int i = 0; i < _value.Length; i++)
             {
-                char c = sbValue[i];
+                char c = _value[i];
                 int value = c <= '9' ? c - '0' : c - 'a' + 10;
                 int index = i * 4;
                 bits[index] = (value & 8) != 0;
