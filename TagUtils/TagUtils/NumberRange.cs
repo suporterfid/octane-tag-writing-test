@@ -23,7 +23,7 @@ namespace Impinj.TagUtils
         {
             if (string.IsNullOrWhiteSpace(strNumberRange))
                 return new NumberRange();
-            string[] strArray = strNumberRange.Trim().Split("-".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+            string[] strArray = strNumberRange.Trim().Split('-', StringSplitOptions.RemoveEmptyEntries);
             if (strArray.Length < 1 || strArray.Length > 2)
             {
                 DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(71, 1);
@@ -31,7 +31,8 @@ namespace Impinj.TagUtils
                 interpolatedStringHandler.AppendLiteral(" Range values specified which is more than the 2 that were anticipated!");
                 throw new InvalidCastException(interpolatedStringHandler.ToStringAndClear());
             }
-            return 1 == strArray.Length ? new NumberRange(strArray[0].ToInt64()) : new NumberRange(strArray[0].ToInt64(), strArray[1].ToInt64());
+            long first = strArray[0].ToInt64();
+            return strArray.Length == 1 ? new NumberRange(first) : new NumberRange(first, strArray[1].ToInt64());
         }
 
         public string ToHexString()
