@@ -6,6 +6,7 @@ using Impinj.TagUtils;
 using OctaneTagWritingTest.Helpers;
 using TagDataTranslation;
 using Serilog;
+using Common.Logging;
 
 namespace EpcListGenerator
 {
@@ -195,8 +196,8 @@ namespace EpcListGenerator
             using (var parser = new TagTidParser(tidHexString))
             {
                 serialHex = parser.Get40BitSerialHex();
-                Console.WriteLine($"Serial extraído: [[[[[[[[[[[[[[[[[[[{serialHex}]]]]]]]]]]]]]]]]]]]");
-            }
+                LoggingService.Instance.LogInfo("Serial extraído: {SerialHex}", serialHex);
+                }
 
 			// Construct the final EPC.
 			string epc = epcHeader + middlePart + serialHex;

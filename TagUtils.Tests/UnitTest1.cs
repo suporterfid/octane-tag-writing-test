@@ -1,12 +1,27 @@
 using NUnit.Framework;
 using Impinj.TagUtils;
 using OctaneTagWritingTest.Helpers;
+using Common.Logging;
+using Common.Logging.Sinks;
+using System.Collections.Generic;
 
 
 namespace TagUtils.Tests;
 
 public class Sgtin96Tests
 {
+    [OneTimeSetUp]
+    public void SetupLogging()
+    {
+        LoggingService.Instance.Start(new LoggingConfiguration(new List<ILogSink>()));
+    }
+
+    [OneTimeTearDown]
+    public void TearDownLogging()
+    {
+        LoggingService.Instance.Stop();
+    }
+
     [Test]
     public void FromGTIN_ShouldPreserveOriginalGTIN_WhenDecodedBack()
     {
@@ -23,7 +38,7 @@ public class Sgtin96Tests
         string binary = _tdtEngine.Translate(epcIdentifier, parameterList, @"BINARY");
         string epcHex = _tdtEngine.BinaryToHex(binary);
         // print epcHex
-        Console.WriteLine("EPC Hex: " + epcHex.ToUpper());
+        LoggingService.Instance.LogInfo("EPC Hex: " + epcHex.ToUpper());
 
         var epcIdentifierBinary = _tdtEngine.HexToBinary(epcHex);
         var parameterListDecode = @"tagLength=96";
@@ -36,9 +51,9 @@ public class Sgtin96Tests
         var tagDataKeyName = epcKeyParts[0];
         var tagDataKey = epcKeyParts[1];
 
-        Console.WriteLine("serial: " + serial);
-        Console.WriteLine("originalGtin: " + originalGtin);
-        Console.WriteLine(" decodedGtin: " + tagDataKey);
+        LoggingService.Instance.LogInfo("serial: " + serial);
+        LoggingService.Instance.LogInfo("originalGtin: " + originalGtin);
+        LoggingService.Instance.LogInfo(" decodedGtin: " + tagDataKey);
         // Assert
         Assert.AreEqual(originalGtin, tagDataKey);
     }
@@ -54,13 +69,13 @@ public class Sgtin96Tests
         ulong serial = 0;
         string tid = "E2801191200076D63DDC030A"; // M730 TID example
 
-        Console.WriteLine($"TID M730: {tid}");
+        LoggingService.Instance.LogInfo($"TID M730: {tid}");
 
         using (var parser = new TagTidParser(tid))
         {
             string tidSuffix = parser.Get40BitSerialHex();
             serial = parser. Get40BitSerialDecimal();
-            Console.WriteLine($"Serial extraído: {tidSuffix} = {serial}");
+            LoggingService.Instance.LogInfo($"Serial extraído: {tidSuffix} = {serial}");
         }
 
         // Act
@@ -69,7 +84,7 @@ public class Sgtin96Tests
         string binary = _tdtEngine.Translate(epcIdentifier, parameterList, @"BINARY");
         string epcHex = _tdtEngine.BinaryToHex(binary);
         // print epcHex
-        Console.WriteLine("EPC Hex: " + epcHex.ToUpper());
+        LoggingService.Instance.LogInfo("EPC Hex: " + epcHex.ToUpper());
 
         var epcIdentifierBinary = _tdtEngine.HexToBinary(epcHex);
         var parameterListDecode = @"tagLength=96";
@@ -82,9 +97,9 @@ public class Sgtin96Tests
         var tagDataKeyName = epcKeyParts[0];
         var tagDataKey = epcKeyParts[1];
 
-        Console.WriteLine("serial: " + serial);
-        Console.WriteLine("originalGtin: " + originalGtin);
-        Console.WriteLine(" decodedGtin: " + tagDataKey);
+        LoggingService.Instance.LogInfo("serial: " + serial);
+        LoggingService.Instance.LogInfo("originalGtin: " + originalGtin);
+        LoggingService.Instance.LogInfo(" decodedGtin: " + tagDataKey);
         // Assert
         Assert.AreEqual(originalGtin, tagDataKey);
     }
@@ -100,13 +115,13 @@ public class Sgtin96Tests
         ulong serial = 0;
         string tid = "E280119020006356D8630332"; // M730 TID example
 
-        Console.WriteLine($"TID M750: {tid}");
+        LoggingService.Instance.LogInfo($"TID M750: {tid}");
 
         using (var parser = new TagTidParser(tid))
         {
             string tidSuffix = parser.Get40BitSerialHex();
             serial = parser.Get40BitSerialDecimal();
-            Console.WriteLine($"Serial extraído: {tidSuffix} = {serial}");
+            LoggingService.Instance.LogInfo($"Serial extraído: {tidSuffix} = {serial}");
         }
 
         // Act
@@ -115,7 +130,7 @@ public class Sgtin96Tests
         string binary = _tdtEngine.Translate(epcIdentifier, parameterList, @"BINARY");
         string epcHex = _tdtEngine.BinaryToHex(binary);
         // print epcHex
-        Console.WriteLine("EPC Hex: " + epcHex.ToUpper());
+        LoggingService.Instance.LogInfo("EPC Hex: " + epcHex.ToUpper());
 
         var epcIdentifierBinary = _tdtEngine.HexToBinary(epcHex);
         var parameterListDecode = @"tagLength=96";
@@ -128,9 +143,9 @@ public class Sgtin96Tests
         var tagDataKeyName = epcKeyParts[0];
         var tagDataKey = epcKeyParts[1];
 
-        Console.WriteLine("serial: " + serial);
-        Console.WriteLine("originalGtin: " + originalGtin);
-        Console.WriteLine(" decodedGtin: " + tagDataKey);
+        LoggingService.Instance.LogInfo("serial: " + serial);
+        LoggingService.Instance.LogInfo("originalGtin: " + originalGtin);
+        LoggingService.Instance.LogInfo(" decodedGtin: " + tagDataKey);
         // Assert
         Assert.AreEqual(originalGtin, tagDataKey);
     }
@@ -146,13 +161,13 @@ public class Sgtin96Tests
         ulong serial = 0;
         string tid = "E2801170200013DC3923099D"; // R6 TID example
 
-        Console.WriteLine($"TID r6: {tid}");
+        LoggingService.Instance.LogInfo($"TID r6: {tid}");
 
         using (var parser = new TagTidParser(tid))
         {
             string tidSuffix = parser.Get40BitSerialHex();
             serial = parser.Get40BitSerialDecimal();
-            Console.WriteLine($"Serial extraído: {tidSuffix} = {serial}");
+            LoggingService.Instance.LogInfo($"Serial extraído: {tidSuffix} = {serial}");
         }
 
         // Act
@@ -161,7 +176,7 @@ public class Sgtin96Tests
         string binary = _tdtEngine.Translate(epcIdentifier, parameterList, @"BINARY");
         string epcHex = _tdtEngine.BinaryToHex(binary);
         // print epcHex
-        Console.WriteLine("EPC Hex: " + epcHex.ToUpper());
+        LoggingService.Instance.LogInfo("EPC Hex: " + epcHex.ToUpper());
 
         var epcIdentifierBinary = _tdtEngine.HexToBinary(epcHex);
         var parameterListDecode = @"tagLength=96";
@@ -174,9 +189,9 @@ public class Sgtin96Tests
         var tagDataKeyName = epcKeyParts[0];
         var tagDataKey = epcKeyParts[1];
 
-        Console.WriteLine("serial: " + serial);
-        Console.WriteLine("originalGtin: " + originalGtin);
-        Console.WriteLine(" decodedGtin: " + tagDataKey);
+        LoggingService.Instance.LogInfo("serial: " + serial);
+        LoggingService.Instance.LogInfo("originalGtin: " + originalGtin);
+        LoggingService.Instance.LogInfo(" decodedGtin: " + tagDataKey);
         // Assert
         Assert.AreEqual(originalGtin, tagDataKey);
     }
@@ -192,12 +207,12 @@ public class Sgtin96Tests
         ulong serial = 0;
         string tid = "E280699520004003138568BB"; // U9 TID example
 
-        Console.WriteLine($"TID U9: {tid}");
+        LoggingService.Instance.LogInfo($"TID U9: {tid}");
         using (var parser = new TagTidParser(tid))
         {
             string tidSuffix = parser.Get40BitSerialHex();
             serial = parser.Get40BitSerialDecimal();
-            Console.WriteLine($"Serial extraído: {tidSuffix} = {serial}");
+            LoggingService.Instance.LogInfo($"Serial extraído: {tidSuffix} = {serial}");
         }
 
         // Act
@@ -206,7 +221,7 @@ public class Sgtin96Tests
         string binary = _tdtEngine.Translate(epcIdentifier, parameterList, @"BINARY");
         string epcHex = _tdtEngine.BinaryToHex(binary);
         // print epcHex
-        Console.WriteLine("EPC Hex: " + epcHex.ToUpper());
+        LoggingService.Instance.LogInfo("EPC Hex: " + epcHex.ToUpper());
 
         var epcIdentifierBinary = _tdtEngine.HexToBinary(epcHex);
         var parameterListDecode = @"tagLength=96";
@@ -219,9 +234,9 @@ public class Sgtin96Tests
         var tagDataKeyName = epcKeyParts[0];
         var tagDataKey = epcKeyParts[1];
 
-        Console.WriteLine("serial: " + serial);
-        Console.WriteLine("originalGtin: " + originalGtin);
-        Console.WriteLine(" decodedGtin: " + tagDataKey);
+        LoggingService.Instance.LogInfo("serial: " + serial);
+        LoggingService.Instance.LogInfo("originalGtin: " + originalGtin);
+        LoggingService.Instance.LogInfo(" decodedGtin: " + tagDataKey);
         // Assert
         Assert.AreEqual(originalGtin, tagDataKey);
     }
@@ -241,7 +256,7 @@ public class Sgtin96Tests
         ulong serial = 12910342659;
 
         // print epcHex
-        Console.WriteLine("EPC Hex: " + sgtin96Hex.ToUpper());
+        LoggingService.Instance.LogInfo("EPC Hex: " + sgtin96Hex.ToUpper());
 
         var epcIdentifierBinary = _tdtEngine.HexToBinary(sgtin96Hex);
         var parameterListDecode = @"tagLength=96";
@@ -254,9 +269,9 @@ public class Sgtin96Tests
         var tagDataKeyName = epcKeyParts[0];
         var tagDataKey = epcKeyParts[1];
 
-        Console.WriteLine("serial: " + serial);
-        Console.WriteLine("originalGtin: " + originalGtin);
-        Console.WriteLine(" decodedGtin: " + tagDataKey);
+        LoggingService.Instance.LogInfo("serial: " + serial);
+        LoggingService.Instance.LogInfo("originalGtin: " + originalGtin);
+        LoggingService.Instance.LogInfo(" decodedGtin: " + tagDataKey);
         // Assert
         Assert.AreEqual(originalGtin, tagDataKey);
     }

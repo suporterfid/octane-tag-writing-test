@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using System;
 using System.IO;
+using Common.Logging;
 
 namespace Impinj.Utils
 {
@@ -26,7 +27,7 @@ namespace Impinj.Utils
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error! Something went wrong saving " + fileName + ": " + ex.Message);
+                LoggingService.Instance.LogInfo("Error! Something went wrong saving {FileName}: {Message}", fileName, ex.Message);
                 throw;
             }
         }
@@ -42,7 +43,7 @@ namespace Impinj.Utils
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error! Something went wrong loading " + fileName + ": " + ex.Message);
+                LoggingService.Instance.LogInfo("Error! Something went wrong loading {FileName}: {Message}", fileName, ex.Message);
                 throw;
             }
         }
