@@ -103,3 +103,4 @@ Este documento descreve as consolidações realizadas nas classes JobStrategy pa
 **Estratégias Antes**: 10 classes
 **Estratégias Depois**: 7 classes
 **Redução**: 30% menos classes JobStrategy
+

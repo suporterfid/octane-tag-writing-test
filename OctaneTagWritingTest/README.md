@@ -102,6 +102,30 @@ OctaneTagWritingTest/
 - CSV-based result logging
 - Docker support for containerized execution
 
+## Verifier Rewrite Behavior (JobStrategy8)
+
+JobStrategy8 (Multiple Reader Endurance) supports configurable behavior when the verifier reads an EPC that does not match the expected EPC for a given TID. This allows running the verifier faster by skipping re-writes when desired.
+
+- VerifierRewriteOnMismatch: Enables rewrite attempts on mismatch (default: true). Set to false to skip re-writing and only log the mismatch.
+- VerifierEpcCompareMode: How EPCs are compared. Options:
+  - "Full": Compare the entire EPC
+  - "Offset": Compare EPCs starting from a given character offset (default)
+- VerifierEpcCompareOffset: The starting character index when using Offset mode (default: 13)
+
+Example configuration (OctaneTagWritingTest/config.json):
+
+```
+{
+  "VerifierRewriteOnMismatch": false,
+  "VerifierEpcCompareMode": "Offset",
+  "VerifierEpcCompareOffset": 13
+}
+```
+
+Notes:
+- Defaults preserve existing behavior (rewrite enabled, offset comparison at 13).
+- Offset comparison mirrors prior logic that ignored the initial EPC header/fields.
+
 ## Usage
 
 1. Run the application with the reader's hostname as an argument:

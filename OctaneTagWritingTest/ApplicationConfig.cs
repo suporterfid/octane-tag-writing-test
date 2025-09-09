@@ -102,6 +102,25 @@ public class ApplicationConfig
     /// </summary>
     public int GpoPulseDurationMs { get; set; } = 100;
 
+    // Verifier behavior configuration
+    /// <summary>
+    /// Controls whether the verifier attempts to re-write tags when the
+    /// observed EPC does not match the expected EPC. Default: true.
+    /// </summary>
+    public bool VerifierRewriteOnMismatch { get; set; } = true;
+
+    /// <summary>
+    /// How the verifier compares EPCs. "Full" compares the complete EPC,
+    /// "Offset" compares from a given offset (in characters). Default: "Offset".
+    /// </summary>
+    public string VerifierEpcCompareMode { get; set; } = "Offset";
+
+    /// <summary>
+    /// When using offset comparison, the starting character index to compare
+    /// the EPCs. Default: 13 to preserve existing behavior in code.
+    /// </summary>
+    public int VerifierEpcCompareOffset { get; set; } = 13;
+
     // NOVA SEÇÃO: Configuração de Antenas
     /// <summary>
     /// Antenna configuration for the detector reader.

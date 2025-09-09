@@ -119,6 +119,30 @@ Esta estratégia agora permite executar o teste com 1, 2 ou 3 leitores. Basta in
 - apenas writer
 - apenas verifier
 
+#### Comportamento do Verifier em caso de EPC mismatch
+
+O comportamento do leitor verificador (verifier) ao detectar que o EPC lido nao corresponde ao EPC esperado agora e configuravel, permitindo operar mais rapido quando nao se deseja tentar reescrever a tag.
+
+- VerifierRewriteOnMismatch: habilita tentativa de reescrita quando ha mismatch (padrao: true). Defina como false para apenas registrar o mismatch sem reescrever.
+- VerifierEpcCompareMode: define como os EPCs sao comparados:
+  - "Full": compara o EPC completo
+  - "Offset": compara a partir de um deslocamento de caracteres (padrao)
+- VerifierEpcCompareOffset: indice de inicio da comparacao quando em modo Offset (padrao: 13)
+
+Exemplo (OctaneTagWritingTest/config.json):
+
+```
+{
+  "VerifierRewriteOnMismatch": false,
+  "VerifierEpcCompareMode": "Offset",
+  "VerifierEpcCompareOffset": 13
+}
+```
+
+Observacoes:
+- Os padroes preservam o comportamento anterior (reescrita habilitada, comparacao por offset em 13).
+- A comparacao por offset reflete a logica previa que desconsiderava campos de cabecalho do EPC.
+
 #### Parâmetros de Linha de Comando
 
 | Parâmetro | Descrição |

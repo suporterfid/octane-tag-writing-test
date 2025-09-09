@@ -23,6 +23,9 @@ namespace OctaneTagWritingTest.JobStrategies
     public class JobStrategy8MultipleReaderEnduranceStrategy : BaseTestStrategy
     {
         private readonly ApplicationConfig applicationConfig;
+        private readonly bool verifierRewriteOnMismatch;
+        private readonly string verifierEpcCompareMode;
+        private readonly int verifierEpcCompareOffset;
 
         private const int MaxCycles = 10000;
         private readonly ConcurrentDictionary<string, int> cycleCount = new ConcurrentDictionary<string, int>();
@@ -81,6 +84,11 @@ namespace OctaneTagWritingTest.JobStrategies
             detectorReader = new ImpinjReaderClient();
             writerReader = new ImpinjReaderClient();
             verifierReader = new ImpinjReaderClient();
+
+            // Verifier behavior
+            verifierRewriteOnMismatch = appConfig.VerifierRewriteOnMismatch;
+            verifierEpcCompareMode = appConfig.VerifierEpcCompareMode ?? "Offset";
+            verifierEpcCompareOffset = appConfig.VerifierEpcCompareOffset;
 
             // Clean up any previous tag operation state.
             TagOpController.Instance.CleanUp();
@@ -600,8 +608,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     Console.WriteLine($"OnTagsReportedVerifier>>>>>>>>>> TID: {tidHex}. Assigning EPC: {epcHex} -> {expectedEpc}");
                 }
 
-                bool success = expectedEpc.Substring(13).Equals(epcHex.Substring(13), StringComparison.InvariantCultureIgnoreCase);
-                //bool success = expectedEpc.Equals(epcHex, StringComparison.InvariantCultureIgnoreCase);
+                bool success = EpcMatches(expectedEpc, epcHex);
                 var writeStatus = success ? "Success" : "Failure";
                 Console.WriteLine(".........................................");
                 Console.WriteLine($"OnTagsReportedVerifier - TID {tidHex} - current EPC: {epcHex} Expected EPC: {expectedEpc} Operation Status [{writeStatus}]" );
@@ -615,13 +622,9 @@ namespace OctaneTagWritingTest.JobStrategies
                 }
                 else if (!string.IsNullOrEmpty(expectedEpc))
                 {
-                    bool isEpcOk = expectedEpc.Substring(12).Equals(epcHex.Substring(12), StringComparison.InvariantCultureIgnoreCase);
-                    if (!isEpcOk)
+                    if (verifierRewriteOnMismatch)
                     {
                         Console.WriteLine($"Verification mismatch for TID {tidHex}: expected {expectedEpc}, read {epcHex}. Retrying write operation using expected EPC.");
-                        // Pulse the LED to indicate verification failure
-                        // sender.SetGpo(gpoPortPulsed, true);
-                        // Retry writing using the available writer
                         var writer = SelectWriterReader();
                         if (writer != null )
                         {
@@ -640,11 +643,25 @@ namespace OctaneTagWritingTest.JobStrategies
                     }
                     else
                     {
-                        verificationTags.TryAdd(tidHex, tag);
-                        Console.WriteLine($"OnTagsReportedVerifier - TID {tidHex} verified successfully on verifier reader. Current EPC: {epcHex} - Written tags regitered {TagOpController.Instance.GetSuccessCount()} (TIDs processed)");
+                        Console.WriteLine($"Verification mismatch for TID {tidHex}: expected {expectedEpc}, read {epcHex}. Rewrite skipped by configuration.");
                     }
                 }
             }
+        }
+
+        private bool EpcMatches(string expected, string actual)
+        {
+            if (string.IsNullOrEmpty(expected) || string.IsNullOrEmpty(actual)) return false;
+
+            if (string.Equals(verifierEpcCompareMode, "Full", StringComparison.OrdinalIgnoreCase))
+            {
+                return expected.Equals(actual, StringComparison.OrdinalIgnoreCase);
+            }
+
+            // Default to offset comparison
+            int offset = Math.Max(0, verifierEpcCompareOffset);
+            if (expected.Length <= offset || actual.Length <= offset) return false;
+            return expected.Substring(offset).Equals(actual.Substring(offset), StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -722,7 +739,7 @@ namespace OctaneTagWritingTest.JobStrategies
                         try
                         {
                             var writer = SelectWriterReader();
-                            if (writer != null)
+                            if (writer != null && verifierRewriteOnMismatch)
                             {
                                 TagOpController.Instance.TriggerWriteAndVerify(
                                     readResult.Tag,
@@ -735,6 +752,10 @@ namespace OctaneTagWritingTest.JobStrategies
                                     1,
                                     true,
                                     3);
+                            }
+                            else if (!verifierRewriteOnMismatch)
+                            {
+                                Console.WriteLine($"OnTagOpComplete - Verification mismatch for TID {tidHex} on reader {sender.Address}. Rewrite skipped by configuration.");
                             }
                         }
                         catch (Exception)

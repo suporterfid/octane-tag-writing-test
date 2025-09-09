@@ -53,6 +53,11 @@ public static class InteractiveConfig
         if (int.TryParse(gpoStaticPortStr, out int gpoStatic))
             config.GpoPortStatic = gpoStatic;
 
+        // Verifier behavior
+        Console.WriteLine("\n=== Verifier Behavior ===");
+        string rewriteMismatchStr = PromptForBoolValue("Verifier rewrites on EPC mismatch", config.VerifierRewriteOnMismatch);
+        config.VerifierRewriteOnMismatch = bool.Parse(rewriteMismatchStr);
+
         // Configuração avançada de antenas
         Console.WriteLine("\n=== Advanced Antenna Configuration ===");
         Console.Write("Configure individual antennas? (y/n) [n]: ");

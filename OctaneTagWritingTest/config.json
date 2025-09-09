@@ -10,6 +10,7 @@
   "GpoPortPulsed": 1,
   "GpoPulseDurationMs": 3000,
   "GpoPortStatic": 2,
+  "VerifierRewriteOnMismatch": true,
 
   "Sgtin96Enabled": true,
   "Sgtin96SourceGtin": "07891033820525",
