@@ -37,34 +37,12 @@ namespace Impinj.TagUtils
 
         public string ToHexString()
         {
-            if (Min != Max)
-            {
-                DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(5, 2);
-                interpolatedStringHandler.AppendLiteral("0x");
-                interpolatedStringHandler.AppendFormatted(Min, "X2");
-                interpolatedStringHandler.AppendLiteral("-0x");
-                interpolatedStringHandler.AppendFormatted(Max, "X2");
-                return interpolatedStringHandler.ToStringAndClear();
-            }
-            DefaultInterpolatedStringHandler interpolatedStringHandler1 = new DefaultInterpolatedStringHandler(2, 1);
-            interpolatedStringHandler1.AppendLiteral("0x");
-            interpolatedStringHandler1.AppendFormatted(Min, "X2");
-            return interpolatedStringHandler1.ToStringAndClear();
+            return Min != Max ? $"0x{Min:X2}-0x{Max:X2}" : $"0x{Min:X2}";
         }
 
         public override string ToString()
         {
-            if (Min != Max)
-            {
-                DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(1, 2);
-                interpolatedStringHandler.AppendFormatted(Min);
-                interpolatedStringHandler.AppendLiteral("-");
-                interpolatedStringHandler.AppendFormatted(Max);
-                return interpolatedStringHandler.ToStringAndClear();
-            }
-            DefaultInterpolatedStringHandler interpolatedStringHandler1 = new DefaultInterpolatedStringHandler(0, 1);
-            interpolatedStringHandler1.AppendFormatted(Min);
-            return interpolatedStringHandler1.ToStringAndClear();
+            return Min != Max ? $"{Min}-{Max}" : $"{Min}";
         }
     }
 }
