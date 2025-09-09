@@ -1,6 +1,8 @@
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
+using Common.Logging;
+using Common.Logging.Sinks;
 
 namespace OctaneTagWritingTest
 {
@@ -39,7 +41,13 @@ namespace OctaneTagWritingTest
                     shared: true)
                 .CreateLogger();
 
-            Log.Information("Logging configured for {Application} with test description: {TestDescription}", 
+            var serilogSink = new SerilogSink();
+            var csvSink = new CsvSink();
+            var sinks = new ILogSink[] { serilogSink, csvSink };
+            var config = new Common.Logging.LoggingConfiguration(sinks);
+            LoggingService.Instance.Start(config);
+
+            Log.Information("Logging configured for {Application} with test description: {TestDescription}",
                 "OctaneTagWritingTest", testDescription);
         }
 
@@ -112,6 +120,7 @@ namespace OctaneTagWritingTest
         /// </summary>
         public static void CloseAndFlush()
         {
+            LoggingService.Instance.Stop();
             Log.CloseAndFlush();
         }
     }
