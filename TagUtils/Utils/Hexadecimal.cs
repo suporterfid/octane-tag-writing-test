@@ -62,12 +62,20 @@ namespace Impinj.Utils
 
         public string ToRawHexString() => sbValue.ToString();
 
-        public BitArray ToBitArray() => new BitArray(Enumerable.Range(0, sbValue.Length).SelectMany(x => new bool[4]
+        public BitArray ToBitArray()
         {
-      ( Convert.ToByte(sbValue.ToString(x, 1), 16) & 8U) > 0U,
-      ( Convert.ToByte(sbValue.ToString(x, 1), 16) & 4U) > 0U,
-      ( Convert.ToByte(sbValue.ToString(x, 1), 16) & 2U) > 0U,
-      ( Convert.ToByte(sbValue.ToString(x, 1), 16) & 1U) > 0U
-        }).ToArray());
+            bool[] bits = new bool[sbValue.Length * 4];
+            for (int i = 0; i < sbValue.Length; i++)
+            {
+                char c = sbValue[i];
+                int value = c <= '9' ? c - '0' : c - 'a' + 10;
+                int index = i * 4;
+                bits[index] = (value & 8) != 0;
+                bits[index + 1] = (value & 4) != 0;
+                bits[index + 2] = (value & 2) != 0;
+                bits[index + 3] = (value & 1) != 0;
+            }
+            return new BitArray(bits);
+        }
     }
 }
