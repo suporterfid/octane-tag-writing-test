@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using Common.Logging.Sinks;
 
 namespace Common.Logging;
 
@@ -42,12 +43,12 @@ public sealed class LoggingService : IDisposable, IAsyncDisposable
         _consumerTask = Task.Run(async () =>
         {
             await foreach (var logEvent in _channel.Reader.ReadAllAsync(_cts.Token))
-            {
-                foreach (var sink in _sinks)
-                {
-                    await sink.WriteAsync(logEvent).ConfigureAwait(false);
-                }
-            }
+              {
+                  foreach (var sink in _sinks)
+                  {
+                      sink.Write(logEvent);
+                  }
+              }
         }, _cts.Token);
     }
 
@@ -72,22 +73,38 @@ public sealed class LoggingService : IDisposable, IAsyncDisposable
     public void LogError(string template, params object[] args) => Log(LogLevel.Error, template, args);
     public void LogCritical(string template, params object[] args) => Log(LogLevel.Critical, template, args);
 
-    /// <summary>
-    /// Flushes all queued log events and waits for the consumer to finish.
-    /// </summary>
-    public async Task FlushAsync()
-    {
-        if (_channel is null)
-        {
-            return;
-        }
+      /// <summary>
+      /// Flushes all queued log events and waits for the consumer to finish.
+      /// </summary>
+      public async Task FlushAsync()
+      {
+          if (_channel is null)
+          {
+              return;
+          }
 
-        _channel.Writer.Complete();
-        if (_consumerTask is not null)
-        {
-            await _consumerTask.ConfigureAwait(false);
-        }
-    }
+          _channel.Writer.Complete();
+          if (_consumerTask is not null)
+          {
+              await _consumerTask.ConfigureAwait(false);
+          }
+
+          if (_sinks is not null)
+          {
+              foreach (var sink in _sinks)
+              {
+                  switch (sink)
+                  {
+                      case IAsyncDisposable asyncDisposable:
+                          await asyncDisposable.DisposeAsync().ConfigureAwait(false);
+                          break;
+                      case IDisposable disposable:
+                          disposable.Dispose();
+                          break;
+                  }
+              }
+          }
+      }
 
     /// <summary>
     /// Stops the logging service and flushes any remaining events.
@@ -107,14 +124,6 @@ public sealed class LoggingService : IDisposable, IAsyncDisposable
         await FlushAsync().ConfigureAwait(false);
         _cts?.Dispose();
     }
-}
-
-/// <summary>
-/// Represents a destination that log events can be written to.
-/// </summary>
-public interface ILogSink
-{
-    ValueTask WriteAsync(LogEvent logEvent);
 }
 
 /// <summary>
