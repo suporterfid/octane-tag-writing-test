@@ -58,14 +58,7 @@ namespace OctaneTagWritingTest
         /// <returns>Contextual logger instance</returns>
         public static ILogger CreateContextLogger(params (string Key, object Value)[] contextProperties)
         {
-            var logger = Log.Logger;
-            
-            foreach (var (key, value) in contextProperties)
-            {
-                logger = logger.ForContext(key, value);
-            }
-            
-            return logger;
+            return LoggingService.Instance.CreateContextLogger(contextProperties);
         }
 
         /// <summary>
@@ -75,7 +68,7 @@ namespace OctaneTagWritingTest
         /// <returns>Logger with source context</returns>
         public static ILogger CreateLogger<T>()
         {
-            return Log.ForContext<T>();
+            return LoggingService.Instance.CreateLogger<T>();
         }
 
         /// <summary>
@@ -86,9 +79,10 @@ namespace OctaneTagWritingTest
         /// <returns>Logger with tag operation context</returns>
         public static ILogger CreateTagOperationLogger(string tid, string operation)
         {
-            return Log.ForContext("TID", tid)
-                     .ForContext("Operation", operation)
-                     .ForContext("Component", "TagOperation");
+            return LoggingService.Instance.CreateContextLogger(
+                ("TID", tid),
+                ("Operation", operation),
+                ("Component", "TagOperation"));
         }
 
         /// <summary>
@@ -99,9 +93,10 @@ namespace OctaneTagWritingTest
         /// <returns>Logger with reader context</returns>
         public static ILogger CreateReaderLogger(string readerName, string hostname)
         {
-            return Log.ForContext("ReaderName", readerName)
-                     .ForContext("ReaderHostname", hostname)
-                     .ForContext("Component", "Reader");
+            return LoggingService.Instance.CreateContextLogger(
+                ("ReaderName", readerName),
+                ("ReaderHostname", hostname),
+                ("Component", "Reader"));
         }
 
         /// <summary>
@@ -111,8 +106,9 @@ namespace OctaneTagWritingTest
         /// <returns>Logger with strategy context</returns>
         public static ILogger CreateStrategyLogger(string strategyName)
         {
-            return Log.ForContext("Strategy", strategyName)
-                     .ForContext("Component", "JobStrategy");
+            return LoggingService.Instance.CreateContextLogger(
+                ("Strategy", strategyName),
+                ("Component", "JobStrategy"));
         }
 
         /// <summary>

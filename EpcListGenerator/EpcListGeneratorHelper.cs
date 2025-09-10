@@ -5,7 +5,6 @@ using System.Security.Cryptography;
 using Impinj.TagUtils;
 using OctaneTagWritingTest.Helpers;
 using TagDataTranslation;
-using Serilog;
 using Common.Logging;
 
 namespace EpcListGenerator
@@ -16,7 +15,7 @@ namespace EpcListGenerator
     public sealed class EpcListGeneratorHelper
     {
         private static readonly TDTEngine _tdtEngine = new();
-        private static readonly ILogger Logger = Log.ForContext<EpcListGeneratorHelper>();
+        private static readonly ILogger Logger = LoggingService.Instance.CreateLogger<EpcListGeneratorHelper>();
 
         // Lazy initialization of the singleton instance (thread-safe).
         private static readonly Lazy<EpcListGeneratorHelper> instance =

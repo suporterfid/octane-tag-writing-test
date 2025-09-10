@@ -3,6 +3,8 @@ using System.Linq;
 using NUnit.Framework;
 using Serilog;
 using Serilog.Sinks.InMemory;
+using Common.Logging;
+using Common.Logging.Sinks;
 using Snapshooter.NUnit;
 
 namespace TagUtils.Tests;
@@ -11,7 +13,7 @@ public class StrategyFlowTests
 {
     private class InstrumentedStrategy
     {
-        private readonly ILogger _logger = Log.ForContext("Strategy", "Test");
+        private readonly ILogger _logger = LoggingService.Instance.CreateContextLogger(("Strategy", "Test"));
         public List<string> Steps { get; } = new();
 
         public void Start()
@@ -44,6 +46,9 @@ public class StrategyFlowTests
     {
         var logger = new LoggerConfiguration().WriteTo.InMemory().CreateLogger();
         Log.Logger = logger;
+        var sink = new SerilogSink();
+        var cfg = new Common.Logging.LoggingConfiguration(new ILogSink[] { sink });
+        LoggingService.Instance.Start(cfg);
 
         var strategy = new InstrumentedStrategy();
         strategy.Start();
@@ -51,6 +56,7 @@ public class StrategyFlowTests
         strategy.Run();
         strategy.Stop();
 
+        LoggingService.Instance.Stop();
         var logMessages = InMemorySink.Instance.LogEvents.Select(e => e.RenderMessage()).ToList();
         Snapshot.Match(logMessages);
 

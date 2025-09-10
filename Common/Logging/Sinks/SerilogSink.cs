@@ -20,13 +20,36 @@ public sealed class SerilogSink : ILogSink
             _ => LogEventLevel.Information
         };
 
+        ILogger logger = Log.Logger;
+        if (evt.Context is { } ctx)
+        {
+            foreach (var (key, value) in ctx)
+            {
+                logger = logger.ForContext(key, value);
+            }
+        }
+
         if (evt.Parameters is { Length: > 0 })
         {
-            Log.Write(level, evt.MessageTemplate, evt.Parameters);
+            if (evt.Exception is not null)
+            {
+                logger.Write(level, evt.Exception, evt.MessageTemplate, evt.Parameters);
+            }
+            else
+            {
+                logger.Write(level, evt.MessageTemplate, evt.Parameters);
+            }
         }
         else
         {
-            Log.Write(level, evt.MessageTemplate);
+            if (evt.Exception is not null)
+            {
+                logger.Write(level, evt.Exception, evt.MessageTemplate);
+            }
+            else
+            {
+                logger.Write(level, evt.MessageTemplate);
+            }
         }
     }
 }

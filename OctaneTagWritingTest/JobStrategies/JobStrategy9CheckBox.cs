@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using Impinj.OctaneSdk;
 using OctaneTagWritingTest.Helpers;
 using Org.LLRP.LTK.LLRPV1.Impinj;
-using Serilog;
+using Common.Logging;
 using OctaneTagWritingTest.Infrastructure;
 
 namespace OctaneTagWritingTest.JobStrategies
