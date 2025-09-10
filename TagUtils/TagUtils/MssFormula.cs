@@ -2,13 +2,13 @@
 using System;
 using System.Text;
 using System.Text.RegularExpressions;
-using Serilog;
+using Common.Logging;
 
 namespace Impinj.TagUtils
 {
     public class MssFormula
     {
-        private static readonly ILogger Logger = Log.ForContext<MssFormula>();
+        private static readonly ILogger Logger = LoggingService.Instance.CreateLogger<MssFormula>();
         private static string ZeroedOut96BitValue = string.Empty.PadLeft(96, '0');
 
         public static string GenerateMssSerialNumberWithSerializationPrefix(

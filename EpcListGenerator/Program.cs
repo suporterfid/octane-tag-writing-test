@@ -3,15 +3,20 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Serilog;
+using Common.Logging;
+using Common.Logging.Sinks;
 
 namespace EpcListGenerator
 {
     internal class Program
     {
-        private static readonly ILogger Logger = Log.ForContext<Program>();
+        private static readonly ILogger Logger = LoggingService.Instance.CreateLogger<Program>();
         // Entry point now supports async operations.
         static async Task Main(string[] args)
         {
+            Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
+            var sinks = new ILogSink[] { new SerilogSink() };
+            LoggingService.Instance.Start(new Common.Logging.LoggingConfiguration(sinks));
             try
             {
                 // Parse command-line arguments or prompt the user for input.

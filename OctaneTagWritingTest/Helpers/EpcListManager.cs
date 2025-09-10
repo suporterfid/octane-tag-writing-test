@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using TagDataTranslation;
-using Serilog;
+using Common.Logging;
 using OctaneTagWritingTest;
 
 public sealed class EpcListManager

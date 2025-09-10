@@ -52,17 +52,23 @@ public sealed class LoggingService : IDisposable, IAsyncDisposable
         }, _cts.Token);
     }
 
+    public ILogger CreateContextLogger(params (string Key, object Value)[] contextProperties)
+        => new ContextLogger(this, contextProperties);
+
+    public ILogger CreateLogger<T>()
+        => CreateContextLogger(("SourceContext", typeof(T).FullName ?? typeof(T).Name));
+
     /// <summary>
     /// Enqueues a log event to be processed by the background consumer.
     /// </summary>
-    public void Log(LogLevel level, string template, params object[] args)
+    public void Log(LogLevel level, string template, object[] args, Exception? exception = null, IReadOnlyList<(string Key, object Value)>? context = null)
     {
         if (_channel is null)
         {
             throw new InvalidOperationException("LoggingService has not been started.");
         }
 
-        var logEvent = new LogEvent(DateTime.UtcNow, level, template, args);
+        var logEvent = new LogEvent(DateTime.UtcNow, level, template, args, null, context, exception);
         _channel.Writer.TryWrite(logEvent);
     }
 

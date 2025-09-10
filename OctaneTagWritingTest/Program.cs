@@ -1,6 +1,7 @@
 ﻿﻿using OctaneTagWritingTest.Helpers;
 using System.Diagnostics;
-using Serilog;
+using Common.Logging;
+using Serilog.Events;
 
 namespace OctaneTagWritingTest
 {
@@ -15,7 +16,7 @@ namespace OctaneTagWritingTest
             Console.Title = "Serializer";
 
             // Initialize structured logging first
-            LoggingConfiguration.ConfigureLogging("main", Serilog.Events.LogEventLevel.Information);
+            LoggingConfiguration.ConfigureLogging("main", LogEventLevel.Information);
             Logger.Information("Application starting with arguments: {Arguments}", args);
 
             // The .NET diagnostics trace listener configuration
