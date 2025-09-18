@@ -21,14 +21,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\Common\**\*.cs" Link="Common\%(RecursiveDir)%(Filename)%(Extension)" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Folder Include="etk_deploy\" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Common\Common.csproj" />
     <ProjectReference Include="..\EpcListGenerator\EpcListGenerator.csproj" />
     <ProjectReference Include="..\TagUtils\TagUtils.csproj" />
   </ItemGroup>

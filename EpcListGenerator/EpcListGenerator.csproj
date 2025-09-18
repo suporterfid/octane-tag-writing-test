@@ -27,11 +27,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Common\Common.csproj" />
     <ProjectReference Include="..\TagUtils\TagUtils.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="..\Common\**\*.cs" Link="Common\%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>
