@@ -3,6 +3,7 @@ using Serilog.Events;
 using Serilog.Formatting.Compact;
 using Common.Logging;
 using Common.Logging.Sinks;
+using ILogger = Common.Logging.ILogger;
 
 namespace OctaneTagWritingTest
 {

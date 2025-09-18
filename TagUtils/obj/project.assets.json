@@ -115,6 +115,19 @@
             "related": ".xml"
           }
         }
+      },
+      "Common/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v8.0",
+        "dependencies": {
+          "Serilog": "3.1.1"
+        },
+        "compile": {
+          "bin/placeholder/Common.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/Common.dll": {}
+        }
       }
     }
   },
@@ -1108,10 +1121,16 @@
         "ssh.net.2024.1.0.nupkg.sha512",
         "ssh.net.nuspec"
       ]
+    },
+    "Common/1.0.0": {
+      "type": "project",
+      "path": "../Common/Common.csproj",
+      "msbuildProject": "../Common/Common.csproj"
     }
   },
   "projectFileDependencyGroups": {
     "net8.0": [
+      "Common >= 1.0.0",
       "CsvHelper >= 33.0.1",
       "Newtonsoft.Json >= 13.0.3",
       "OctaneSDK >= 5.0.0",
@@ -1151,7 +1170,11 @@
       "frameworks": {
         "net8.0": {
           "targetAlias": "net8.0",
-          "projectReferences": {}
+          "projectReferences": {
+            "C:\\Users\\alexa\\Dropbox\\workspace\\impinj\\octane-tag-writing-test\\Common\\Common.csproj": {
+              "projectPath": "C:\\Users\\alexa\\Dropbox\\workspace\\impinj\\octane-tag-writing-test\\Common\\Common.csproj"
+            }
+          }
         }
       },
       "warningProperties": {

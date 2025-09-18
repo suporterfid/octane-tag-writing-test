@@ -34,7 +34,7 @@ public class Sgtin96Tests
 
         // Act
         string epcIdentifier = @"gtin=" + originalGtin + ";serial=" + serial;
-        string parameterList = @"filter=1;gs1companyprefixlength=6;tagLength=96";
+        string parameterList = @"filter=1;gs1companyprefixlength="+ companyPrefixLength + ";tagLength=96";
         string binary = _tdtEngine.Translate(epcIdentifier, parameterList, @"BINARY");
         string epcHex = _tdtEngine.BinaryToHex(binary);
         // print epcHex
@@ -80,7 +80,7 @@ public class Sgtin96Tests
 
         // Act
         string epcIdentifier = @"gtin=" + originalGtin + ";serial=" + serial;
-        string parameterList = @"filter=1;gs1companyprefixlength=6;tagLength=96";
+        string parameterList = @"filter=1;gs1companyprefixlength="+ companyPrefixLength + ";tagLength=96";
         string binary = _tdtEngine.Translate(epcIdentifier, parameterList, @"BINARY");
         string epcHex = _tdtEngine.BinaryToHex(binary);
         // print epcHex
@@ -126,7 +126,7 @@ public class Sgtin96Tests
 
         // Act
         string epcIdentifier = @"gtin=" + originalGtin + ";serial=" + serial;
-        string parameterList = @"filter=1;gs1companyprefixlength=6;tagLength=96";
+        string parameterList = @"filter=1;gs1companyprefixlength="+ companyPrefixLength + ";tagLength=96";
         string binary = _tdtEngine.Translate(epcIdentifier, parameterList, @"BINARY");
         string epcHex = _tdtEngine.BinaryToHex(binary);
         // print epcHex
@@ -155,11 +155,11 @@ public class Sgtin96Tests
     {
         TDTEngine _tdtEngine = new();
         // Arrange
-        string originalGtin = "07891033748938";
-        int companyPrefixLength = 6;
+        string originalGtin = "01234567890951";
+        int companyPrefixLength = 7;
         //ulong serial = 0;
         ulong serial = 0;
-        string tid = "E2801170200013DC3923099D"; // R6 TID example
+        string tid = "e28011702000529e7ee20b9b"; // R6 TID example
 
         LoggingService.Instance.LogInfo($"TID r6: {tid}");
 
@@ -172,7 +172,7 @@ public class Sgtin96Tests
 
         // Act
         string epcIdentifier = @"gtin=" + originalGtin + ";serial=" + serial;
-        string parameterList = @"filter=1;gs1companyprefixlength=6;tagLength=96";
+        string parameterList = @"filter=1;gs1companyprefixlength="+ companyPrefixLength + ";tagLength=96";
         string binary = _tdtEngine.Translate(epcIdentifier, parameterList, @"BINARY");
         string epcHex = _tdtEngine.BinaryToHex(binary);
         // print epcHex
@@ -217,7 +217,7 @@ public class Sgtin96Tests
 
         // Act
         string epcIdentifier = @"gtin=" + originalGtin + ";serial=" + serial;
-        string parameterList = @"filter=1;gs1companyprefixlength=6;tagLength=96";
+        string parameterList = @"filter=1;gs1companyprefixlength="+ companyPrefixLength + ";tagLength=96";
         string binary = _tdtEngine.Translate(epcIdentifier, parameterList, @"BINARY");
         string epcHex = _tdtEngine.BinaryToHex(binary);
         // print epcHex
@@ -251,7 +251,7 @@ public class Sgtin96Tests
         string sgtin96Hex = "303B029BC16E188301843203";
         // Arrange
         string originalGtin = "07891033748938";
-        int companyPrefixLength = 6;
+        // int companyPrefixLength = 6;
         //ulong serial = 0;
         ulong serial = 12910342659;
 
@@ -259,7 +259,7 @@ public class Sgtin96Tests
         LoggingService.Instance.LogInfo("EPC Hex: " + sgtin96Hex.ToUpper());
 
         var epcIdentifierBinary = _tdtEngine.HexToBinary(sgtin96Hex);
-        var parameterListDecode = @"tagLength=96";
+        //var parameterListDecode = @"tagLength=96";
         var decodedEpc = _tdtEngine.Translate(epcIdentifierBinary, parameterList, @"LEGACY");
         var decodedEpcParts = decodedEpc.Split(";");
         var epcKey = decodedEpcParts[0];

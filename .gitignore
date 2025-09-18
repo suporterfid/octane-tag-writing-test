@@ -441,3 +441,9 @@ OctaneTagWritingTest/obj/Release/net8.0/refint/OctaneTagWritingTest.dll
 TagUtils/bin/Release/net8.0/TagUtils.deps.json
 TagUtils/bin/Release/net8.0/TagUtils.dll
 TagUtils/bin/Release/net8.0/TagUtils.pdb
+/Common/bin
+/Common/obj
+/TagUtils/bin
+/TagUtils/obj
+/TagUtils/obj
+/TagUtils/obj

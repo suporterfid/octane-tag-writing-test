@@ -6,6 +6,8 @@ using Serilog.Sinks.InMemory;
 using Common.Logging;
 using Common.Logging.Sinks;
 using Snapshooter.NUnit;
+using ILogger = Common.Logging.ILogger;
+
 
 namespace TagUtils.Tests;
 
