@@ -1,9 +1,11 @@
+using System;
+using System.IO;
 using NUnit.Framework;
 using Impinj.TagUtils;
 using OctaneTagWritingTest.Helpers;
 using Common.Logging;
 using Common.Logging.Sinks;
-using System.Collections.Generic;
+using Serilog;
 
 
 namespace TagUtils.Tests;
@@ -13,13 +15,27 @@ public class Sgtin96Tests
     [OneTimeSetUp]
     public void SetupLogging()
     {
-        LoggingService.Instance.Start(new LoggingConfiguration(new List<ILogSink>()));
+        var logDirectory = Path.Combine(TestContext.CurrentContext.WorkDirectory, "logs");
+        Directory.CreateDirectory(logDirectory);
+        var logFilePath = Path.Combine(logDirectory, $"sgtin96-tests-{DateTime.UtcNow:yyyyMMdd-HHmmss}.log");
+
+        Log.Logger = new LoggerConfiguration()
+            .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .WriteTo.File(logFilePath)
+            .CreateLogger();
+
+        LoggingService.Instance.Start(new LoggingConfiguration(new ILogSink[]
+        {
+            new SerilogSink(),
+            new CsvSink()
+        }));
     }
 
     [OneTimeTearDown]
     public void TearDownLogging()
     {
         LoggingService.Instance.Stop();
+        Log.CloseAndFlush();
     }
 
     [Test]
