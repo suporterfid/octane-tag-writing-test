@@ -20,7 +20,7 @@ public sealed class SerilogSink : ILogSink
             _ => LogEventLevel.Information
         };
 
-        ILogger logger = Log.Logger;
+        Serilog.ILogger logger = Log.Logger;
         if (evt.Context is { } ctx)
         {
             foreach (var (key, value) in ctx)
