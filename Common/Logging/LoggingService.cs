@@ -102,20 +102,26 @@ public sealed class LoggingService : IDisposable, IAsyncDisposable
       /// </summary>
       public async Task FlushAsync()
       {
-          if (_channel is null)
+          var channel = _channel;
+          if (channel is null)
           {
               return;
           }
 
-          _channel.Writer.Complete();
-          if (_consumerTask is not null)
+          var consumerTask = _consumerTask;
+          var sinks = _sinks;
+          var cts = _cts;
+
+          channel.Writer.Complete();
+
+          if (consumerTask is not null)
           {
-              await _consumerTask.ConfigureAwait(false);
+              await consumerTask.ConfigureAwait(false);
           }
 
-          if (_sinks is not null)
+          if (sinks is not null)
           {
-              foreach (var sink in _sinks)
+              foreach (var sink in sinks)
               {
                   switch (sink)
                   {
@@ -128,6 +134,14 @@ public sealed class LoggingService : IDisposable, IAsyncDisposable
                   }
               }
           }
+
+          cts?.Cancel();
+          cts?.Dispose();
+
+          _channel = null;
+          _consumerTask = null;
+          _sinks = null;
+          _cts = null;
       }
 
     /// <summary>
