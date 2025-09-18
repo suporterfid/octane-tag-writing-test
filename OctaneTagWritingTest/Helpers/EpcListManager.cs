@@ -9,7 +9,7 @@ using System.Linq;
 using TagDataTranslation;
 using Common.Logging;
 using OctaneTagWritingTest;
-
+using LoggingConfiguration = OctaneTagWritingTest.LoggingConfiguration;
 public sealed class EpcListManager
 {
     private static readonly TDTEngine _tdtEngine = new();
