@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Serilog;
 using Common.Logging;
 using Common.Logging.Sinks;
+using ILogger = Common.Logging.ILogger;
 
 namespace EpcListGenerator
 {
