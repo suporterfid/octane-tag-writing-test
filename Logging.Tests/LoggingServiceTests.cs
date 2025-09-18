@@ -60,4 +60,20 @@ public class LoggingServiceTests
         await svc.FlushAsync();
         Assert.That(sink.Events.Count, Is.EqualTo(20));
     }
+
+    [Test]
+    public async Task Service_Can_Be_Restarted_After_Stop()
+    {
+        var sink = new TestSink();
+        var svc = CreateService(sink);
+
+        svc.LogInfo("first run");
+        svc.Stop();
+
+        svc.Start(new LoggingConfiguration(new[] { sink }));
+        svc.LogInfo("second run");
+        await svc.FlushAsync();
+
+        Assert.That(sink.Events.Select(e => e.MessageTemplate), Is.EqualTo(new[] { "first run", "second run" }));
+    }
 }
