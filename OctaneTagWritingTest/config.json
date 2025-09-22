@@ -1,8 +1,8 @@
 {
-  "DetectorHostname": "",
-  "WriterHostname": "",
-  "VerifierHostname": "impinj-15-d3-ee",
-  "TestDescription": "Endurance apenas verifier",
+  "DetectorHostname": "192.168.1.3",
+  "WriterHostname": "192.168.1.4",
+  "VerifierHostname": "192.168.1.5",
+  "TestDescription": "Testes Fareva",
   "UseGpiForVerification": true,
   "GpiPortToProcessVerification": 1,
   "GpiTriggerStateToProcessVerification": true,
@@ -13,11 +13,11 @@
   "VerifierRewriteOnMismatch": true,
 
   "Sgtin96Enabled": true,
-  "Sgtin96SourceGtin": "07891033820525",
+  "Sgtin96SourceGtin": "07891033625888",
 
   "EpcHeader": "B1",
-  "EpcPlainItemCode": "07891033820525",
-  "Sku": "789103382052",
+  "EpcPlainItemCode": "07891033625888",
+  "Sku": "7891033625888",
 
   "Quantity": 1,
 
@@ -28,7 +28,7 @@
       {
         "Port": 1,
         "IsEnabled": true,
-        "TxPowerInDbm": 12,
+        "TxPowerInDbm": 16,
         "MaxRxSensitivity": true,
         "RxSensitivityInDbm": -70
       }
@@ -41,7 +41,7 @@
       {
         "Port": 1,
         "IsEnabled": true,
-        "TxPowerInDbm": 17,
+        "TxPowerInDbm": 27,
         "MaxRxSensitivity": true,
         "RxSensitivityInDbm": -70
       }
@@ -73,7 +73,7 @@
   "DetectorFilterOp": "NotMatch",
   "DetectorFilterMode": "OnlyFilter1",
 
-  "WriterTxPowerInDbm": 17,
+  "WriterTxPowerInDbm": 27,
   "WriterSearchMode": "SingleTarget",
   "WriterSession": 0,
   "WriterRfMode": 0,

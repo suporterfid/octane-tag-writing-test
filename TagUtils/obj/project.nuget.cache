@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "qNpV/3ZEigQ=",
+  "dgSpecHash": "QeaS6WrxMnU=",
   "success": true,
   "projectFilePath": "C:\\Users\\alexa\\Dropbox\\workspace\\impinj\\octane-tag-writing-test\\TagUtils\\TagUtils.csproj",
   "expectedPackageFiles": [
@@ -13,5 +13,12 @@
     "C:\\Users\\alexa\\.nuget\\packages\\serilog.sinks.file\\5.0.0\\serilog.sinks.file.5.0.0.nupkg.sha512",
     "C:\\Users\\alexa\\.nuget\\packages\\ssh.net\\2024.1.0\\ssh.net.2024.1.0.nupkg.sha512"
   ],
-  "logs": []
+  "logs": [
+    {
+      "code": "NU1900",
+      "level": "Warning",
+      "warningLevel": 1,
+      "message": "Error occurred while getting package vulnerability data: Unable to load the service index for source https://api.nuget.org/v3/index.json."
+    }
+  ]
 }
