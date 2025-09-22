@@ -426,6 +426,7 @@ namespace OctaneTagWritingTest.JobStrategies
                         {
                             sender.SetGpo(gpoPortPulsed, true);
                             sender.SetGpo(gpoPortStatic, true);
+                            BeepAsync();
                             //Console.WriteLine($"GPO port {gpoPortStatic} set to true (static). Press Enter to reset and resume...");
                             //await Task.Run(() => Console.ReadLine());
                             //Console.ReadLine();
@@ -644,6 +645,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     else
                     {
                         Console.WriteLine($"Verification mismatch for TID {tidHex}: expected {expectedEpc}, read {epcHex}. Rewrite skipped by configuration.");
+                        BeepAsync();
                     }
                 }
             }
@@ -706,6 +708,7 @@ namespace OctaneTagWritingTest.JobStrategies
                     else
                     {
                         Console.WriteLine($"OnTagOpComplete - Write operation failed for TID {tidHex} on reader {sender.Name}.");
+                        //BeepAsync();
                     }
                 }
                 else if (result is TagReadOpResult readResult)
@@ -734,6 +737,7 @@ namespace OctaneTagWritingTest.JobStrategies
 
                     if (!success)
                     {
+                        BeepAsync();
                         // Pulse LED to indicate verification failure
                         sender.SetGpo(gpoPortPulsed, true);
                         try
@@ -776,6 +780,20 @@ namespace OctaneTagWritingTest.JobStrategies
         private new void LogToCsv(string line)
         {
             TagOpController.Instance.LogToCsv(logFile, line);
+        }
+
+        public Task BeepAsync()
+        {
+            return BeepAsync(1000, 500);
+
+        }
+        // Updated method to handle platform-specific code for Console.Beep
+        public void BeepAsync(int frequency, int duration)
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                _ = Task.Run(() => Console.Beep(frequency, duration));
+            }
         }
 
         /// <summary>
