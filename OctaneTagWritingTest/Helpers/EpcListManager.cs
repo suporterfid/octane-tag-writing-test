@@ -32,7 +32,7 @@ public sealed class EpcListManager
     private string epcHeader = "B200";
     private string epcPlainItemCode = "99999999999999";
     private long quantity = 1;
-    private string gtin = "80614141123458";
+    private string gtin = "00012345600012"; // Fictional GS1 sample GTIN used for default configuration only.
 
     // Thread-safe dictionary to ensure unique EPC generation using tag TID as key.
     private ConcurrentDictionary<string, string> generatedEpcsByTid = new ConcurrentDictionary<string, string>();

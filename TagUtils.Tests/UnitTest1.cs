@@ -12,6 +12,14 @@ namespace TagUtils.Tests;
 
 public class Sgtin96Tests
 {
+    private const string FictionalGtinPrefix6 = "00012345678905"; // Fictional GS1 sample GTIN used for tests only.
+    private const string FictionalGtinPrefix7 = "00012345600012"; // Fictional GS1 sample GTIN used for tests only.
+    private const string FictionalM730Tid = "E28011912000000000123456"; // Fictional Impinj M730 sample TID.
+    private const string FictionalM750Tid = "E28011902000000000789ABC"; // Fictional Impinj M750 sample TID.
+    private const string FictionalR6Tid = "E28011702000000123456789";   // Fictional Impinj Monza R6 sample TID.
+    private const string FictionalU9Tid = "E28069952000001122334455";  // Fictional NXP UCODE 9 sample TID.
+    private const string FictionalSgtin96Hex = "30380134822A9480499602D2"; // Fictional SGTIN-96 for sanitized GTIN/serial.
+
     [OneTimeSetUp]
     public void SetupLogging()
     {
@@ -43,10 +51,10 @@ public class Sgtin96Tests
     {
         TDTEngine _tdtEngine = new();
         // Arrange
-        string originalGtin = "07891033748938";
+        string originalGtin = FictionalGtinPrefix6;
         int companyPrefixLength = 6;
         //ulong serial = 0;
-        ulong serial = 12910342659;
+        ulong serial = 1234567890; // Fictional serial value for sample EPC generation.
 
         // Act
         string epcIdentifier = @"gtin=" + originalGtin + ";serial=" + serial;
@@ -79,11 +87,11 @@ public class Sgtin96Tests
     {
         TDTEngine _tdtEngine = new();
         // Arrange
-        string originalGtin = "07891033748938";
+        string originalGtin = FictionalGtinPrefix6;
         int companyPrefixLength = 6;
         //ulong serial = 0;
         ulong serial = 0;
-        string tid = "E2801191200076D63DDC030A"; // M730 TID example
+        string tid = FictionalM730Tid; // Fictional M730 TID example for testing only.
 
         LoggingService.Instance.LogInfo($"TID M730: {tid}");
 
@@ -125,11 +133,11 @@ public class Sgtin96Tests
     {
         TDTEngine _tdtEngine = new();
         // Arrange
-        string originalGtin = "07891033748938";
+        string originalGtin = FictionalGtinPrefix6;
         int companyPrefixLength = 6;
         //ulong serial = 0;
         ulong serial = 0;
-        string tid = "E280119020006356D8630332"; // M730 TID example
+        string tid = FictionalM750Tid; // Fictional M750 TID example for testing only.
 
         LoggingService.Instance.LogInfo($"TID M750: {tid}");
 
@@ -171,11 +179,11 @@ public class Sgtin96Tests
     {
         TDTEngine _tdtEngine = new();
         // Arrange
-        string originalGtin = "01234567890951";
+        string originalGtin = FictionalGtinPrefix7;
         int companyPrefixLength = 7;
         //ulong serial = 0;
         ulong serial = 0;
-        string tid = "e28011702000529e7ee20b9b"; // R6 TID example
+        string tid = FictionalR6Tid; // Fictional R6 TID example for testing only.
 
         LoggingService.Instance.LogInfo($"TID r6: {tid}");
 
@@ -217,11 +225,11 @@ public class Sgtin96Tests
     {
         TDTEngine _tdtEngine = new();
         // Arrange
-        string originalGtin = "07891033748938";
+        string originalGtin = FictionalGtinPrefix6;
         int companyPrefixLength = 6;
         //ulong serial = 0;
         ulong serial = 0;
-        string tid = "E280699520004003138568BB"; // U9 TID example
+        string tid = FictionalU9Tid; // Fictional UCODE 9 TID example for testing only.
 
         LoggingService.Instance.LogInfo($"TID U9: {tid}");
         using (var parser = new TagTidParser(tid))
@@ -264,12 +272,12 @@ public class Sgtin96Tests
         TDTEngine _tdtEngine = new();
         string parameterList = @"filter=1;gs1companyprefixlength=6;tagLength=96";
 
-        string sgtin96Hex = "303B029BC16E188301843203";
+        string sgtin96Hex = FictionalSgtin96Hex;
         // Arrange
-        string originalGtin = "07891033748938";
+        string originalGtin = FictionalGtinPrefix6;
         // int companyPrefixLength = 6;
         //ulong serial = 0;
-        ulong serial = 12910342659;
+        ulong serial = 1234567890; // Fictional serial value for sample EPC generation.
 
         // print epcHex
         LoggingService.Instance.LogInfo("EPC Hex: " + sgtin96Hex.ToUpper());

@@ -46,7 +46,7 @@ namespace EpcListGenerator
             // Use default GTIN if none is provided.
             if (string.IsNullOrWhiteSpace(gtin))
             {
-                gtin = "07891033079360";
+                gtin = "00012345678905"; // Fictional GS1 sample GTIN used when none is provided.
             }
 
             // Validate the quantity.
