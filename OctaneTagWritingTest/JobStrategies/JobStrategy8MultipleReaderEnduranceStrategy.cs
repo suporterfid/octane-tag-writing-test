@@ -785,15 +785,17 @@ namespace OctaneTagWritingTest.JobStrategies
         public Task BeepAsync()
         {
             return BeepAsync(1000, 500);
-
         }
+
         // Updated method to handle platform-specific code for Console.Beep
-        public void BeepAsync(int frequency, int duration)
+        public Task BeepAsync(int frequency, int duration)
         {
             if (OperatingSystem.IsWindows())
             {
-                _ = Task.Run(() => Console.Beep(frequency, duration));
+                return Task.Run(() => Console.Beep(frequency, duration));
             }
+
+            return Task.CompletedTask;
         }
 
         /// <summary>
