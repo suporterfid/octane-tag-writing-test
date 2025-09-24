@@ -7,22 +7,22 @@
 public class ApplicationConfig
 {
     // Reader network settings
-    // Leaving hostnames empty allows running strategies with a subset of readers
+    // Defaults use placeholder hostnames; clear a value to disable the corresponding reader
 
     /// <summary>
-    /// Hostname or IP of the detector reader. Default: empty (disabled).
+    /// Hostname or IP of the detector reader. Default: "detector.example.com".
     /// </summary>
-    public string DetectorHostname { get; set; } = string.Empty;
+    public string DetectorHostname { get; set; } = "detector.example.com";
 
     /// <summary>
-    /// Hostname or IP of the writer reader. Default: empty (disabled).
+    /// Hostname or IP of the writer reader. Default: "writer.example.com".
     /// </summary>
-    public string WriterHostname { get; set; } = string.Empty;
+    public string WriterHostname { get; set; } = "writer.example.com";
 
     /// <summary>
-    /// Hostname or IP of the verifier reader. Default: empty (disabled).
+    /// Hostname or IP of the verifier reader. Default: "verifier.example.com".
     /// </summary>
-    public string VerifierHostname { get; set; } = string.Empty;
+    public string VerifierHostname { get; set; } = "verifier.example.com";
 
     /// <summary>
     /// Enables SGTIN-96 EPC generation. Default: <c>true</c>.
@@ -30,15 +30,15 @@ public class ApplicationConfig
     public bool Sgtin96Enabled { get; set; } = true;
 
     /// <summary>
-    /// Base GTIN used for SGTIN-96 generation. Default: empty.
+    /// Base GTIN used for SGTIN-96 generation. Default: "00000000000000".
     /// </summary>
-    public string Sgtin96SourceGtin { get; set; } = "";
+    public string Sgtin96SourceGtin { get; set; } = "00000000000000";
 
     // Test parameters
     /// <summary>
-    /// Description used in log file names. Default: "Teste11-Aplicador-Integrado".
+    /// Description used in log file names. Default: "Sample Integration Test".
     /// </summary>
-    public string TestDescription { get; set; } = "Teste11-Aplicador-Integrado";
+    public string TestDescription { get; set; } = "Sample Integration Test";
 
     /// <summary>
     /// EPC header value in hexadecimal. Default: "B6".
@@ -46,14 +46,14 @@ public class ApplicationConfig
     public string EpcHeader { get; set; } = "B6";
 
     /// <summary>
-    /// EPC item identifier without the header. Default: "33449900112222".
+    /// EPC item identifier without the header. Default: "00000000000000".
     /// </summary>
-    public string EpcPlainItemCode { get; set; } = "33449900112222";
+    public string EpcPlainItemCode { get; set; } = "00000000000000";
 
     /// <summary>
-    /// Stock keeping unit identifier. Default: "334499001122".
+    /// Stock keeping unit identifier. Default: "000000000000".
     /// </summary>
-    public string Sku { get; set; } = "334499001122";
+    public string Sku { get; set; } = "000000000000";
 
     /// <summary>
     /// Number of tags to generate. Default: 1 tag.

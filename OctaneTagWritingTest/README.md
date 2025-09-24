@@ -112,7 +112,15 @@ JobStrategy8 (Multiple Reader Endurance) supports configurable behavior when the
   - "Offset": Compare EPCs starting from a given character offset (default)
 - VerifierEpcCompareOffset: The starting character index when using Offset mode (default: 13)
 
-Example configuration (OctaneTagWritingTest/config.json):
+### Configuration
+
+1. Copy `OctaneTagWritingTest/config.example.json` to `OctaneTagWritingTest/config.json`.
+2. Replace the placeholder hostnames, GTIN, SKU, and any other environment-specific values with your production settings.
+3. Keep `config.json` out of source control so sensitive infrastructure details remain local only.
+
+The application loads settings from `config.json` at runtime. If the file is absent, the built-in defaults shown in `ApplicationConfig.cs` are used.
+
+Example override file (`OctaneTagWritingTest/config.json`):
 
 ```
 {

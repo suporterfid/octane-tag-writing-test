@@ -59,6 +59,7 @@ OctaneTagWritingTest/.vs/ProjectEvaluation/octanetagwritingtest.projects.v9.bin
 OctaneTagWritingTest/.vs/ProjectEvaluation/octanetagwritingtest.strings.v9.bin
 OctaneTagWritingTest/obj/Container/AbsoluteOutputAssemblyPath.cache
 OctaneTagWritingTest/obj/Container/AdditionalProbingPaths.cache
+OctaneTagWritingTest/config.json
 OctaneTagWritingTest/obj/Container/ContainerDevelopmentMode.cache
 OctaneTagWritingTest/obj/Container/ContainerId.cache
 OctaneTagWritingTest/obj/Container/ContainerName.cache

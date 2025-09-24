@@ -1,8 +1,8 @@
 {
-  "DetectorHostname": "192.168.1.3",
-  "WriterHostname": "192.168.1.4",
-  "VerifierHostname": "192.168.1.5",
-  "TestDescription": "Testes Fareva",
+  "DetectorHostname": "detector.example.com",
+  "WriterHostname": "writer.example.com",
+  "VerifierHostname": "verifier.example.com",
+  "TestDescription": "Sample Integration Test",
   "UseGpiForVerification": true,
   "GpiPortToProcessVerification": 1,
   "GpiTriggerStateToProcessVerification": true,
@@ -13,11 +13,11 @@
   "VerifierRewriteOnMismatch": true,
 
   "Sgtin96Enabled": true,
-  "Sgtin96SourceGtin": "07891033625888",
+  "Sgtin96SourceGtin": "00000000000000",
 
-  "EpcHeader": "B1",
-  "EpcPlainItemCode": "07891033625888",
-  "Sku": "7891033625888",
+  "EpcHeader": "B6",
+  "EpcPlainItemCode": "00000000000000",
+  "Sku": "000000000000",
 
   "Quantity": 1,
 
