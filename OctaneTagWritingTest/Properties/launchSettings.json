@@ -6,7 +6,7 @@
     },
     "Container (Dockerfile)": {
       "commandName": "Docker",
-      "commandLineArgs": "192.168.68.248  192.168.68.94"
+      "commandLineArgs": "[detector-hostname] [writer-hostname] [verifier-hostname]"
     }
   }
 }

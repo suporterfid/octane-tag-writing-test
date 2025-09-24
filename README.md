@@ -243,8 +243,10 @@ docker build --build-arg BUILD_CONFIGURATION=Debug -t octane-tag-writing-test .
 docker run octane-tag-writing-test [detector-hostname] [writer-hostname] [verifier-hostname]
 
 # Execução com configurações específicas
-docker run octane-tag-writing-test 192.168.68.248 192.168.68.94 192.168.68.100
+docker run octane-tag-writing-test [detector-hostname] [writer-hostname] [verifier-hostname]
 ```
+
+> Substitua os placeholders `[detector-hostname]`, `[writer-hostname]` e `[verifier-hostname]` pelos hostnames ou endereços IP reais dos leitores utilizados.
 
 ### Otimizações Docker
 
