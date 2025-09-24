@@ -1,43 +1,39 @@
-name: Build OctaneTagWritingTest
+name: .NET CI
 
 on:
+  push:
+    branches: ["main", "master"]
+  pull_request:
   workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: windows-latest
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+      DOTNET_NOLOGO: true
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore OctaneTagWritingTest/OctaneTagWritingTest.csproj --runtime win-x64
+        run: dotnet restore OctaneTagWritingTest/OctaneTagWritingTest.sln
 
-      - name: Build solution
-        run: dotnet build OctaneTagWritingTest/OctaneTagWritingTest.csproj --configuration Release --no-restore
+      - name: Build
+        run: dotnet build OctaneTagWritingTest/OctaneTagWritingTest.sln --configuration Release --no-restore
 
-      - name: Publish output for Windows
-        shell: bash
-        run: |
-          dotnet publish OctaneTagWritingTest/OctaneTagWritingTest.csproj \
-            --configuration Release \
-            --runtime win-x64 \
-            --self-contained true \
-            -p:PublishSingleFile=true \
-            --output ./publish
+      - name: Run tests
+        run: dotnet test OctaneTagWritingTest/OctaneTagWritingTest.sln --configuration Release --no-build --logger "trx"
 
-      # Optional: Run unit tests if needed
-      # - name: Run tests
-      #   run: dotnet test TagUtils.Tests/TagUtils.Tests.csproj --configuration Release
-
-      - name: Upload build artifact
+      - name: Upload test results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: octane-tag-writer-output
-          path: ./publish
+          name: dotnet-test-results
+          path: '**/*.trx'

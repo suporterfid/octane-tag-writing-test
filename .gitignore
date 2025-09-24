@@ -10,6 +10,10 @@
 *.userosscache
 *.sln.docstates
 *.env
+# Local configuration that must remain outside source control
+OctaneTagWritingTest/config.json
+OctaneTagWritingTest/reader_settings.json
+OctaneTagWritingTest/reader_settings/
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
