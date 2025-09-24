@@ -448,3 +448,5 @@ TagUtils/bin/Release/net8.0/TagUtils.pdb
 /TagUtils/obj
 /TagUtils/obj
 /TagUtils/obj
+
+*.csproj.user
