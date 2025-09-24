@@ -1,228 +1,75 @@
 # Octane Tag Writing Test
 
-A comprehensive .NET 8 testing suite for evaluating RFID tag writing operations using the Impinj Octane SDK. This project implements various test strategies to assess different aspects of RFID tag writing performance, reliability, and functionality.
+A .NET 8 suite for exercising RFID tag writing workflows with the Impinj Octane SDK. The solution implements multiple strategies to measure performance, robustness and verification behavior while keeping infrastructure details outside of source control.
 
-## Overview
+## Enterprise publication readiness
 
-This application provides a structured testing framework for RFID tag writing operations, implementing various test strategies to evaluate different aspects of tag writing performance and reliability. The project uses the Strategy design pattern to organize different test scenarios, making it easy to add new test cases while maintaining a consistent interface.
+Follow these practices before mirroring the repository into an enterprise GitHub organization:
 
-## Prerequisites
+- **Configuration template only.** The repository ships `config.example.json` with placeholder hostnames and product identifiers. Copy it to `config.json` locally and populate environment-specific values without committing them. The `.gitignore` file already excludes `config.json`, `reader_settings.json` and the runtime `reader_settings/` directory.
+- **Fictional test data.** EPC/TID lists and the constants in `TagUtils.Tests` use clearly fictional identifiers annotated in comments. Regenerate additional samples with the same conventions if more coverage is needed.
+- **Neutral documentation.** Use placeholders such as `detector.example.com` (already reflected in CLI and Docker snippets) instead of real IPs or hostnames when describing deployments.
+- **Corporate licensing.** Replace the root `LICENSE` contents with the organization-approved text before publishing internally.
+- **Automation alignment.** Review `.github/workflows/dotnet.yml` and adapt triggers, runners or quality gates to match corporate CI requirements if they differ from the provided defaults.
 
-- .NET 8.0 SDK
-- Impinj Octane SDK (v5.0.0)
-- LLRP SDK (included with Octane SDK)
-- Impinj RFID Reader (hostname/IP address required)
-- Docker (optional, for containerized execution)
-
-## Project Configuration
-
-```xml
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-  </PropertyGroup>
-</Project>
-```
-
-### NuGet Packages
-- OctaneSDK (v5.0.0)
-- Microsoft.VisualStudio.Azure.Containers.Tools.Targets (v1.21.0)
-
-## Project Structure
+## Project structure
 
 ```
 OctaneTagWritingTest/
-├── Helpers/
-│   ├── EpcListManager.cs     # Manages EPC list operations
-│   └── TagOpController.Instance.cs    # Controls tag operations
-├── TestStrategy/
-│   ├── TestCase1SpeedStrategy.cs           # Optimal write speed testing
-│   ├── TestCase2InlineWriteStrategy.cs     # Inline writing operations
-│   ├── TestCase3MultiAntennaWriteStrategy.cs # Multi-antenna writing
-│   ├── TestCase4BatchSerializationTestStrategy.cs # Batch operations
-│   ├── TestCase5VerificationCycleStrategy.cs # Write verification
-│   ├── TestCase6RobustnessStrategy.cs      # Robustness testing
-│   ├── TestCase7ErrorRecoveryStrategy.cs   # Error recovery testing
-│   └── TestCase8EnduranceStrategy.cs       # Endurance testing
-├── BaseTestStrategy.cs       # Base class for all test strategies
-├── ITestStrategy.cs         # Strategy pattern interface
-├── TestManager.cs          # Manages test execution
-└── Program.cs             # Application entry point
+├── ApplicationConfig.cs          # Strongly-typed application configuration
+├── Helpers/                      # EPC list utilities, tag operations, logging helpers
+├── Infrastructure/               # Dependency registration and plumbing
+├── JobStrategies/                # Strategy implementations (JobStrategy0..9)
+├── Properties/                   # Launch settings and assembly metadata
+├── ReaderSettings*.cs            # Reader configuration management
+├── Program.cs                    # Application entry point
+├── epc_list.txt / tid_list.txt   # Fictional sample identifiers for testing only
+└── config.example.json           # Placeholder configuration template
 ```
 
-## Test Strategies
+## Configuration management
 
-1. **Speed Test (TestCase1)**
-   - Optimizes for maximum write speed
-   - Measures and logs write operation timing
-   - Records results in TestCase1_Log.csv
+1. Copy `config.example.json` to `config.json` in the same directory.
+2. Fill in reader hostnames, GTIN/SKU information and any authentication secrets locally.
+3. Keep the populated file out of version control (it is ignored by default).
+4. Runtime adjustments to individual readers are persisted in the `reader_settings/` directory, which is also ignored.
 
-2. **Inline Write Test (TestCase2)**
-   - Tests inline writing capabilities
-   - Evaluates continuous write operations
+If the enterprise environment mandates a secrets manager or environment variables, document the alternative bootstrap process here before publishing.
 
-3. **Multi-Antenna Write Test (TestCase3)**
-   - Tests writing across multiple antennas
-   - Evaluates antenna switching and coordination
+## Sample data
 
-4. **Batch Serialization Test (TestCase4)**
-   - Tests batch writing operations
-   - Evaluates serialization performance
-
-5. **Verification Cycle Test (TestCase5)**
-   - Implements write-verify cycles
-   - Ensures data integrity
-
-6. **Robustness Test (TestCase6)**
-   - Tests system stability
-   - Evaluates error handling
-
-7. **Error Recovery Test (TestCase7)**
-   - Tests recovery from various error conditions
-   - Evaluates system resilience
-
-8. **Endurance Test (TestCase8)**
-   - Long-running stability testing
-   - Evaluates system performance over time
-
-## Features
-
-- Strategy Pattern implementation for flexible test case management
-- Comprehensive logging of test results
-- Support for various RFID operations:
-  - EPC writing
-  - Access password updates
-  - Block writing operations
-  - Multi-antenna operations
-- Low latency reporting configuration
-- CSV-based result logging
-- Docker support for containerized execution
-
-## Verifier Rewrite Behavior (JobStrategy8)
-
-JobStrategy8 (Multiple Reader Endurance) supports configurable behavior when the verifier reads an EPC that does not match the expected EPC for a given TID. This allows running the verifier faster by skipping re-writes when desired.
-
-- VerifierRewriteOnMismatch: Enables rewrite attempts on mismatch (default: true). Set to false to skip re-writing and only log the mismatch.
-- VerifierEpcCompareMode: How EPCs are compared. Options:
-  - "Full": Compare the entire EPC
-  - "Offset": Compare EPCs starting from a given character offset (default)
-- VerifierEpcCompareOffset: The starting character index when using Offset mode (default: 13)
-
-### Configuration
-
-1. Copy `OctaneTagWritingTest/config.example.json` to `OctaneTagWritingTest/config.json`.
-2. Replace the placeholder hostnames, GTIN, SKU, and any other environment-specific values with your production settings.
-3. Keep `config.json` out of source control so sensitive infrastructure details remain local only.
-
-The application loads settings from `config.json` at runtime. If the file is absent, the built-in defaults shown in `ApplicationConfig.cs` are used.
-
-Example override file (`OctaneTagWritingTest/config.json`):
-
-```
-{
-  "VerifierRewriteOnMismatch": false,
-  "VerifierEpcCompareMode": "Offset",
-  "VerifierEpcCompareOffset": 13
-}
-```
-
-Notes:
-- Defaults preserve existing behavior (rewrite enabled, offset comparison at 13).
-- Offset comparison mirrors prior logic that ignored the initial EPC header/fields.
+- `epc_list.txt` and `tid_list.txt` contain synthetic values prefixed or patterned to make their fictional nature obvious.
+- Unit tests under `TagUtils.Tests` declare fictional GTIN/TID examples with inline comments to prevent confusion with production identifiers.
+- Update accompanying comments if you introduce new samples so downstream teams understand they are non-production.
 
 ## Usage
 
-1. Run the application with the reader's hostname as an argument:
 ```bash
-dotnet run <reader-hostname>
+# Run with a sanitized configuration file
+OctaneTagWritingTest.exe --config config.json
+
+# Start interactive configuration mode
+OctaneTagWritingTest.exe --interactive
 ```
 
-2. Select a test strategy from the menu by entering the corresponding number.
+CLI parameters allow overriding individual settings (see `--help` output). Strategies can be launched individually through the interactive menu.
 
-3. Test results will be logged to strategy-specific CSV files (e.g., TestCase1_Log.csv).
+## Docker
 
-## Docker Support
-
-The project includes multi-stage Docker support for both development and production environments:
-
-### Docker Configuration
-- Base image: `mcr.microsoft.com/dotnet/runtime:8.0`
-- SDK image: `mcr.microsoft.com/dotnet/sdk:8.0`
-- Multi-stage build process for optimized container size
-- Supports both Debug and Release configurations
-
-### Build and Run
 ```bash
-# Build the Docker image
+# Build a production image
 docker build -t octane-tag-writing-test .
 
-# Run in production mode
-docker run octane-tag-writing-test <reader-hostname>
-
-# Build with specific configuration
-docker build --build-arg BUILD_CONFIGURATION=Debug -t octane-tag-writing-test .
+# Run with placeholder hostnames (replace locally)
+docker run octane-tag-writing-test detector.example.com writer.example.com verifier.example.com
 ```
 
-### Docker Stages
-1. **Base**: Runtime environment setup
-2. **Build**: Compilation of the project
-3. **Publish**: Creation of deployment artifacts
-4. **Final**: Production runtime environment
+Avoid embedding customer network information in documentation or scripts that remain under version control.
 
-The Dockerfile is optimized for both Visual Studio debugging and production deployment.
+## Logging and outputs
 
-### Docker Build Optimization
-The project includes a `.dockerignore` file that excludes unnecessary files from the Docker context:
-- Development artifacts (bin/, obj/)
-- Version control files (.git/, .gitignore)
-- IDE files (.vs/, .vscode/, *.user files)
-- Configuration files (secrets.dev.yaml, values.dev.yaml)
-- Node.js files (if any)
-- Docker-related files (docker-compose*, Dockerfile*)
-
-This optimization ensures:
-- Smaller build context
-- Faster builds
-- Better security (by excluding sensitive files)
-- Cleaner production images
-
-## Logging
-
-Each test strategy generates a CSV log file with relevant metrics:
-- Timestamp
-- TID (Tag ID)
-- Old EPC
-- New EPC
-- Write Time
-- Operation Result
-
-## Base Configuration
-
-The base test strategy provides common functionality:
-- Reader connection management
-- Default settings configuration
-- Low latency reporting
-- EPC list management
-- CSV logging
-
-## Contributing
-
-To add a new test strategy:
-1. Create a new class in the TestStrategy folder
-2. Inherit from BaseTestStrategy
-3. Implement the RunTest() method
-4. Register the strategy in TestManager.cs
+Each strategy produces structured CSV logs that capture EPC transitions, verification results and timing metrics. Logs are written beneath the working directory in timestamped folders for traceability.
 
 ## License
 
-[Your License Here]
-
-## Notes
-
-- Ensure proper reader connectivity before running tests
-- Review individual test strategy documentation for specific requirements
-- Check CSV log files for detailed test results
+Update the root `LICENSE` file with the company-approved terms prior to internal publication.

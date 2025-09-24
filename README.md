@@ -14,6 +14,16 @@ Esta aplicação fornece um framework estruturado de testes para operações de 
 - Leitor RFID Impinj (hostname/endereço IP necessário)
 - Docker (opcional, para execução containerizada)
 
+## Preparação para publicação corporativa
+
+Para compartilhar este repositório em um GitHub corporativo sem expor dados de clientes:
+
+- **Configuração sanitizada:** o arquivo `OctaneTagWritingTest/config.example.json` contém apenas hostnames e identificadores fictícios. Copie-o localmente para `config.json` e preencha as informações reais fora do controle de versão.
+- **Arquivos locais ignorados:** `config.json`, `reader_settings.json` e a pasta `reader_settings/` já estão listados no `.gitignore` padrão. Valide que nenhuma variante com credenciais foi adicionada ao repositório antes de publicar.
+- **Dados de amostra fictícios:** as listas `epc_list.txt` e `tid_list.txt`, bem como as constantes de teste em `TagUtils.Tests`, utilizam valores claramente fictícios e anotados nos comentários. Mantenha esta distinção ao gerar novos conjuntos de teste.
+- **Documentação neutra:** substitua quaisquer referências a endereços IP ou infraestrutura cliente por placeholders (por exemplo, `detector.example.com`). Os exemplos de CLI e Docker neste README já seguem este padrão.
+- **Licenciamento corporativo:** atualize o arquivo `LICENSE` com o texto aprovado pela empresa antes de abrir o código internamente.
+
 ## Estrutura do Projeto
 
 ```
@@ -219,10 +229,11 @@ Cada leitor pode ter configurações específicas:
 
 ### Arquivos de Configuração
 
-O sistema salva configurações em arquivos JSON na pasta `reader_settings/`:
-- `detector.json`: Configurações do leitor detector
-- `writer.json`: Configurações do leitor writer
-- `verifier.json`: Configurações do leitor verifier
+- `OctaneTagWritingTest/config.example.json`: modelo com valores fictícios utilizado como referência.
+- `OctaneTagWritingTest/config.json`: cópia local do modelo com hostnames e credenciais reais (não versionado).
+- `reader_settings/`: diretório criado em tempo de execução contendo ajustes por leitor (não versionado).
+
+Documente qualquer ajuste corporativo adicional no `README.md` antes de publicar para orientar outros times.
 
 ## Docker
 
@@ -239,14 +250,14 @@ docker build --build-arg BUILD_CONFIGURATION=Debug -t octane-tag-writing-test .
 ### Execução
 
 ```bash
-# Execução em modo produção
-docker run octane-tag-writing-test [detector-hostname] [writer-hostname] [verifier-hostname]
+# Execução em modo produção (preencha com hostnames internos)
+docker run octane-tag-writing-test detector.example.com writer.example.com verifier.example.com
 
-# Execução com configurações específicas
-docker run octane-tag-writing-test [detector-hostname] [writer-hostname] [verifier-hostname]
+# Execução com dois leitores
+docker run octane-tag-writing-test detector.example.com writer.example.com
 ```
 
-> Substitua os placeholders `[detector-hostname]`, `[writer-hostname]` e `[verifier-hostname]` pelos hostnames ou endereços IP reais dos leitores utilizados.
+> Substitua os placeholders por hostnames internos resolvíveis. Evite publicar endereços reais na documentação corporativa.
 
 ### Otimizações Docker
 

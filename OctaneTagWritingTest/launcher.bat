@@ -1,4 +1,5 @@
-﻿@echo off
+@echo off
+REM Expects a local config.json copied from config.example.json and populated outside of source control.
 echo RFID Tag Writing Application Launcher
 echo ====================================
 
