@@ -248,6 +248,57 @@ essenciais a partir do `config.json` e disparar a escrita diretamente com a ante
    O programa carregará o cabeçalho (`EpcHeader`) e o código plano (`EpcPlainItemCode`) do arquivo de configuração e gerará os
    EPCs sequenciais necessários (`Quantity`) utilizando exclusivamente a porta 1 do writer.
 
+### Exemplo rápido: serialização multi-antena com SGTIN-96 e GPI
+
+Quando há necessidade de serializar tags com o máximo de cobertura física e controle por sensor, é possível operar apenas com o
+leitor writer utilizando todas as quatro portas de antena e um sensor GPI para iniciar a rotina de leitura/gravação. O exemplo
+abaixo aproveita o campo `Sgtin96SourceGtin` para gerar EPCs no formato SGTIN-96 diretamente a partir do `config.json`.
+
+1. Copie `OctaneTagWritingTest/config.example.json` para `OctaneTagWritingTest/config.json` e ajuste os campos relevantes para
+   o seu ambiente:
+
+   ```json
+   {
+     "WriterHostname": "writer.local",
+     "UseGpiForVerification": true,
+     "GpiPortToProcessVerification": 1,
+     "GpiTriggerStateToProcessVerification": true,
+     "GpiDebounceInMs": 50,
+
+     "Sgtin96Enabled": true,
+     "Sgtin96SourceGtin": "01234567890123",
+     "Quantity": 96,
+
+     "WriterAntennas": {
+       "Antennas": [
+         { "Port": 1, "IsEnabled": true, "TxPowerInDbm": 27, "MaxRxSensitivity": true,  "RxSensitivityInDbm": -70 },
+         { "Port": 2, "IsEnabled": true, "TxPowerInDbm": 27, "MaxRxSensitivity": true,  "RxSensitivityInDbm": -70 },
+         { "Port": 3, "IsEnabled": true, "TxPowerInDbm": 27, "MaxRxSensitivity": true,  "RxSensitivityInDbm": -70 },
+         { "Port": 4, "IsEnabled": true, "TxPowerInDbm": 27, "MaxRxSensitivity": true,  "RxSensitivityInDbm": -70 }
+       ]
+     }
+   }
+   ```
+
+   > Ajuste o GTIN de origem (`Sgtin96SourceGtin`), potência de transmissão e sensibilidade de acordo com a infraestrutura
+   > instalada. Com `UseGpiForVerification` habilitado, o programa aguardará o nível configurado na porta GPI 1 antes de iniciar
+   > a rodada de escrita/verificação.
+
+2. Execute o programa informando o hostname do writer e o caminho para o arquivo de configuração:
+
+   ```bash
+   dotnet run --project OctaneTagWritingTest -- \
+     --writer writer.local \
+     --config OctaneTagWritingTest/config.json
+   ```
+
+3. No menu interativo exibido ao iniciar a aplicação, escolha a opção `[8] JobStrategy8MultipleReaderEnduranceStrategy`. Esta
+   estratégia suporta operar apenas com o writer e, com o GPI habilitado, aguarda o acionamento do sensor para disparar o ciclo
+   de leitura/escrita e registrar os EPCs gerados.
+
+   > Conecte o sensor ao GPI indicado para que, ao atingir o estado configurado (`true` no exemplo), o reader inicie o processo
+   > de serialização utilizando as quatro antenas em sequência. O desligamento do sensor retorna o sistema ao estado de espera.
+
 ### Modo Interativo
 
 O aplicativo suporta configuração interativa quando executado sem parâmetros ou com a flag `--interactive`:
