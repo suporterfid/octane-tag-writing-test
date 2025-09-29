@@ -430,3 +430,7 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+OctaneTagWritingTest/update_all_strategies.ps1
+OctaneTagWritingTest/update_remaining_strategies.ps1
+OctaneTagWritingTest/update_strategies.ps1
+OctaneTagWritingTest/verifier-gpi.json

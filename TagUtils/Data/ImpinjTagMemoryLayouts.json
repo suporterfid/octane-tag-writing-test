@@ -1,0 +1,485 @@
+{ "Schema Version": "1.0.0.18",
+  "Tag Design": {
+    "All Impinj Tags": {
+      "Description": "This section contains the overridable common features and bits supported by all chips",
+      "Features": {
+        "Password Killable": { "Is Supported": true, "Description": "When the kill bit is set to 1 while the kill password is provided the tag will no longer respond over the air" },
+        "Password Lockable": { "Is Supported": true, "Description": "When the lock and/or permalock bits are set while the access password is provided, the tag will not allow the memory to change" },
+        "EPC Permalockable": { "Is Supported": true, "Description": "This tag allows for the EPC to be permanently locked" },
+        "EPC AFI Bits Writable": { "Is Supported": true, "Description": "There is NVM in the PC Word" },
+        "BlockWrite": { "Is Supported": true, "Description": "Enables 32-bit BlockWrites which significantly improves write performance" },
+        "BlockPermalock": { "Is Supported": false, "Description": "Protects user data from overwriting" },
+        "Untraceable Short Range": { "Is Supported": false, "Description": "Decreases a tag’s read range by >90% via the EPCglobal Gen2v2 Untraceable command" },
+        "FastID": { "Is Supported": true, "Description": "Enables 2x to 3x faster EPC+TID inventory for authentication and other TID - based applications" },
+        "TagFocus": { "Is Supported": true, "Description": "Suppresses previously read tags to enable capture of more tags" },
+        "Integra TID Even Parity Check": { "Is Supported": false, "Description": "All tag chips with Integra have TID serial numbers with even parity. If the TID serial number for a tag is found to have odd parity, it indicates potential physical damage to the tag and hence questionable integrity of the data inside it" },
+        "Integra Memory Self Check": { "Is Supported": false, "Description": "Include automatic word - wise parity checking for all memory spaces.Automatic parity checking prevents tags from sending corrupt data to a reader during Gen2v2 inventory rounds or read operations" },
+        "Integra MarginRead": { "Is Supported": false, "Description": "This feature allows a reader to explicitly verify that each bit of the tag chip NVM is strongly written and has sufficient charge margin for reliable operation. It is used for tag quality control to ensure data integrity and for failure analysis" },
+        "QT": { "Is Supported": false, "Description": "Through QT technology, a tag owner/user can maintain two data profiles (one public, one private), allowing confidentiality of business - sensitive data while assuring consumers of privacy.The tag owner stores confidential data in the private data profile, which is protected by a password-controlled command and may only be accessed at very short read distances" },
+        "Protected Mode": { "Is Supported": false, "Description": "enables loss prevention while protecting consumer privacy by making a RAIN tag invisible to RAIN readers.The tag can be returned to normal operation, and made visible to RAIN readers, using a secure PIN" },
+        "Enhanced Integra Automatic Memory Parity Check": { "Is Supported": false, "Description": "Suite of diagnostics verify tag chip health and validate data encoding to consistently deliver more accurate data and reliable tags" },
+        "Short Range Capability": { "Is Supported": false, "Description": "Adds a layer of physical security by preventing readers farther than roughly one meter from the tag from switching the tag from Public to Private(or vice versa)" },
+        "AutoTune": { "Is Supported": false, "Description": "Automatically adjusts performance to optimize readability for environment and application" },
+        "I2C Interface": { "Is Supported": false, "Description": "Use a synchronous, multi-master, multi-slave, packet switched, single-ended, serial computer bus communication protocol with this end point" } },
+      "Memory Bank": {
+        "TID": {
+          "Is Lockable":  true,
+          "Fields": {
+            "Id": { "Description": "The Model Number of the Tag used for matching the value representing this Tag Chip" },
+            "Range": { "Bits": "0x0-0x1F,0x20-0x5F", "Lockable Bits": "0x20-0x5F", "Description": "Bit range of the TID memory Bank" },
+            "ISO / IEC 15963 Class Identifier": { "Bits": "0x0-0x7", "Description": "The EPCglobal™ Class ID (E2h)" },
+            "XTID Indicator (X bit)": { "Bits": "0x8", "Description": "XTID indicator bit. A value of 1 to indicate the presence of an extended TID" },
+            "Security Indicator (S bit)": { "Bits": "0x9", "Description": "When set to 1 it means the tag implements the Authenticate or Challenge commands" },
+            "File Indicator (F bit)": { "Bits": "0xA", "Description": "When set to 1 it means the tag implements the File Open command" },
+            "Mask Designer Identifier (MDID)": { "Bits": "0xB-0x13", "Description": "GS1-assigned 9-bit Manufacturer Identifier (MDID) for Impinj is 0000000012 and is located in TID memory bit locations 0Bh - 13h" },
+            "Tag Model Number (TMN)": { "Bits": "0x14-0x1F", "Description": "Tag chip model number" },
+            "EPC Tag Data Standard Header": { "Bits": "0x20-0x2F", "Description": "EPC Tag Data Standard Header" },
+            "Wafer Mask Revision": { "Bits": "0x30-0x33", "Description": "Wafer Mask Revision" },
+            "Integra TID Parity Bit": { "Description": "Integra TID Parity Bit" },
+            "Monza Serial Cycle Counter": { "Description": "Monza Serial Cycle Counter" },
+            "Reserved for Future Use": { "Bits": "0x50-0x52", "Description": "Reserved for Future Use" },
+            "Monza Series ID": { "Bits": "0x53-0x54", "Description": "Monza Series ID" } } },
+        "EPC": {
+          "Is Lockable":  true,
+          "Fields": {
+            "CRC-16": { "Bits": "0x0-0xF", "Description": "The cyclic redundancy check (CRC) is a technique used to detect errors in digital data. CRC16 is a 16-bit word hash function that detects accidental changes to the tag memory" },
+            "PC": { "Bits": "0x10-0x1F", "Description": "The Protocol-control word" },
+            "EPC Length": { "Bits": "0x10-0x14", "Description": "The word length of the EPC" },
+            "User Memory Indicator (UMI)": { "Bits": "0x15", "Description": "Read-Only User Memory Indicator" },
+            "Extended Protocol Control Word 1 Present Indicator (XI)": { "Bits": "0x16", "Description": "Read-Only extended protocol control indicator" },
+            "Numbering System Identifier Toggle (T)": { "Bits": "0x17", "Description": "Numbering system identifier toggle bit" },
+            "Reserved for Future Use, or Application Family Identifier (RFU or AFI)": { "Bits": "0x18-0x1F", "Description": "Reserved for Future Use or Application Family Identifier" },
+            "EPC": { "Bits": "0x20-0x9F", "Description": "The EPC field of the EPC Memory Bank" },
+            "Range": { "Bits": "0x0-0x9F", "Description": "Bit range of the EPC Memory Bank" } } },
+        "Reserved": {
+          "Fields": {
+            "Kill Password": { "Is Lockable":  true, "Bits": "0x0-0x1F", "Description": "Killing a tag requires a non-zero kill password to be applied" },
+            "Access Password": { "Is Lockable":  true, "Bits": "0x20-0x3F", "Description": "Locking a tag requires a non-zero access password to be applied" },
+            "Range": { "Bits": "0x00-0x1F,0x20-0x3F,0x40-0x6F", "Lockable Bits": "0x0-0x1F,0x20-0x3F", "Description": "Bit range of the Reserved Memory Bank" },
+            "AutoTune Disable Bit": { "Description": "AutoTune Disable Bit" },
+            "Memory Map Selection Bit": { "Description": "Memory Map Selection Bit" },
+            "BlockPermalock Enabled":  { "Description": "Dictates whether BlockPermalock is available on those chips with the BlockPermalock Feature" },
+            "Short Range Bit": { "Description": "Short Range Bit" },
+            "AutoTune Value": { "Description": "AutoTune Value" },
+            "Kill Password Locked": { "Bits": "0x40", "Description": "Kill Password is prevented from being written to if set to 1, 0 otherwise." },
+            "Kill Password Permalocked": { "Bits": "0x41", "Description": "Kill Password locked or unlocked state is permanent if set to 1, 0 otherwise" },
+            "Access Password Locked": { "Bits": "0x42", "Description": "Access Password is prevented from being written to if set to 1, 0 otherwise." },
+            "Access Password Permalocked": { "Bits": "0x43", "Description": "Access Password locked or unlocked state is permanent if set to 1, 0 otherwise" },
+            "EPC Locked": { "Bits": "0x44", "Description": "EPC is prevented from being written to if set to 1, 0 otherwise." },
+            "EPC Permalocked": { "Bits": "0x45", "Description": "EPC locked or unlocked state is permanent if set to 1, 0 otherwise" },
+            "User Memory Locked": { "Bits": "0x46", "Description": "User Memory is prevented from being written to if set to 1, 0 otherwise." },
+            "User Memory Permalocked": { "Bits": "0x47", "Description": "User Memory locked or unlocked state is permanent if set to 1, 0 otherwise" },
+            "Killed": { "Bits": "0x4B", "Description": "Prevents the tag from transmitting if set to 1, 0 otherwise" },
+            "BlockPermalock 0": { "Description": "Bit that dictates if Block 0 is permanently locked" },
+            "BlockPermalock 1": { "Description": "Bit that dictates if Block 1 is permanently locked" },
+            "BlockPermalock 2": { "Description": "Bit that dictates if Block 2 is permanently locked" },
+            "BlockPermalock 3": { "Description": "Bit that dictates if Block 3 is permanently locked" },
+            "BlockPermalock 4": { "Description": "Bit that dictates if Block 4 is permanently locked" },
+            "BlockPermalock 5": { "Description": "Bit that dictates if Block 5 is permanently locked" },
+            "BlockPermalock 6": { "Description": "Bit that dictates if Block 6 is permanently locked" },
+            "BlockPermalock 7": { "Description": "Bit that dictates if Block 7 is permanently locked" },
+            "BlockPermalock 8": { "Description": "Bit that dictates if Block 8 is permanently locked" },
+            "BlockPermalock 9": { "Description": "Bit that dictates if Block 9 is permanently locked" },
+            "BlockPermalock 10": { "Description": "Bit that dictates if Block 10 is permanently locked" },
+            "BlockPermalock 11": { "Description": "Bit that dictates if Block 11 is permanently locked" },
+            "BlockPermalock 12": { "Description": "Bit that dictates if Block 12 is permanently locked" },
+            "BlockPermalock 13": { "Description": "Bit that dictates if Block 13 is permanently locked" },
+            "BlockPermalock 14": { "Description": "Bit that dictates if Block 14 is permanently locked" },
+            "BlockPermalock 15": { "Description": "Bit that dictates if Block 15 is permanently locked" } } },
+        "User": {
+          "Is Lockable":  true,
+          "Fields": {
+            "Range": { "Description": "Bit range of the User memory Bank" },
+            "Block 0": { "Description": "Bit range of Block 0" },
+            "Block 1": { "Description": "Bit range of Block 1" },
+            "Block 2": { "Description": "Bit range of Block 2" },
+            "Block 3": { "Description": "Bit range of Block 3" },
+            "Block 4": { "Description": "Bit range of Block 4" },
+            "Block 5": { "Description": "Bit range of Block 5" },
+            "Block 6": { "Description": "Bit range of Block 6" },
+            "Block 7": { "Description": "Bit range of Block 7" },
+            "Block 8": { "Description": "Bit range of Block 8" },
+            "Block 9": { "Description": "Bit range of Block 9" },
+            "Block 10": { "Description": "Bit range of Block 10" },
+            "Block 11": { "Description": "Bit range of Block 11" },
+            "Block 12": { "Description": "Bit range of Block 12" },
+            "Block 13": { "Description": "Bit range of Block 13" },
+            "Block 14": { "Description": "Bit range of Block 14" },
+            "Block 15": { "Description": "Bit range of Block 15" } } } } },
+    "Impinj Monza X-2K": {
+      "Description": "Impinj Monza X Dura tag chips bring intelligent, embedded RAIN RFID to electronic devices for data logging, device configuration and upgrades, and IoT sensor applications with 2K bits of Memory",
+      "Features": {
+        "BlockPermalock": { "Is Supported": true },
+        "QT": { "Is Supported": true },
+        "I2C Interface": { "Is Supported": true } },
+      "Memory Bank": {
+        "TID": {
+          "Fields": {
+            "Id": { "Bits": "0x0-0x1F", "Value": "0xE2801140" } } },
+        "Reserved": {
+          "Fields": {
+            "Range": { "Bits": "0x00-0x1F,0x20-0x3F,0x40-0xAF" },
+            "BlockPermalock Enabled": { "Bits": "0xAA", "Applies To": { "User": { "Blocks": "0-4" } } },
+            "BlockPermalock 0": { "Bits": "0x48", "Applies To": { "User": { "Field": "Block 0" } } },
+            "BlockPermalock 1": { "Bits": "0x49", "Applies To": { "User": { "Field": "Block 1" } } },
+            "BlockPermalock 2": { "Bits": "0x4A", "Applies To": { "User": { "Field": "Block 2" } } },
+            "BlockPermalock 3": { "Bits": "0x4B", "Applies To": { "User": { "Field": "Block 3" } } },
+            "BlockPermalock 4": { "Bits": "0x4C", "Applies To": { "User": { "Field": "Block 4" } } } } },
+        "User": {
+          "Fields": {
+            "Range": { "Bits": "0x0-0x87F" },
+            "Block 0": { "Bits": "0x000-0x1FF" },
+            "Block 1": { "Bits": "0x200-0x3FF" },
+            "Block 2": { "Bits": "0x400-0x5FF" },
+            "Block 3": { "Bits": "0x600-0x7FF" },
+            "Block 4": { "Bits": "0x800-0x87F" } } } } },
+    "Impinj Monza X-8K": {
+      "Description": "Impinj Monza X Dura tag chips bring intelligent, embedded RAIN RFID to electronic devices for data logging, device configuration and upgrades, and IoT sensor applications with 8K bits of Memory",
+      "Features": {
+        "BlockPermalock": { "Is Supported": true },
+        "QT": { "Is Supported": true },
+        "I2C Interface": { "Is Supported": true } },
+      "Memory Bank": {
+        "TID": {
+          "Fields": {
+            "Id": { "Bits": "0x0-0x1F", "Value": "0xE2801150" } } },
+        "Reserved": {
+          "Fields": {
+            "Range": { "Bits": "0x00-0x1F,0x20-0x3F,0x40-0xAF" },
+            "BlockPermalock Enabled": { "Bits": "0xAA", "Applies To": { "User": { "Blocks": "0-15" } } },
+            "BlockPermalock 0": { "Bits": "0x90", "Applies To": { "User": { "Field": "Block 0" } } },
+            "BlockPermalock 1": { "Bits": "0x91", "Applies To": { "User": { "Field": "Block 1" } } },
+            "BlockPermalock 2": { "Bits": "0x92", "Applies To": { "User": { "Field": "Block 2" } } },
+            "BlockPermalock 3": { "Bits": "0x93", "Applies To": { "User": { "Field": "Block 3" } } },
+            "BlockPermalock 4": { "Bits": "0x94", "Applies To": { "User": { "Field": "Block 4" } } },
+            "BlockPermalock 5": { "Bits": "0x95", "Applies To": { "User": { "Field": "Block 5" } } },
+            "BlockPermalock 6": { "Bits": "0x96", "Applies To": { "User": { "Field": "Block 6" } } },
+            "BlockPermalock 7": { "Bits": "0x97", "Applies To": { "User": { "Field": "Block 7" } } },
+            "BlockPermalock 8": { "Bits": "0x98", "Applies To": { "User": { "Field": "Block 8" } } },
+            "BlockPermalock 9": { "Bits": "0x99", "Applies To": { "User": { "Field": "Block 9" } } },
+            "BlockPermalock 10": { "Bits": "0x9A", "Applies To": { "User": { "Field": "Block 10" } } },
+            "BlockPermalock 11": { "Bits": "0x9B", "Applies To": { "User": { "Field": "Block 11" } } },
+            "BlockPermalock 12": { "Bits": "0x9C", "Applies To": { "User": { "Field": "Block 12" } } },
+            "BlockPermalock 13": { "Bits": "0x9D", "Applies To": { "User": { "Field": "Block 13" } } },
+            "BlockPermalock 14": { "Bits": "0x9E", "Applies To": { "User": { "Field": "Block 14" } } },
+            "BlockPermalock 15": { "Bits": "0x9F", "Applies To": { "User": { "Field": "Block 15" } } } } },
+        "User": {
+          "Fields": {
+            "Range": { "Bits": "0x0-0x1FFF" },
+            "Block 0": { "Bits": "0x000-0x1FF" },
+            "Block 1": { "Bits": "0x200-0x3FF" },
+            "Block 2": { "Bits": "0x400-0x5FF" },
+            "Block 3": { "Bits": "0x600-0x7FF" },
+            "Block 4": { "Bits": "0x800-0x87F" },
+            "Block 5": { "Bits": "0x880-0x8FF" },
+            "Block 6": { "Bits": "0x900-0x97F" },
+            "Block 7": { "Bits": "0x980-0x9FF" },
+            "Block 8": { "Bits": "0xA00-0xA7F" },
+            "Block 9": { "Bits": "0xA80-0xAFF" },
+            "Block 10": { "Bits": "0xB00-0xB7F" },
+            "Block 11": { "Bits": "0xB80-0xBFF" },
+            "Block 12": { "Bits": "0xC00-0xC7F" },
+            "Block 13": { "Bits": "0xC80-0xCFF" },
+            "Block 14": { "Bits": "0xD00-0xD7F" },
+            "Block 15": { "Bits": "0xD80-0xDFF" } } } } },
+    "Impinj Monza 4D": {
+      "Description": "Provides 128 bits of EPC memory, 32 bits of User memory, and a serialized TID. For applications where large memory is not required, Monza 4D offers superior sensitivity, True3D antenna support and a unique TID within a more standard memory size",
+      "Memory Bank": {
+        "TID": {
+          "Fields": {
+            "Id": { "Bits": "0x0-0x1F", "Value": "0xE2801100" } } },
+        "User": {
+          "Fields": {
+            "Range": { "Bits": "0x0-0x1F" } } } } },
+    "Impinj Monza 4E": {
+      "Description": "Offers up to 496 bits of EPC memory, 128 bits of User memory, and a serialized TID to provide fast access to a larger memory, as well as meet the needs of applications requiring greater than 96 bit EPC numbers.Monza 4E also provides True3D antenna support",
+      "Features": {
+        "FastID": { "Is Supported": false } },
+      "Memory Bank": {
+        "TID": {
+          "Fields": {
+            "Id": { "Bits": "0x0-0x1F", "Value": "0xE280110C" } } },
+        "EPC": {
+          "Fields": {
+            "EPC": { "Bits": "0x20-0x1EF" },
+            "Range": { "Bits": "0x0-0x1EF" } } },
+        "User": {
+          "Fields": {
+            "Range": { "Bits": "0x0-0x7F" } } } } },
+    "Impinj Monza 4QT": {
+      "Description": "Offers 512 bits of user memory, 128 bits of EPC memory, BlockPermalock capability, a serialized TID, and True3D antenna support. The extended User memory options support applications where users cannot count on a database connection. The 512 bits of User memory enables a portable, but private database to travel with the tag.Monza 4QT also provides Impinj’s patent-pending QT technology, which protects data confidentiality and consumer privacy",
+      "Features": {
+        "BlockPermalock": { "Is Supported": true },
+        "QT": { "Is Supported": true } },
+      "Memory Bank": {
+        "TID": {
+          "Fields": {
+            "Id": { "Bits": "0x0-0x1F", "Value": "0xE2801105" } } },
+        "EPC": {
+          "Fields": {
+            "EPC": { "Bits": "0x20-0x7F" },
+            "Range": { "Bits": "0x0-0x7F" } } },
+        "Reserved": {
+          "Fields": {
+            "BlockPermalock Enabled": { "Value": "0x1", "Applies To": { "User": { "Blocks": "0-3" } } },
+            "BlockPermalock 0": { "Applies To": { "User": { "Field": "Block 0" } } },
+            "BlockPermalock 1": { "Applies To": { "User": { "Field": "Block 1" } } },
+            "BlockPermalock 2": { "Applies To": { "User": { "Field": "Block 2" } } },
+            "BlockPermalock 3": { "Applies To": { "User": { "Field": "Block 3" } } } } },
+        "User": {
+          "Fields": {
+            "Range": { "Bits": "0x0-0x1FF" },
+            "Block 0": { "Bits": "0x00-0x7F" },
+            "Block 1": { "Bits": "0x80-0xFF" },
+            "Block 2": { "Bits": "0x100-0x17F" },
+            "Block 3": { "Bits": "0x180-0x1FF" } } } } },
+    "Impinj Monza 4i": {
+      "Description": "Ideal for component-level tagging in vehicle and production line manufacturing, Monza 4i tag chips are built with an extended EPC memory to track long serial numbers along with a large amount of user memory to chronicle the production process and components from raw material through final assembly",
+      "Features": {
+        "BlockPermalock": { "Is Supported": true } },
+      "Memory Bank": {
+        "TID": {
+          "Fields": {
+            "Id": { "Bits": "0x0-0x1F", "Value": "0xE2801114" } } },
+        "EPC": {
+          "Fields": {
+            "EPC": { "Bits": "0x20-0x11F" },
+            "Range": { "Bits": "0x0-0x11F" } } },
+        "Reserved": {
+          "Fields": {
+            "BlockPermalock Enabled": { "Value": "0x1", "Applies To": { "User": { "Blocks": "0-3" } } },
+            "BlockPermalock 0": { "Bits": "0x48", "Applies To": { "User": { "Field": "Block 0" } } },
+            "BlockPermalock 1": { "Bits": "0x49", "Applies To": { "User": { "Field": "Block 1" } } },
+            "BlockPermalock 2": { "Bits": "0x4A", "Applies To": { "User": { "Field": "Block 2" } } },
+            "BlockPermalock 3": { "Bits": "0x4B", "Applies To": { "User": { "Field": "Block 3" } } }
+          } },
+        "User": {
+          "Fields": {
+            "Range": { "Bits": "0x0-0x1DF" },
+            "Block 0": { "Bits": "0x00-0x7F" },
+            "Block 1": { "Bits": "0x80-0xFF" },
+            "Block 2": { "Bits": "0x100-0x17F" },
+            "Block 3": { "Bits": "0x180-0x1DF" } } } } },
+    "Impinj Monza 5": {
+      "Description": "Ideal solution for item-level tagging of apparel, electronics, cosmetics, and jewelry, or any other application that requires high - volume, high - performance, serial - numbered tags",
+      "Memory Bank": {
+        "TID": {
+          "Fields": {
+            "Id": { "Bits": "0x0-0x1F", "Value": "0xE2801130" } } },
+        "User": {
+          "Fields": {
+            "Range": { "Bits": "0x0-0x1F" } } } } },
+    "Impinj Monza R6": {
+      "Description": "This UHF RFID tag chip is optimized for serializing items such as apparel, electronics, cosmetics, documents and jewelry. It delivers unmatched read performance and data integrity for effective RFID business systems and record-breaking encoding performance to enable the lowest applied tag cost",
+      "Features": {
+        "Password Killable": { "Is Supported": false },
+        "Password Lockable": { "Is Supported": false },
+        "EPC AFI Bits Writable": { "Is Supported": false },
+        "Integra TID Even Parity Check": { "Is Supported": true },
+        "Integra Memory Self Check": { "Is Supported": true },
+        "Integra MarginRead": { "Is Supported": true },
+        "AutoTune": { "Is Supported": true } },
+      "Memory Bank": {
+        "TID": {
+          "Fields": {
+            "Id": { "Bits": "0x0-0x1F", "Value": "0xE2801160" },
+            "Wafer Mask Revision": { "Bits": "0x30-0x32" },
+            "Integra TID Parity Bit": { "Bits": "0x33" },
+            "Monza Serial Cycle Counter": { "Bits": "0x34" },
+            "Reserved for Future Use": { "Bits": "0x50-0x52" },
+            "Monza Series ID": { "Bits": "0x53-0x54" } } },
+        "EPC": {
+          "Fields": {
+            "EPC": { "Bits": "0x20-0x7F" },
+            "Range": { "Bits": "0x0-0x7F" } } },
+        "Reserved": {
+          "Fields": {
+            "Range": { "Bits": "0x00-0x1F,0x20-0x3F,0x40-0x5F,0xE0-0xEF" },
+            "AutoTune Disable Bit": { "Bits": "0x50" },
+            "AutoTune Value": { "Bits": "0xED-0xEF" },
+            "Killed": { "Bits": "", "Value": "0x0" },
+            "Kill Password Locked": { "Bits": "", "Value": "0x1" },
+            "Kill Password Permalocked": { "Bits": "", "Value": "0x1" },
+            "Access Password Locked": { "Bits": "", "Value": "0x1" },
+            "Access Password Permalocked": { "Bits": "", "Value": "0x1" },
+            "EPC Locked": { "Bits": "0x51" },
+            "EPC Permalocked": { "Bits": "0x51" },
+            "User Memory Locked": { "Bits": "" },
+            "User Memory Permalocked": { "Bits": "" } } } } },
+    "Impinj Monza R6-P": {
+      "Description": "Impinj Monza R6-P RAIN RFID tag chips attach to everyday items, enabling retail applications like global inventory tracking, brand protection and loss prevention",
+      "Features": {
+        "BlockPermalock": { "Is Supported": true },
+        "Integra TID Even Parity Check": { "Is Supported": true },
+        "Integra Memory Self Check": { "Is Supported": true },
+        "Integra MarginRead": { "Is Supported": true },
+        "Short Range Capability": { "Is Supported": true },
+        "AutoTune": { "Is Supported": true } },
+      "Memory Bank": {
+        "TID": {
+          "Fields": {
+            "Id": { "Bits": "0x0-0x1F", "Value": "0xE2801170" },
+            "Wafer Mask Revision": { "Bits": "0x30-0x32" },
+            "Integra TID Parity Bit": { "Bits": "0x33" },
+            "Monza Serial Cycle Counter": { "Bits": "0x34" },
+            "Reserved for Future Use": { "Bits": "0x50-0x52" },
+            "Monza Series ID": { "Bits": "0x53-0x54" } } },
+        "EPC": {
+          "Fields": {
+            "EPC": {
+              "Dynamic": [
+                { "Bits": "0x20-0x7F", "Depends On": { "Reserved": {
+                      "Bits": "0x4D", "Value": "0x0" } } },
+                { "Bits": "0x20-0x9F", "Depends On": { "Reserved": {
+                      "Bits": "0x4D", "Value": "0x1" } } } ] },
+            "Range": {
+              "Dynamic": [
+                { "Bits": "0x0-0x7F", "Depends On": { "Reserved": {
+                      "Bits": "0x4D", "Value": "0x0" } } },
+                { "Bits": "0x0-0x9F", "Depends On": {"Reserved": {
+                      "Bits": "0x4D", "Value": "0x1" } } } ] } } },
+        "Reserved": {
+          "Fields": {
+            "Range": { "Bits": "0x00-0x1F,0x20-0x3F,0x40-0x6F,0x140-0x14F" },
+            "AutoTune Disable Bit": { "Bits": "0x4F" },
+            "Memory Map Selection Bit": { "Bits": "0x4D" },
+            "BlockPermalock Enabled": { "Bits": "0x4D", "Applies To": { "User": { "Blocks": "0-1" } } },
+            "Short Range Bit": { "Bits": "0x4E" },
+            "AutoTune Value": { "Bits": "0x14D-0x14F" },
+            "BlockPermalock 0": { "Applies To": { "User": { "Field": "Block 0" } } },
+            "BlockPermalock 1": { "Applies To": { "User": { "Field": "Block 1" } } } } },
+        "User": {
+          "Fields": {
+            "Range": {
+              "Dynamic": [
+                { "Bits": "0x0-0x3F", "Depends On": { "Reserved": {
+                      "Bits": "0x4D", "Value": "0x0" } } },
+                { "Bits": "0x0-0x1F", "Depends On": { "Reserved": {
+                      "Bits": "0x4D", "Value": "0x1" } } } ] },
+            "Block 0": { "Bits": "0x0-0x1F" },
+            "Block 1": { "Bits": "0x20-0x3F", "Depends On": { "Reserved":  {
+                      "Bits":  "0x4D", "Value":  "0x0" } } } } } } },
+    "Impinj Monza R6-A": {
+      "Description": "This RAIN RFID endpoint IC (or tag chip) is optimized for serializing items such as apparel, electronics, cosmetics, pharmaceuticals, jewelry and various other products where enhanced privacy protections such as short range mode and Kill and Access commands are preferred",
+      "Features": {
+        "Integra TID Even Parity Check": { "Is Supported": true },
+        "Integra Memory Self Check": { "Is Supported": true },
+        "Integra MarginRead": { "Is Supported": true },
+        "Short Range Capability": { "Is Supported": true },
+        "AutoTune": { "Is Supported": true } },
+      "Memory Bank": {
+        "TID": {
+          "Fields": {
+            "Id": { "Bits": "0x0-0x1F,0x0F,0x30-0x32", "Value": "0xE28011710" },
+            "Wafer Mask Revision": { "Bits": "0x30-0x32" },
+            "Integra TID Parity Bit": { "Bits": "0x33" },
+            "Monza Serial Cycle Counter": { "Bits": "0x34" },
+            "Reserved for Future Use": { "Bits": "0x50-0x52" },
+            "Monza Series ID": { "Bits": "0x53-0x54" } } },
+        "EPC": {
+          "Fields": {
+            "EPC": { "Bits": "0x20-0x7F" },
+            "Range": { "Bits": "0x0-0x7F" } } },
+        "Reserved": {
+          "Fields": {
+            "Range": { "Bits": "0x00-0x1F,0x20-0x3F,0x40-0x6F,0x140-0x14F" },
+            "AutoTune Disable Bit": { "Bits": "0x4F" },
+            "Short Range Bit": { "Bits": "0x4E" },
+            "AutoTune Value": { "Bits": "0x14D-0x14F" },
+            "User Memory Locked": { "Bits": "" },
+            "User Memory Permalocked": { "Bits": "" } } } } },
+    "Impinj Monza R6-B": {
+      "Description": "Provides excellent high speed performance in challenging airport RF environments",
+      "Features": {
+        "Integra TID Even Parity Check": { "Is Supported": true },
+        "Integra Memory Self Check": { "Is Supported": true },
+        "Integra MarginRead": { "Is Supported": true },
+        "Short Range Capability": { "Is Supported": true },
+        "AutoTune": { "Is Supported": true } },
+      "Memory Bank": {
+        "TID": {
+          "Fields": {
+            "Id": { "Bits": "0x0-0x1F,0x0F,0x30-0x32", "Value": "0xE28011711" },
+            "Wafer Mask Revision": { "Bits": "0x30-0x32" },
+            "Integra TID Parity Bit": { "Bits": "0x33" },
+            "Monza Serial Cycle Counter": { "Bits": "0x34" },
+            "Reserved for Future Use": { "Bits": "0x50-0x52" },
+            "Monza Series ID": { "Bits": "0x53-0x54" } } },
+        "EPC": {
+          "Fields": {
+            "EPC": { "Bits": "0x20-0x7F" },
+            "Range": { "Bits": "0x0-0x7F" } } },
+        "Reserved": {
+          "Fields": {
+            "Range": { "Bits": "0x00-0x1F,0x20-0x3F,0x40-0x6F,0x140-0x14F" },
+            "AutoTune Disable Bit": { "Bits": "0x4F" },
+            "Short Range Bit": { "Bits": "0x4E" },
+            "AutoTune Value": { "Bits": "0x14D-0x14F" },
+            "User Memory Locked": { "Bits": "" },
+            "User Memory Permalocked": { "Bits": "" } } } } },
+    "Impinj M750": {
+      "Description": "With 96 Bits of EPC and 32 bits of User Memory it can be attached to or embedded in nearly any item, globally, to enable solutions for high - speed inventory counting, loss prevention with frictionless self - checkout, and embedded tagging with seamless product returns",
+      "Features": {
+        "Untraceable Short Range": { "Is Supported": true },
+        "Protected Mode": { "Is Supported": true },
+        "Integra Memory Self Check": { "Is Supported": true },
+        "Integra MarginRead": { "Is Supported": true },
+        "Short Range Capability": { "Is Supported": true },
+        "AutoTune": { "Is Supported": true } },
+      "Memory Bank": {
+        "TID": {
+          "Fields": {
+            "Id": { "Bits": "0x0-0x1F", "Value": "0xE2801190" },
+            "Wafer Mask Revision": { "Bits": "0x30-0x32" },
+            "Reserved for Future Use": { "Bits": "0x50-0x54" },
+            "Monza Series ID": { "Bits": "0x55-0x56" } } },
+        "EPC": {
+          "Fields": {
+            "EPC": { "Bits": "0x20-0x7F" },
+            "Range": { "Bits": "0x0-0x7F" } } },
+        "User": {
+          "Fields": {
+            "Range": { "Bits": "0x0-0x1F" } } },
+        "Reserved": {
+          "Fields": {
+            "Range": { "Bits": "0x00-0x1F,0x20-0x3F,0x40-0x6F,0x140-0x14F" },
+            "Kill Password Locked": { "Bits": "0x42" },
+            "Kill Password Permalocked": { "Bits": "0x43" },
+            "Access Password Locked": { "Bits": "0x42" },
+            "Access Password Permalocked": { "Bits": "0x43" },
+            "User Memory Locked": { "Bits": "0x46" },
+            "User Memory Permalocked": { "Bits": "0x47" },
+            "Short Range Bit": { "Bits": "0x4B" },
+            "Killed": { "Bits": "0x4D" },
+            "AutoTune Disable Bit": { "Bits": "0x4F" },
+            "AutoTune Value": { "Bits": "0x14D-0x14F" } } } } },
+    "Impinj M730": {
+      "Description": "With 128 Bits of EPC it can be attached to or embedded in nearly any item, globally, to enable solutions for high - speed inventory counting, loss prevention with frictionless self - checkout, and embedded tagging with seamless product returns",
+      "Features": {
+        "Untraceable Short Range": { "Is Supported": true },
+        "Integra Memory Self Check": { "Is Supported": true },
+        "Integra MarginRead": { "Is Supported": true },
+        "Protected Mode": { "Is Supported": true },
+        "Enhanced Integra Automatic Memory Parity Check": { "Is Supported": true },
+        "Short Range Capability": { "Is Supported": true },
+        "AutoTune": { "Is Supported": true } },
+      "Memory Bank": {
+        "TID": {
+          "Fields": {
+            "Id": { "Bits": "0x0-0x1F", "Value": "0xE2801191" },
+            "Wafer Mask Revision": { "Bits": "0x30-0x32" },
+            "Reserved for Future Use": { "Bits": "0x50-0x54" },
+            "Monza Series ID": { "Bits": "0x55-0x56" } } },
+        "Reserved": {
+          "Fields": {
+            "Range": { "Bits": "0x00-0x1F,0x20-0x3F,0x40-0x6F,0x140-0x14F" },
+            "Kill Password Locked": { "Bits": "0x42" },
+            "Kill Password Permalocked": { "Bits": "0x43" },
+            "Access Password Locked": { "Bits": "0x42" },
+            "Access Password Permalocked": { "Bits": "0x43" },
+            "User Memory Locked": { "Bits": "0x46" },
+            "User Memory Permalocked": { "Bits": "0x47" },
+            "Short Range Bit": { "Bits": "0x4B" },
+            "Killed": { "Bits": "0x4D" },
+            "AutoTune Disable Bit": { "Bits": "0x4F" },
+            "AutoTune Value": { "Bits": "0x14D-0x14F" } } } } } } }
