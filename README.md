@@ -204,6 +204,50 @@ OctaneTagWritingTest.exe --interactive
 OctaneTagWritingTest.exe --help
 ```
 
+### Exemplo rápido: serialização somente com writer
+
+Para cenários de serialização rápida em que apenas um leitor writer está disponível, é possível carregar todas as informações
+essenciais a partir do `config.json` e disparar a escrita diretamente com a antena 1. O exemplo abaixo utiliza os campos
+`EpcHeader` e `EpcPlainItemCode` para definir um EPC plano, sem habilitar SGTIN‑96.
+
+1. Copie `OctaneTagWritingTest/config.example.json` para `OctaneTagWritingTest/config.json` e ajuste apenas os campos
+   relevantes:
+
+   ```json
+   {
+     "WriterHostname": "writer.local",
+     "Sgtin96Enabled": false,
+     "EpcHeader": "B6",
+     "EpcPlainItemCode": "00000000012345",
+     "Quantity": 10,
+     "WriterAntennas": {
+       "Antennas": [
+         {
+           "Port": 1,
+           "IsEnabled": true,
+           "TxPowerInDbm": 27,
+           "MaxRxSensitivity": true,
+           "RxSensitivityInDbm": -70
+         }
+       ]
+     }
+   }
+   ```
+
+   > Os demais campos podem ser removidos ou deixados com valores fictícios; apenas o hostname do writer e a antena utilizada
+   > precisam refletir o ambiente real.
+
+2. Execute o teste informando apenas o writer e o arquivo de configuração:
+
+   ```bash
+   dotnet run --project OctaneTagWritingTest -- \
+     --writer writer.local \
+     --config OctaneTagWritingTest/config.json
+   ```
+
+   O programa carregará o cabeçalho (`EpcHeader`) e o código plano (`EpcPlainItemCode`) do arquivo de configuração e gerará os
+   EPCs sequenciais necessários (`Quantity`) utilizando exclusivamente a porta 1 do writer.
+
 ### Modo Interativo
 
 O aplicativo suporta configuração interativa quando executado sem parâmetros ou com a flag `--interactive`:
