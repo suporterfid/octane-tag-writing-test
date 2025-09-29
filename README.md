@@ -248,6 +248,66 @@ essenciais a partir do `config.json` e disparar a escrita diretamente com a ante
    O programa carregará o cabeçalho (`EpcHeader`) e o código plano (`EpcPlainItemCode`) do arquivo de configuração e gerará os
    EPCs sequenciais necessários (`Quantity`) utilizando exclusivamente a porta 1 do writer.
 
+### Exemplo rápido: serialização com três leitores usando SGTIN-96
+
+Para operações que precisam validar cada EPC logo após a escrita, é possível orquestrar os três leitores (detector, writer e
+verifier) operando com uma antena cada. O detector garante a presença da tag no campo, o writer executa a escrita e o verifier
+confirma o EPC utilizando a porta GPI 1 para sincronizar o ciclo de verificação. O exemplo abaixo demonstra como carregar o
+GTIN de origem pelo parâmetro `Sgtin96SourceGtin` no `config.json` e reutilizar as antenas padrão (porta 1) em cada leitor.
+
+1. Copie `OctaneTagWritingTest/config.example.json` para `OctaneTagWritingTest/config.json` e ajuste apenas os campos
+   relevantes:
+
+   ```json
+   {
+     "DetectorHostname": "detector.local",
+     "WriterHostname": "writer.local",
+     "VerifierHostname": "verifier.local",
+
+     "UseGpiForVerification": true,
+     "GpiPortToProcessVerification": 1,
+     "GpiTriggerStateToProcessVerification": true,
+
+     "Sgtin96Enabled": true,
+     "Sgtin96SourceGtin": "01234567890123",
+     "Quantity": 48,
+
+     "DetectorAntennas": {
+       "Antennas": [
+         { "Port": 1, "IsEnabled": true, "TxPowerInDbm": 25, "MaxRxSensitivity": true, "RxSensitivityInDbm": -65 }
+       ]
+     },
+     "WriterAntennas": {
+       "Antennas": [
+         { "Port": 1, "IsEnabled": true, "TxPowerInDbm": 27, "MaxRxSensitivity": true, "RxSensitivityInDbm": -70 }
+       ]
+     },
+     "VerifierAntennas": {
+       "Antennas": [
+         { "Port": 1, "IsEnabled": true, "TxPowerInDbm": 24, "MaxRxSensitivity": true, "RxSensitivityInDbm": -68 }
+       ]
+     }
+   }
+   ```
+
+   > Ajuste os hostnames e níveis de potência conforme a infraestrutura disponível. O uso de `Sgtin96SourceGtin` gera a
+   > sequência SGTIN-96 automaticamente para a quantidade configurada.
+
+2. Execute o programa informando os três leitores e o caminho para o arquivo de configuração:
+
+   ```bash
+   dotnet run --project OctaneTagWritingTest -- \
+     --detector detector.local \
+     --writer writer.local \
+     --verifier verifier.local \
+     --config OctaneTagWritingTest/config.json
+   ```
+
+3. Selecione `[8] JobStrategy8MultipleReaderEnduranceStrategy` quando o menu interativo aparecer. Com `UseGpiForVerification`
+   habilitado e `GpiPortToProcessVerification` definido como 1, o verifier aguardará o sinal GPI na porta 1 antes de efetuar a
+   leitura de validação. Enquanto isso, o detector mantém o monitoramento da tag na antena 1, permitindo que o writer
+   serialize rapidamente cada EPC e o verifier confirme o valor escrito.
+
 ### Exemplo rápido: serialização multi-antena com SGTIN-96 e GPI
 
 Quando há necessidade de serializar tags com o máximo de cobertura física e controle por sensor, é possível operar apenas com o
