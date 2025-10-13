@@ -615,6 +615,33 @@ namespace OctaneTagWritingTest.JobStrategies
                 Console.WriteLine($"OnTagsReportedVerifier - TID {tidHex} - current EPC: {epcHex} Expected EPC: {expectedEpc} Operation Status [{writeStatus}]" );
                 Console.WriteLine(".........................................");
 
+                var previousEpc = "N/A";
+                if (verificationTags.TryGetValue(tidHex, out var previousTag))
+                {
+                    previousEpc = previousTag?.Epc?.ToHexString() ?? "N/A";
+                }
+
+                var expectedEpcForLog = string.IsNullOrEmpty(expectedEpc) ? "N/A" : expectedEpc;
+
+                long writeTime = 0;
+                if (swWriteTimers.TryGetValue(tidHex, out var writeTimer))
+                {
+                    writeTime = writeTimer.ElapsedMilliseconds;
+                }
+
+                long verifyTime = 0;
+                if (swVerifyTimers.TryGetValue(tidHex, out var verifyTimer))
+                {
+                    verifyTime = verifyTimer.ElapsedMilliseconds;
+                }
+
+                cycleCount.TryGetValue(tidHex, out var cycle);
+
+                var rssi = tag.IsPeakRssiInDbmPresent ? tag.PeakRssiInDbm : 0;
+                var antennaPort = tag.IsAntennaPortNumberPresent ? tag.AntennaPortNumber : (ushort)0;
+
+                LogToCsv($"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{tidHex},{previousEpc},{expectedEpcForLog},{epcHex},{writeTime},{verifyTime},{writeStatus},{cycle},{rssi},{antennaPort}");
+
                 if (success)
                 {
                     TagOpController.Instance.RecordResult(tidHex, writeStatus, success);
