@@ -682,12 +682,28 @@ namespace OctaneTagWritingTest.JobStrategies
 
                 if (result is TagWriteOpResult writeResult)
                 {
-                    swWriteTimers[tidHex].Stop();
+                    var hasWriteTimer = swWriteTimers.TryGetValue(tidHex, out var writeStopwatch);
+                    if (hasWriteTimer)
+                    {
+                        writeStopwatch.Stop();
+                    }
 
-                    var expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex);
+                    var expectedEpc = TagOpController.Instance.GetExpectedEpc(tidHex) ?? "N/A";
                     var verifiedEpc = writeResult.Tag.Epc?.ToHexString() ?? "N/A";
-                    bool success = !string.IsNullOrEmpty(expectedEpc) && expectedEpc.Equals(verifiedEpc, StringComparison.InvariantCultureIgnoreCase);
+                    bool success = !string.Equals(expectedEpc, "N/A", StringComparison.InvariantCultureIgnoreCase) &&
+                                   expectedEpc.Equals(verifiedEpc, StringComparison.InvariantCultureIgnoreCase);
                     var writeStatus = success ? "Success" : "Failure";
+
+                    var previousEpc = !string.IsNullOrEmpty(tempEpc) ? tempEpc : "N/A";
+                    var writeTime = hasWriteTimer ? writeStopwatch.ElapsedMilliseconds : 0;
+                    const int verifyTimePlaceholder = 0;
+                    var cycle = cycleCount.GetOrAdd(tidHex, 0);
+                    var rssi = writeResult.Tag?.IsPeakRssiInDbmPresent == true ? writeResult.Tag.PeakRssiInDbm : 0;
+                    var antennaPort = writeResult.Tag?.IsAntennaPortNumberPresent == true ? writeResult.Tag.AntennaPortNumber : (ushort)0;
+
+                    LogToCsv($"{DateTime.Now:yyyy-MM-dd HH:mm:ss},{tidHex},{previousEpc},{expectedEpc},{verifiedEpc},{writeTime},{verifyTimePlaceholder},{writeStatus},{cycle}," +
+                             $"{rssi},{antennaPort}");
+
                     if (success)
                     {
                         verificationTags.TryAdd(tidHex, writeResult.Tag);
